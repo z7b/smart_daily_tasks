@@ -1,0 +1,10 @@
+﻿Analyzing smart_daily_tasks...                                  
+
+   info - Don't invoke 'print' in production code - lib\app\modules\bookmarks\controllers\bookmarks_controller.dart:38:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\app\modules\calendar\controllers\calendar_controller.dart:40:7 - avoid_print
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\app\modules\settings\views\settings_view.dart:142:9 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\app\modules\settings\views\settings_view.dart:156:7 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\app\modules\settings\views\settings_view.dart:157:7 - deprecated_member_use
+warning - Unused import: 'app/data/providers/bookmark_repository.dart' - lib\main.dart:16:8 - unused_import
+warning - Unused import: 'app/data/providers/calendar_repository.dart' - lib\main.dart:17:8 - unused_import
+
