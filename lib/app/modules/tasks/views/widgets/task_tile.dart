@@ -172,15 +172,19 @@ class TaskTile extends StatelessWidget {
                               children: [
                                 Icon(CupertinoIcons.clock_fill, size: 13, color: color.withValues(alpha: 0.6)),
                                 const SizedBox(width: 4),
-                                Text(
-                                  "${DateFormat('dd/MM/yyyy').format(task.scheduledAt)} • ${DateFormat.jm().format(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${DateFormat.jm().format(task.scheduledEnd!)}' : ''}",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    "${DateFormat('dd/MM/yyyy').format(task.scheduledAt)} • ${DateFormat.jm().format(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${DateFormat.jm().format(task.scheduledEnd!)}' : ''}",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 // The "Intelligence" Part: Time Left
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

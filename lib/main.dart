@@ -6,43 +6,41 @@ import 'package:get_storage/get_storage.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
-import 'app/core/helpers/log_helper.dart';
+import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
+import 'package:smart_daily_tasks/app/core/bindings/initial_binding.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:smart_daily_tasks/app/core/translations/messages.dart';
+import 'package:smart_daily_tasks/app/core/theme/app_theme.dart';
+import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
+import 'package:smart_daily_tasks/app/core/services/security_service.dart';
+import 'package:smart_daily_tasks/app/core/services/app_lock_service.dart';
+import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 
-import 'app/core/bindings/initial_binding.dart';
-import 'app/core/translations/messages.dart';
+import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import 'package:smart_daily_tasks/app/data/models/note_model.dart';
+import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
+import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
+import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
+import 'package:smart_daily_tasks/app/data/models/book_model.dart'; 
+import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
+import 'package:smart_daily_tasks/app/data/models/step_log_model.dart'; 
+import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
+import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 
-import 'app/core/theme/app_theme.dart';
-import 'app/core/theme/theme_service.dart';
-import 'app/core/services/security_service.dart';
+import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/calendar_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/bookmark_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart'; 
+import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/job_repository.dart';
+import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 
-import 'app/core/services/app_lock_service.dart';
-import 'app/core/services/app_lock_observer.dart';
-import 'app/core/services/notification_service.dart';
-
-import 'app/data/models/task_model.dart';
-import 'app/data/models/note_model.dart';
-import 'app/data/models/journal_model.dart';
-import 'app/data/models/calendar_event_model.dart';
-import 'app/data/models/bookmark_model.dart';
-import 'app/data/models/book_model.dart'; 
-import 'app/data/models/medication_model.dart';
-import 'app/data/models/step_log_model.dart'; 
-import 'app/data/models/work_profile_model.dart';
-import 'app/data/models/attendance_log_model.dart';
-
-import 'app/data/providers/task_repository.dart';
-import 'app/data/providers/note_repository.dart';
-import 'app/data/providers/journal_repository.dart';
-import 'app/data/providers/calendar_repository.dart';
-import 'app/data/providers/bookmark_repository.dart';
-import 'app/data/providers/medication_repository.dart'; 
-import 'app/data/providers/step_repository.dart';
-import 'app/data/providers/job_repository.dart';
-
-import 'app/routes/app_pages.dart';
-import 'app/modules/settings/controllers/settings_controller.dart';
+import 'package:smart_daily_tasks/app/routes/app_pages.dart';
+import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -141,7 +139,11 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       Get.put(JobRepository(isar), permanent: true);
 
-      // ✅ Step 3: Initialize Features
+      // ✅ Step 3: Initialize Health & Pedometer
+      talker.info('🏥 Initializing Health Services...');
+      await Get.putAsync(() => HealthService(isar!).init(), permanent: true);
+
+      // ✅ Step 4: Initialize Features
       talker.info('🔔 Initializing Notifications...');
       await NotificationService().init();
       

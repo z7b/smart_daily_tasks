@@ -90,23 +90,47 @@ class JobController extends GetxController {
     statsSummary.assignAll(summary);
   }
 
-  Future<void> logAttendance(AttendanceStatus status, {DateTime? date, String? note}) async {
+  Future<void> logAttendance(AttendanceStatus status, {DateTime? date, String? note, bool isCheckOut = false}) async {
     final targetDate = date ?? DateTime.now();
     final normalizedDate = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final todayNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    
+    // 🛡️ HR Guard: Prevent future dates
+    if (normalizedDate.isAfter(todayNormalized)) {
+      talker.warning('⚠️ Cannot log attendance for future dates.');
+      return;
+    }
     
     final existing = await _repository.getLogForDate(normalizedDate);
+    
+    // 🛡️ HR Logic: Handle Check-In vs Check-Out
+    DateTime? checkIn = existing?.checkInTime;
+    DateTime? checkOut = existing?.checkOutTime;
+    
+    if (status == AttendanceStatus.present) {
+      if (isCheckOut) {
+        checkIn ??= DateTime.now();
+        checkOut = DateTime.now();
+      } else {
+        checkIn = date != null ? targetDate : DateTime.now(); // Retain precise time if selected manually, otherwise now
+      }
+    } else {
+      checkIn = null;
+      checkOut = null; // Non-present statuses clear time logs
+    }
     
     final log = AttendanceLog(
       id: existing?.id ?? 0,
       date: normalizedDate,
       status: status,
-      checkInTime: status == AttendanceStatus.present ? (date != null ? normalizedDate.add(const Duration(hours: 9)) : DateTime.now()) : null,
+      checkInTime: checkIn,
+      checkOutTime: checkOut,
       note: note,
     );
     
     await _repository.logAttendance(log);
     
-    if (DateFormat.yMd().format(normalizedDate) == DateFormat.yMd().format(DateTime.now())) {
+    if (normalizedDate.isAtSameMomentAs(todayNormalized)) {
       todayLog.value = log;
     }
     
@@ -200,15 +224,23 @@ class JobController extends GetxController {
     _cancelShiftReminders(); // Clear old ones first
     
     final service = NotificationService();
-    final startHour = p.startMinutes ~/ 60;
-    final startMin = p.startMinutes % 60;
     
     for (var day in p.workingDays) {
+      // ✅ Read distinct start minutes for this specific day using custom schedules logic
+      final startMinGlobal = getStartMinutesForDay(day);
+      
+      // ✅ Suggestion: Notify 15 minutes before the shift begins
+      final notifyMinutes = startMinGlobal - 15;
+      final scheduleMin = notifyMinutes < 0 ? 0 : notifyMinutes;
+      
+      final startHour = scheduleMin ~/ 60;
+      final startMin = scheduleMin % 60;
+      
       // Logic: id = 1000 + day
-      await service.scheduleWeeklyNotification( // ✅ Await to catch errors properly
+      await service.scheduleWeeklyNotification( 
         id: 1000 + day,
-        title: 'job_reminder_title'.tr,
-        body: 'job_reminder_msg'.trParams({'time': formatMinutes(p.startMinutes)}),
+        title: 'job_reminder_title'.tr, // "Work Duty"
+        body: 'job_reminder_msg'.trParams({'time': formatMinutes(startMinGlobal)}), // Tells actual shift time
         dayOfWeek: day == 0 ? 7 : day, 
         hour: startHour,
         minute: startMin,

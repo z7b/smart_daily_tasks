@@ -11,6 +11,7 @@ import 'package:smart_daily_tasks/app/modules/home/widgets/productivity_chart.da
 import 'package:smart_daily_tasks/app/modules/home/widgets/floating_navigation_bar.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
+import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -512,9 +513,14 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildStepsHomeCard(BuildContext context) {
-    return Obx(
-      () => GestureDetector(
-        onTap: () => Get.toNamed(Routes.STEPS),
+    final healthService = Get.find<HealthService>();
+    
+    return Obx(() {
+      final isAuthorized = healthService.isAuthorized.value;
+      final isConnecting = healthService.isConnecting.value;
+
+      return GestureDetector(
+        onTap: isAuthorized ? () => Get.toNamed(Routes.STEPS) : null,
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -541,31 +547,48 @@ class HomeView extends GetView<HomeController> {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    '${controller.stepsCount.value} / ${controller.stepsGoal.value}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
+                  if (isAuthorized)
+                    Text(
+                      '${controller.stepsCount.value} / ${controller.stepsGoal.value}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: controller.stepsProgress.value,
-                backgroundColor: Colors.tealAccent.withAlpha(20),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Colors.tealAccent,
+              if (!isAuthorized)
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: isConnecting ? null : () => controller.connectHealth(),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.tealAccent.withAlpha(20),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: isConnecting 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.tealAccent))
+                      : Text('connect_fit'.tr, style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              else
+                LinearProgressIndicator(
+                  value: controller.stepsProgress.value,
+                  backgroundColor: Colors.tealAccent.withAlpha(20),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Colors.tealAccent,
+                  ),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
                 ),
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(3),
-              ),
             ],
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildMedicationHomeCard(BuildContext context) {

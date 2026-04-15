@@ -26,7 +26,7 @@ extension DateTimeExtensions on DateTime {
     // Try current month first if not already passed
     DateTime candidate = DateTime(year, month, min(dayOfMonth, daysInMonth));
     
-    if (isAfter(candidate)) {
+    if (this.normalized.isAfter(candidate)) {
       // Move to next month
       int nextMonth = month + 1;
       int nextYear = year;

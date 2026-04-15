@@ -6,23 +6,25 @@ import 'package:get_storage/get_storage.dart';
 import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
-import '../../../core/helpers/log_helper.dart';
-import '../../../core/extensions/date_time_extensions.dart';
+import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
+import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart';
 
-import '../../../data/models/task_model.dart';
-import '../../../data/models/note_model.dart';
-import '../../../data/models/journal_model.dart';
-import '../../../data/models/bookmark_model.dart';
-import '../../../data/models/calendar_event_model.dart';
-import '../../../data/models/book_model.dart';
-import '../../../data/models/medication_model.dart';
-import '../../../data/models/step_log_model.dart';
-import '../../../data/models/work_profile_model.dart';
-import '../../../data/models/attendance_log_model.dart';
-import '../../../routes/app_pages.dart';
+import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import 'package:smart_daily_tasks/app/data/models/note_model.dart';
+import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
+import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
+import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
+import 'package:smart_daily_tasks/app/data/models/book_model.dart';
+import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
+import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
+import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
+import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
+import 'package:smart_daily_tasks/app/data/services/health_service.dart';
+import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 
 class HomeController extends GetxController {
   final _isar = Get.find<Isar>();
+  final _healthService = Get.find<HealthService>();
   
   StreamSubscription? _taskSub;
   StreamSubscription? _journalSub;
@@ -90,7 +92,17 @@ class HomeController extends GetxController {
 
   final weeklyLabels = <String>[].obs;
 
-  void refreshDashboard() => _loadRealData();
+  void refreshDashboard() {
+    _healthService.syncSteps(); // Sync health data on manual refresh
+    _loadRealData();
+  }
+  
+  void connectHealth() async {
+    final success = await _healthService.requestPermissions();
+    if (success) {
+      _loadRealData();
+    }
+  }
 
   @override
   void onInit() {
@@ -190,6 +202,8 @@ class HomeController extends GetxController {
 
   Future<void> _loadRealData() async {
     try {
+      // Logic: Only load from Isar here. 
+      // Health syncing is handled by the initial pulse and manual refresh to avoid infinite loops.
       taskCount.value = await _isar.tasks.count();
       noteCount.value = await _isar.notes.count();
       journalCount.value = await _isar.journals.count();

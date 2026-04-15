@@ -13,11 +13,10 @@ class JobSettingsView extends GetView<JobController> {
     final theme = Theme.of(context);
     final profile = controller.profile.value;
     
-    // Local state controllers
+    // Local state controllers for explicitly typed data
     final titleController = TextEditingController(text: profile.jobTitle);
     final companyController = TextEditingController(text: profile.companyName);
     final positionController = TextEditingController(text: profile.jobPosition);
-    final salaryDayController = TextEditingController(text: profile.salaryDay.toString());
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -34,7 +33,6 @@ class JobSettingsView extends GetView<JobController> {
                 title: titleController.text,
                 company: companyController.text,
                 position: positionController.text,
-                salDay: int.tryParse(salaryDayController.text) ?? 25,
               );
               Get.back();
               Get.snackbar('success'.tr, 'task_update_success'.tr, snackPosition: SnackPosition.BOTTOM);
@@ -197,44 +195,96 @@ class JobSettingsView extends GetView<JobController> {
       final workingDays = controller.profile.value.workingDays;
       if (workingDays.isEmpty) return const SizedBox.shrink();
 
-      return Column(
+    return Column(
         children: workingDays.map((day) {
           final start = controller.getStartMinutesForDay(day);
           final end = controller.getEndMinutesForDay(day);
           final hasOverride = controller.getCustomSchedules().containsKey(day.toString());
+          
+          final durationMinutes = end >= start ? (end - start) : ((24 * 60 - start) + end);
+          final durationHours = (durationMinutes / 60).toStringAsFixed(1);
 
           return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.primary.withAlpha(hasOverride ? 40 : 10)),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: hasOverride 
+                      ? AppTheme.primary.withAlpha(80) 
+                      : Theme.of(context).dividerColor.withAlpha(20)),
+              boxShadow: hasOverride 
+                  ? [BoxShadow(color: AppTheme.primary.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))] 
+                  : [],
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(DateFormat.EEEE().format(DateTime(2024, 1, 7 + day)), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () async {
-                    final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: start ~/ 60, minute: start % 60));
-                    if (time != null) controller.setCustomSchedule(day, time.hour * 60 + time.minute, end);
-                  },
-                  child: Text(controller.formatMinutes(start), style: TextStyle(color: hasOverride ? AppTheme.primary : Colors.grey, fontSize: 13)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(CupertinoIcons.calendar_today, size: 18, color: hasOverride ? AppTheme.primary : Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(DateFormat.EEEE().format(DateTime(2024, 1, 7 + day)), 
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: hasOverride ? null : Colors.grey)),
+                      ],
+                    ),
+                    if (hasOverride)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: AppTheme.primary.withAlpha(30), borderRadius: BorderRadius.circular(8)),
+                        child: Text('${durationHours}h Shift', style: const TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                      )
+                    else 
+                      Text('${durationHours}h Shift', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  ],
                 ),
-                const Text('-', style: TextStyle(color: Colors.grey)),
-                TextButton(
-                  onPressed: () async {
-                    final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: end ~/ 60, minute: end % 60));
-                    if (time != null) controller.setCustomSchedule(day, start, time.hour * 60 + time.minute);
-                  },
-                  child: Text(controller.formatMinutes(end), style: TextStyle(color: hasOverride ? Colors.orange : Colors.grey, fontSize: 13)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          padding: EdgeInsets.zero,
+                          foregroundColor: hasOverride ? AppTheme.primary : Colors.grey,
+                        ),
+                        icon: const Icon(CupertinoIcons.sun_min_fill, size: 16),
+                        onPressed: () async {
+                          final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: start ~/ 60, minute: start % 60));
+                          if (time != null) controller.setCustomSchedule(day, time.hour * 60 + time.minute, end);
+                        },
+                        label: Text(controller.formatMinutes(start), style: const TextStyle(fontSize: 14)),
+                      ),
+                    ),
+                    const Icon(CupertinoIcons.arrow_right, size: 14, color: Colors.grey),
+                    Expanded(
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.zero,
+                          foregroundColor: hasOverride ? Colors.orange : Colors.grey,
+                        ),
+                        icon: const Icon(CupertinoIcons.moon_stars_fill, size: 16),
+                        onPressed: () async {
+                          final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: end ~/ 60, minute: end % 60));
+                          if (time != null) controller.setCustomSchedule(day, start, time.hour * 60 + time.minute);
+                        },
+                        label: Text(controller.formatMinutes(end), style: const TextStyle(fontSize: 14)),
+                      ),
+                    ),
+                    if (hasOverride)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(CupertinoIcons.clear_circled_solid, size: 20, color: Colors.redAccent),
+                        onPressed: () => controller.setCustomSchedule(day, null, null),
+                      ),
+                  ],
                 ),
-                if (hasOverride)
-                  IconButton(
-                    icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 16, color: Colors.red),
-                    onPressed: () => controller.setCustomSchedule(day, null, null),
-                  ),
               ],
             ),
           );

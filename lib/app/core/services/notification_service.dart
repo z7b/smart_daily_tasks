@@ -70,7 +70,17 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
-    await Permission.notification.request();
+    // Request basic notification permission (Android 13+)
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+    
+    // Request exact alarm scheduling (Android 12/14) if needed
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        await Permission.scheduleExactAlarm.request();
+      }
+    }
   }
 
   Future<void> scheduleNotification({

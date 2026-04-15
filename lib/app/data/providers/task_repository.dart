@@ -62,6 +62,14 @@ class TaskRepository {
     });
   }
 
+  /// Mark a task as cancelled
+  Future<void> cancelTask(Task task) async {
+    await _isar.writeTxn(() async {
+      task.status = TaskStatus.cancelled;
+      await _isar.tasks.put(task);
+    });
+  }
+
   // Search
   Future<List<Task>> searchTasks(String query) async {
     return await _isar.tasks
