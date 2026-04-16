@@ -5,6 +5,7 @@ import 'dart:async';
 import '../../../data/models/note_model.dart';
 import '../../../data/providers/note_repository.dart';
 import '../../../core/helpers/log_helper.dart';
+import '../../../core/extensions/string_extensions.dart';
 
 class NotesController extends GetxController {
   final NoteRepository _repository;
@@ -44,10 +45,10 @@ class NotesController extends GetxController {
       return;
     }
 
-    final query = searchQuery.value.toLowerCase();
+    final query = searchQuery.value.searchNormalized;
     final filtered = notes.where((n) {
-      return n.title.toLowerCase().contains(query) ||
-          (n.content?.toLowerCase().contains(query) ?? false);
+      return n.title.searchNormalized.contains(query) ||
+          (n.content?.searchNormalized.contains(query) ?? false);
     }).toList();
     
     // Sort: Pinned first, then by updatedAt/createdAt desc

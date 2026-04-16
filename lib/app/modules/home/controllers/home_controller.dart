@@ -52,6 +52,8 @@ class HomeController extends GetxController {
   final calendarEventCount = 0.obs;
   final bookCount = 0.obs;
   
+  final _isBusy = false.obs; // Logic guard for data loading concurrency
+  
   // Progress Pillars (Doctoral Logic: Symmetry & Balance)
   final mindProgress = 0.0.obs;
   final bodyProgress = 0.0.obs;
@@ -225,7 +227,9 @@ class HomeController extends GetxController {
   }
 
   Future<void> _loadRealData() async {
+    if (_isBusy.value) return;
     try {
+      _isBusy.value = true;
       // Logic: Only load from Isar here. 
       // Health syncing is handled by the initial pulse and manual refresh to avoid infinite loops.
       taskCount.value = await _isar.tasks.count();
@@ -451,6 +455,8 @@ class HomeController extends GetxController {
       
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Home Data Load Error');
+    } finally {
+      _isBusy.value = false;
     }
   }
 

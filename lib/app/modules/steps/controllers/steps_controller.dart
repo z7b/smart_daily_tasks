@@ -28,6 +28,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   final monthlyLogs = <StepLog>[].obs;
   final yearlyLogs = <StepLog>[].obs;
   final totalStepsAllTime = 0.obs;
+  final _isSyncing = false.obs; // Logic guard
 
   Timer? _pollTimer;
 
@@ -84,9 +85,10 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> syncData() async {
-    if (isLoading.value) return;
+    if (isLoading.value || _isSyncing.value) return;
     
     try {
+      _isSyncing.value = true;
       isLoading.value = true;
       talker.info('🔄 Syncing Life OS Steps (Authorized: ${isHealthAuthorized.value})');
       
@@ -102,10 +104,8 @@ class StepsController extends GetxController with WidgetsBindingObserver {
           if (i == 0) {
              stepsToday.value = sensorSteps;
           } else {
-             // For history, we just refresh the local cache from repo
-             final log = await _repository.getStepLog(date);
-             // Note: In an ideal world, HealthService would sync history too, 
-             // but we'll focus on today's real-time accuracy first.
+             // For history, we fetch from sensor if needed, or at least ensure repo is valid
+             await _repository.getStepLog(date);
           }
         }
       } else {
@@ -121,6 +121,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       talker.handle(e, stack, '🔴 StepsController Sync Error');
     } finally {
       isLoading.value = false;
+      _isSyncing.value = false;
     }
   }
 

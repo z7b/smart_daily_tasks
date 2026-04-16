@@ -75,8 +75,8 @@ class MedicationView extends GetView<MedicationController> {
                 final active = meds.where((m) => m.isActive).length;
                 final totalCompliance = meds.isEmpty
                     ? 0.0
-                    : meds.fold(0.0, (s, m) => s + m.todayCompliance) /
-                        meds.length;
+                    : (meds.fold(0.0, (s, m) => s + m.todayCompliance.clamp(0.0, 1.0)) /
+                        meds.length).clamp(0.0, 1.0);
 
                 return Padding(
                   padding:
@@ -241,13 +241,23 @@ class MedicationView extends GetView<MedicationController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                med.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                  color: theme.textTheme.titleLarge?.color,
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      med.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17,
+                                        color: theme.textTheme.titleLarge?.color,
+                                      ),
+                                    ),
+                                  ),
+                                  if (!med.isActive)
+                                    _statusBadge('paused'.tr, Colors.orange)
+                                  else if (med.endDate != null && med.remainingDays < 0)
+                                    _statusBadge('expired'.tr, Colors.redAccent),
+                                ],
                               ),
                               const SizedBox(height: 3),
                               Text(
@@ -778,6 +788,24 @@ class MedicationView extends GetView<MedicationController> {
           fontSize: 13,
           fontWeight: FontWeight.bold,
           color: theme.textTheme.bodySmall?.color,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+  Widget _statusBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
         ),
       ),

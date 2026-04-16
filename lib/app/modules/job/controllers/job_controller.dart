@@ -78,8 +78,11 @@ class JobController extends GetxController {
     final monthLogs = await _repository.getLogsInRange(monthStart, now);
     monthlyStats.assignAll(monthLogs);
 
-    // Yearly
-    final yearStart = DateTime(now.year - 1, now.month, now.day);
+    // Yearly (Safe leap year handling: e.g., Feb 29 -> Feb 28 in non-leap years)
+    final prevYear = now.year - 1;
+    final maxDayInPrevYear = DateTime(prevYear, now.month + 1, 0).day;
+    final safeDay = now.day > maxDayInPrevYear ? maxDayInPrevYear : now.day;
+    final yearStart = DateTime(prevYear, now.month, safeDay);
     yearlyStats.assignAll(await _repository.getLogsInRange(yearStart, now));
 
     // Calculate Rate (Monthly Consistency Score)

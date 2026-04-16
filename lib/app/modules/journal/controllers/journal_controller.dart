@@ -5,6 +5,7 @@ import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../data/providers/journal_repository.dart';
 import 'dart:async';
+import '../../../core/extensions/string_extensions.dart';
 
 class JournalController extends GetxController {
   final JournalRepository _repository;
@@ -59,12 +60,10 @@ class JournalController extends GetxController {
       filteredJournals.assignAll(journals);
       return;
     }
-
-    final query = searchQuery.value.toLowerCase();
+    final query = searchQuery.value.searchNormalized;
     final filtered = journals.where((j) =>
-      (j.note?.toLowerCase().contains(query) ?? false)
+      (j.note?.searchNormalized.contains(query) ?? false)
     ).toList();
-    
     filteredJournals.assignAll(filtered);
   }
 

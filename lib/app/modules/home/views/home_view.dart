@@ -297,7 +297,7 @@ class HomeView extends GetView<HomeController> {
               const Spacer(),
               Obx(
                 () => Text(
-                  '${(controller.currentBookProgress.value * 100).toInt()}%',
+                  '${(controller.currentBookProgress.value.clamp(0.0, 1.0) * 100).toInt()}%',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -319,7 +319,7 @@ class HomeView extends GetView<HomeController> {
           const SizedBox(height: 12),
           Obx(
             () => LinearProgressIndicator(
-              value: controller.currentBookProgress.value,
+              value: controller.currentBookProgress.value.clamp(0.0, 1.0),
               backgroundColor: const Color(0xFF5E5CE6).withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(0xFF5E5CE6),
@@ -946,7 +946,7 @@ class HomeView extends GetView<HomeController> {
                 curve: Curves.easeOutCubic,
                 height: 12,
                 width: MediaQuery.of(context).size.width * 
-                       (controller.progressPercentage.value.clamp(0.05, 1.0)),
+                       (controller.progressPercentage.value.clamp(0.0, 1.0)),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),

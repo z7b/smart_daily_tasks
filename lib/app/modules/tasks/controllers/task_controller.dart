@@ -10,6 +10,7 @@ import '../../../data/providers/task_repository.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:intl/intl.dart';
 import '../../../core/extensions/date_time_extensions.dart';
+import '../../../core/extensions/string_extensions.dart';
 
 class TaskController extends GetxController {
   final TaskRepository _repository;
@@ -86,10 +87,10 @@ class TaskController extends GetxController {
       return;
     }
 
-    final query = searchQuery.value.toLowerCase();
+    final query = searchQuery.value.searchNormalized;
     final filtered = tasks.where((task) {
-      return task.title.toLowerCase().contains(query) ||
-          (task.note?.toLowerCase().contains(query) ?? false);
+      return task.title.searchNormalized.contains(query) ||
+          (task.note?.searchNormalized.contains(query) ?? false);
     }).toList();
     
     filteredTasks.assignAll(filtered);
@@ -299,6 +300,12 @@ class TaskController extends GetxController {
                 }
                 break;
              default: break;
+           }
+
+           // 🛡️ Recurrence Safety Guard: Ensure next occurrence is strictly in the future relative to the completed task
+           if (!nextScheduledAt.isAfter(updatedTask.scheduledAt)) {
+             talker.warning('🚨 Recurrence Guard Blocked: Next occurrence is not in the future.');
+             return;
            }
 
           final nextTask = Task(

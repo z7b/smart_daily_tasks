@@ -422,7 +422,7 @@ class StepsView extends GetView<StepsController> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${(log.progress * 100).toInt()}%',
+                    '${(log.progress.clamp(0.0, 1.0) * 100).toInt()}%',
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
