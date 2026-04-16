@@ -32,13 +32,18 @@ const StepLogSchema = CollectionSchema(
       name: r'isManual',
       type: IsarType.bool,
     ),
-    r'progress': PropertySchema(
+    r'lastSyncedAt': PropertySchema(
       id: 3,
+      name: r'lastSyncedAt',
+      type: IsarType.dateTime,
+    ),
+    r'progress': PropertySchema(
+      id: 4,
       name: r'progress',
       type: IsarType.double,
     ),
     r'steps': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'steps',
       type: IsarType.long,
     )
@@ -52,11 +57,24 @@ const StepLogSchema = CollectionSchema(
     r'date': IndexSchema(
       id: -7552997827385218417,
       name: r'date',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
           name: r'date',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
+    r'lastSyncedAt': IndexSchema(
+      id: 1468862003463895500,
+      name: r'lastSyncedAt',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'lastSyncedAt',
           type: IndexType.value,
           caseSensitive: false,
         )
@@ -89,8 +107,9 @@ void _stepLogSerialize(
   writer.writeDateTime(offsets[0], object.date);
   writer.writeLong(offsets[1], object.goal);
   writer.writeBool(offsets[2], object.isManual);
-  writer.writeDouble(offsets[3], object.progress);
-  writer.writeLong(offsets[4], object.steps);
+  writer.writeDateTime(offsets[3], object.lastSyncedAt);
+  writer.writeDouble(offsets[4], object.progress);
+  writer.writeLong(offsets[5], object.steps);
 }
 
 StepLog _stepLogDeserialize(
@@ -104,8 +123,9 @@ StepLog _stepLogDeserialize(
     goal: reader.readLongOrNull(offsets[1]) ?? 10000,
     id: id,
     isManual: reader.readBoolOrNull(offsets[2]) ?? false,
-    steps: reader.readLongOrNull(offsets[4]) ?? 0,
+    steps: reader.readLongOrNull(offsets[5]) ?? 0,
   );
+  object.lastSyncedAt = reader.readDateTime(offsets[3]);
   return object;
 }
 
@@ -123,8 +143,10 @@ P _stepLogDeserializeProp<P>(
     case 2:
       return (reader.readBoolOrNull(offset) ?? false) as P;
     case 3:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 4:
+      return (reader.readDouble(offset)) as P;
+    case 5:
       return (reader.readLongOrNull(offset) ?? 0) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -143,60 +165,6 @@ void _stepLogAttach(IsarCollection<dynamic> col, Id id, StepLog object) {
   object.id = id;
 }
 
-extension StepLogByIndex on IsarCollection<StepLog> {
-  Future<StepLog?> getByDate(DateTime date) {
-    return getByIndex(r'date', [date]);
-  }
-
-  StepLog? getByDateSync(DateTime date) {
-    return getByIndexSync(r'date', [date]);
-  }
-
-  Future<bool> deleteByDate(DateTime date) {
-    return deleteByIndex(r'date', [date]);
-  }
-
-  bool deleteByDateSync(DateTime date) {
-    return deleteByIndexSync(r'date', [date]);
-  }
-
-  Future<List<StepLog?>> getAllByDate(List<DateTime> dateValues) {
-    final values = dateValues.map((e) => [e]).toList();
-    return getAllByIndex(r'date', values);
-  }
-
-  List<StepLog?> getAllByDateSync(List<DateTime> dateValues) {
-    final values = dateValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'date', values);
-  }
-
-  Future<int> deleteAllByDate(List<DateTime> dateValues) {
-    final values = dateValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'date', values);
-  }
-
-  int deleteAllByDateSync(List<DateTime> dateValues) {
-    final values = dateValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'date', values);
-  }
-
-  Future<Id> putByDate(StepLog object) {
-    return putByIndex(r'date', object);
-  }
-
-  Id putByDateSync(StepLog object, {bool saveLinks = true}) {
-    return putByIndexSync(r'date', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByDate(List<StepLog> objects) {
-    return putAllByIndex(r'date', objects);
-  }
-
-  List<Id> putAllByDateSync(List<StepLog> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'date', objects, saveLinks: saveLinks);
-  }
-}
-
 extension StepLogQueryWhereSort on QueryBuilder<StepLog, StepLog, QWhere> {
   QueryBuilder<StepLog, StepLog, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
@@ -208,6 +176,14 @@ extension StepLogQueryWhereSort on QueryBuilder<StepLog, StepLog, QWhere> {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'date'),
+      );
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhere> anyLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'lastSyncedAt'),
       );
     });
   }
@@ -363,6 +339,96 @@ extension StepLogQueryWhere on QueryBuilder<StepLog, StepLog, QWhereClause> {
         lower: [lowerDate],
         includeLower: includeLower,
         upper: [upperDate],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhereClause> lastSyncedAtEqualTo(
+      DateTime lastSyncedAt) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'lastSyncedAt',
+        value: [lastSyncedAt],
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhereClause> lastSyncedAtNotEqualTo(
+      DateTime lastSyncedAt) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'lastSyncedAt',
+              lower: [],
+              upper: [lastSyncedAt],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'lastSyncedAt',
+              lower: [lastSyncedAt],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'lastSyncedAt',
+              lower: [lastSyncedAt],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'lastSyncedAt',
+              lower: [],
+              upper: [lastSyncedAt],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhereClause> lastSyncedAtGreaterThan(
+    DateTime lastSyncedAt, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'lastSyncedAt',
+        lower: [lastSyncedAt],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhereClause> lastSyncedAtLessThan(
+    DateTime lastSyncedAt, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'lastSyncedAt',
+        lower: [],
+        upper: [lastSyncedAt],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterWhereClause> lastSyncedAtBetween(
+    DateTime lowerLastSyncedAt,
+    DateTime upperLastSyncedAt, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'lastSyncedAt',
+        lower: [lowerLastSyncedAt],
+        includeLower: includeLower,
+        upper: [upperLastSyncedAt],
         includeUpper: includeUpper,
       ));
     });
@@ -538,6 +604,59 @@ extension StepLogQueryFilter
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterFilterCondition> lastSyncedAtEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterFilterCondition> lastSyncedAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterFilterCondition> lastSyncedAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterFilterCondition> lastSyncedAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastSyncedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterFilterCondition> progressEqualTo(
     double value, {
     double epsilon = Query.epsilon,
@@ -697,6 +816,18 @@ extension StepLogQuerySortBy on QueryBuilder<StepLog, StepLog, QSortBy> {
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByLastSyncedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'progress', Sort.asc);
@@ -772,6 +903,18 @@ extension StepLogQuerySortThenBy
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByLastSyncedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'progress', Sort.asc);
@@ -817,6 +960,12 @@ extension StepLogQueryWhereDistinct
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QDistinct> distinctByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastSyncedAt');
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QDistinct> distinctByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'progress');
@@ -853,6 +1002,12 @@ extension StepLogQueryProperty
   QueryBuilder<StepLog, bool, QQueryOperations> isManualProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isManual');
+    });
+  }
+
+  QueryBuilder<StepLog, DateTime, QQueryOperations> lastSyncedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastSyncedAt');
     });
   }
 

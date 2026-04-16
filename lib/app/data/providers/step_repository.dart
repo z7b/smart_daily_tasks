@@ -55,9 +55,11 @@ class StepRepository {
 
   /// Get all logs for a range
   Future<List<StepLog>> getLogsInRange(DateTime start, DateTime end) async {
+    final normalStart = DateTime(start.year, start.month, start.day);
+    final normalEnd = DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
     return await _isar.stepLogs
         .filter()
-        .dateBetween(start, end)
+        .dateBetween(normalStart, normalEnd, includeLower: true, includeUpper: false)
         .sortByDateDesc()
         .findAll();
   }

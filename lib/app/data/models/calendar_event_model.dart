@@ -27,6 +27,13 @@ class CalendarEvent {
   @Index(type: IndexType.value)
   String get titleLower => title.toLowerCase();
 
+  /// Temporal integrity validation
+  @ignore
+  bool get isValidTimeRange {
+    if (startTime == null || endTime == null) return true;
+    return !endTime!.isBefore(startTime!);
+  }
+
   CalendarEvent({
     this.id = Isar.autoIncrement,
     required this.title,

@@ -21,7 +21,9 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
+import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
+import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 
 class HomeController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -130,7 +132,7 @@ class HomeController extends GetxController {
     // Push the user-configured Start Screen *over* HomeView.
     // This allows the Back button to gracefully return to the underlying Dashboard.
     final startRoute = AppPages.savedStartRoute;
-    if (startRoute != null) {
+    if (startRoute != Routes.HOME) {
       Get.toNamed(startRoute);
     }
   }
@@ -245,7 +247,7 @@ class HomeController extends GetxController {
           .findAll();
       final int total = dayTasks.length;
       final int completed = dayTasks.where((t) => t.status == TaskStatus.completed).length;
-      final double taskProgress = total > 0 ? (completed / total) : 1.0; // 1.0 if no tasks
+      final double taskProgress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 1.0;
       
       // 2. Health Progress (30%) - Medication Adherence
       final allMeds = await _isar.medications.filter().isActiveEqualTo(true).findAll();
@@ -255,9 +257,13 @@ class HomeController extends GetxController {
       final isToday = viewDate.isSameDay(DateTime.now());
 
       for (var med in allMeds) {
-        // Check if med was active on the selected date
-        if (viewDate.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
-           (med.endDate == null || viewDate.isBefore(med.endDate!.add(const Duration(days: 1))))) {
+        // Check if med was active on the selected date (Normalized to midnight)
+        final medStart = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
+        final medEnd = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
+        final normalizedView = DateTime(viewDate.year, viewDate.month, viewDate.day);
+        
+        if (!normalizedView.isBefore(medStart) && 
+           (medEnd == null || !normalizedView.isAfter(medEnd))) {
           
           expected += med.reminderTimes.length;
           for (var intake in med.intakeHistory) {
@@ -281,9 +287,14 @@ class HomeController extends GetxController {
         String nextDoseTimeStr = '';
         final now = DateTime.now();
 
+
         for (var med in allMeds) {
-          if (viewDate.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
-             (med.endDate == null || viewDate.isBefore(med.endDate!.add(const Duration(days: 1))))) {
+          final medStartN = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
+          final medEndN = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
+          final normalView = DateTime(viewDate.year, viewDate.month, viewDate.day);
+        
+          if (!normalView.isBefore(medStartN) && 
+             (medEndN == null || !normalView.isAfter(medEndN))) {
             
             for (var timeStr in med.reminderTimes) {
               try {
@@ -349,7 +360,7 @@ class HomeController extends GetxController {
           final diff = nextTask.scheduledAt.difference(now);
           if (diff.isNegative) {
             final hours = diff.inHours.abs();
-            final minutes = diff.inMinutes.abs() % 60;
+            final minutes = (diff.inMinutes.abs() % 60);
             // Negative time denotes overdue/debt time
             nextTaskTimeLeft.value = '-${hours > 0 ? '${hours}h ' : ''}${minutes}m';
           } else {
@@ -396,8 +407,8 @@ class HomeController extends GetxController {
       tasksLeftCount.value = total - completed;
       
       // 1. Mind Pillar (Tasks & Intellectual Growth)
-      final taskScore = total > 0 ? (completed / total) : 1.0;
-      final bookScore = currentBookProgress.value;
+      final taskScore = total > 0 ? (completed / total).clamp(0.0, 1.0) : 1.0;
+      final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
       mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
 
       // 2. Body Pillar (Physical Health & Vitality)
@@ -480,10 +491,18 @@ class HomeController extends GetxController {
     for (var j in logs) {
       counts[j.mood] = (counts[j.mood] ?? 0) + 1;
     }
-    final topMood = counts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+    final topMood = counts.entries
+        .fold<MapEntry<Mood, int>?>(null, (max, e) => (max == null || e.value > max.value) ? e : max)
+        ?.key ?? Mood.neutral;
     weeklyMoodTrend.value = topMood.name;
-    final emojis = {'amazing': '🤩', 'good': '😊', 'neutral': '😐', 'bad': '😢', 'terrible': '😤'};
-    moodEmoji.value = emojis[weeklyMoodTrend.value] ?? '😐';
+    
+    switch (topMood) {
+      case Mood.amazing:  moodEmoji.value = '🤩'; break;
+      case Mood.good:     moodEmoji.value = '😊'; break;
+      case Mood.neutral:  moodEmoji.value = '😐'; break;
+      case Mood.bad:      moodEmoji.value = '😢'; break;
+      case Mood.terrible: moodEmoji.value = '😤'; break;
+    }
   }
 
   void onDateSelected(DateTime date) {
@@ -550,5 +569,23 @@ class HomeController extends GetxController {
     normalized = normalized.replaceAll('ص', 'AM').replaceAll('م', 'PM');
     normalized = normalized.replaceAll('صباحاً', 'AM').replaceAll('مساءً', 'PM');
     return DateFormat.jm().parse(normalized);
+  }
+
+  void _debugStepsData() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final log = await Get.find<StepRepository>().getStepLog(today);
+    
+    talker.info('''
+      🔍 DEBUG: Steps Data
+      ═════════════════════
+      Today: $today
+      Steps: ${log?.steps ?? 'NO DATA'}
+      Goal: ${log?.goal ?? 'NO DATA'}
+      Is Manual: ${log?.isManual ?? 'NO DATA'}
+      Last Synced: ${log?.lastSyncedAt ?? 'NEVER'}
+      Health Authorized: ${Get.find<HealthService>().isAuthorized.value}
+    ''');
   }
 }

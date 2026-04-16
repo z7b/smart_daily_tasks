@@ -75,7 +75,11 @@ class Book {
     );
   }
 
-  double get progress => totalPages > 0 ? (currentPage / totalPages) : 0.0;
+  double get progress {
+    if (totalPages <= 0 || currentPage < 0) return 0.0;
+    if (currentPage > totalPages) return 1.0;
+    return (currentPage / totalPages).clamp(0.0, 1.0);
+  }
 
   Map<String, dynamic> toJson() {
     return {

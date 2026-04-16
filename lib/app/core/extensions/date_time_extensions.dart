@@ -23,11 +23,14 @@ extension DateTimeExtensions on DateTime {
   /// Safely calculates the next occurrence of a specific day of the month.
   /// Handles months with fewer days (e.g., if dayOfMonth is 31 and next month is Feb).
   DateTime nextOccurrenceOfMonthDay(int dayOfMonth) {
-    // Try current month first if not already passed
-    DateTime candidate = DateTime(year, month, min(dayOfMonth, daysInMonth));
+    // Clamp to valid day range
+    final clampedDay = dayOfMonth.clamp(1, 31);
     
-    if (this.normalized.isAfter(candidate)) {
-      // Move to next month
+    // Try current month first if not already passed
+    DateTime candidate = DateTime(year, month, min(clampedDay, daysInMonth));
+    
+    if (!this.normalized.isBefore(candidate)) {
+      // Move to next month (current day is same or after candidate)
       int nextMonth = month + 1;
       int nextYear = year;
       if (nextMonth > 12) {
@@ -36,7 +39,7 @@ extension DateTimeExtensions on DateTime {
       }
       
       int daysInNext = DateTime(nextYear, nextMonth + 1, 0).day;
-      candidate = DateTime(nextYear, nextMonth, min(dayOfMonth, daysInNext));
+      candidate = DateTime(nextYear, nextMonth, min(clampedDay, daysInNext));
     }
     
     return candidate;

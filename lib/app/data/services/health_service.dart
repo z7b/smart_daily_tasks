@@ -31,12 +31,23 @@ class HealthService extends GetxService {
 
   Future<HealthService> init() async {
     try {
-      // 🔥 Android 16 Handshake: Configure bridge during initialization
+      // ✅ Step 1: Configure Health
       await health.configure();
       talker.info('🏥 Health Service Configured for Life OS (Unified)');
+      
+      // ✅ Step 2: Check permissions
       await checkAuthorization();
-    } catch (e) {
-      talker.error('❌ Health Service Init Error: $e');
+      
+      // ✅ Step 3: Request if not authorized, else sync
+      if (!isAuthorized.value) {
+        talker.warning('⚠️ Not authorized - requesting permissions...');
+        await requestPermissions();
+      } else {
+        talker.info('✅ Already authorized - syncing steps');
+        await fetchAndPersistSteps();
+      }
+    } catch (e, stack) {
+      talker.handle(e, stack, '❌ Health Service Init Error');
     }
     return this;
   }
@@ -111,64 +122,111 @@ class HealthService extends GetxService {
 
     try {
       final now = DateTime.now();
-      // Apply 1-minute buffer for Android 16 Health Connect stability
-      final endRange = now.subtract(const Duration(minutes: 1));
+      
+      // ✅ Fix 1: Use exact current time (include current second)
+      final endRange = now.add(const Duration(seconds: 1));
+      
+      // ✅ Fix 2: Proper midnight normalization
       final midnight = DateTime(now.year, now.month, now.day);
       
-      talker.info('📥 Life OS Pulse: Auditing health data since midnight ($midnight)');
+      talker.info('''
+      📥 Life OS Pulse: Auditing health data 
+      From: $midnight
+      To:   $endRange
+      Duration: ${endRange.difference(midnight).inHours}h
+      ''');
       
-      // Strategy 1: Aggregated Count (High Performance)
+      // ✅ Strategy 1: Aggregated Count
       int? steps = await health.getTotalStepsInInterval(midnight, endRange);
       
-      // Strategy 2: Raw Point Sum (Samsung Health Resilience)
+      talker.info('Strategy 1 Result: $steps steps');
+      
+      // ✅ Strategy 2: Raw Point Sum (Fallback for some integrations)
       if (steps == null || steps == 0) {
-        talker.info('🔍 Strategy 1 returned $steps. Launching Strategy 2 (Point Sum)...');
-        final rawData = await health.getHealthDataFromTypes(
-          types: [HealthDataType.STEPS],
-          startTime: midnight,
-          endTime: endRange,
-        );
-        if (rawData.isNotEmpty) {
-           steps = 0;
-           for (var d in rawData) {
+        talker.info('🔍 Attempting Strategy 2: Point Sum...');
+        try {
+          final rawData = await health.getHealthDataFromTypes(
+            types: [HealthDataType.STEPS],
+            startTime: midnight,
+            endTime: endRange,
+          );
+          
+          talker.info('📊 Raw data points: ${rawData.length}');
+          
+          if (rawData.isNotEmpty) {
+            steps = 0;
+            for (var d in rawData) {
               final val = d.value;
               if (val is NumericHealthValue) {
                 steps = steps! + val.numericValue.toInt();
+                talker.info('  └─ Point: ${val.numericValue.toInt()}');
               }
-           }
-           talker.info('✅ Strategy 2 recovered $steps steps');
+            }
+            talker.info('✅ Strategy 2 recovered $steps steps');
+          }
+        } catch (e) {
+          talker.error('Strategy 2 failed: $e');
         }
       }
 
-      // Strategy 3: Historical Deep Diagnostics (The "Proof of Life" sync)
+      // ✅ Strategy 3: Historical Deep Diagnostics
       if (steps == null || steps == 0) {
-        talker.info('🛰️ All strategies returned 0. Checking last 24h as a diagnostic probe...');
-        final diagnosticStart = now.subtract(const Duration(hours: 24));
-        final diagSteps = await health.getTotalStepsInInterval(diagnosticStart, endRange);
-        if (diagSteps != null && diagSteps > 0) {
-           talker.info('📈 Diagnostic Success: Sensor is active, but today is empty ($diagSteps steps found in 24h)');
-        } else {
-           talker.warning('📉 Diagnostic Alert: Zero data detected in full 24h cycle');
+        talker.info('🛰️ Running 24h diagnostic probe...');
+        try {
+          final diagnosticStart = now.subtract(const Duration(hours: 24));
+          final diagSteps = await health.getTotalStepsInInterval(diagnosticStart, endRange);
+          
+          if (diagSteps != null && diagSteps > 0) {
+             talker.warning('''
+             📉 Diagnostic Alert: 
+             - Today: 0 steps
+             - Last 24h: $diagSteps steps
+             - Possible cause: Sensor offline or permission issue
+             ''');
+          } else {
+             talker.critical('''
+             🚨 Critical Alert:
+             - Zero data in 24h window
+             - Sensor may be disconnected
+             - Check: Activity Recognition permission
+             ''');
+          }
+        } catch (e) {
+          talker.error('Diagnostic failed: $e');
         }
       }
 
-      if (steps != null) {
+      // ✅ Convert to 0 if all failed instead of crashing
+      steps = steps ?? 0;
+
+      if (steps >= 0) {
         talker.info('🏆 Sync Finalized: $steps steps');
         
         await _isar.writeTxn(() async {
-          final existing = await _isar.stepLogs.filter().dateEqualTo(midnight).findFirst();
+          final existing = await _isar.stepLogs
+              .filter()
+              .dateEqualTo(midnight)
+              .findFirst();
+              
           if (existing != null) {
             if (!existing.isManual) {
                existing.steps = steps!;
+               existing.lastSyncedAt = now;
                await _isar.stepLogs.put(existing);
-               talker.info('💾 Isar: Updated cached record');
+               talker.info('💾 Updated: ${existing.steps} steps');
             } else {
-               talker.info('⛔ Isar: Skipped update (Manual mode protected)');
+               talker.info('⛔ Skipped sync (Manual mode protected)');
             }
           } else {
-            final newLog = StepLog(date: midnight, steps: steps!, goal: 10000);
+            final newLog = StepLog(
+              date: midnight,
+              steps: steps!,
+              goal: 10000,
+              isManual: false,
+              lastSyncedAt: now,
+            );
             await _isar.stepLogs.put(newLog);
-            talker.info('💾 Isar: New daily record created');
+            talker.info('💾 Created new record: ${newLog.steps} steps');
           }
         });
         return steps;

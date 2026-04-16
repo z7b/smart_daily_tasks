@@ -36,13 +36,12 @@ class AppPages {
 
   static const initial = Routes.HOME;
 
-  static String? get savedStartRoute {
+  static String get savedStartRoute {
     try {
-      final route = SettingsController.getSavedStartRoute();
-      return route != Routes.HOME ? route : null;
+      return SettingsController.getSavedStartRoute() ?? Routes.HOME;
     } catch (e, stack) {
       talker.handle(e, stack, '⚠️ Error reading saved start route');
-      return null;
+      return Routes.HOME;
     }
   }
 

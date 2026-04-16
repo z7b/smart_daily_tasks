@@ -6,12 +6,15 @@ part 'step_log_model.g.dart';
 class StepLog {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true)
+  @Index()
   DateTime date; // Normalized to midnight
 
   int steps;
   int goal;
   bool isManual;
+  
+  @Index()
+  DateTime lastSyncedAt = DateTime.now();
 
   double get progress => goal > 0 ? (steps / goal).clamp(0.0, 1.0) : 0.0;
 
@@ -21,19 +24,23 @@ class StepLog {
     this.steps = 0,
     this.goal = 10000,
     this.isManual = false,
-  });
+    DateTime? lastSyncedAt,
+  }) : lastSyncedAt = lastSyncedAt ?? DateTime.now();
 
   StepLog copyWith({
     Id? id,
     DateTime? date,
     int? steps,
     int? goal,
+    bool? isManual,
+    DateTime? lastSyncedAt,
   }) {
     return StepLog(
       id: id ?? this.id,
       date: date ?? this.date,
       steps: steps ?? this.steps,
       goal: goal ?? this.goal,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }
 }

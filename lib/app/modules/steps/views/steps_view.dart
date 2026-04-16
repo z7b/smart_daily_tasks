@@ -322,7 +322,7 @@ class StepsView extends GetView<StepsController> {
                     return Padding(
                       padding: EdgeInsets.only(top: 12.0),
                       child: Text(
-                        DateFormat.E().format(logs[value.toInt()].date).substring(0, 1),
+                        DateFormat.E(Get.locale?.languageCode).format(logs[value.toInt()].date),
                         style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color, fontWeight: FontWeight.bold),
                       ),
                     );
@@ -407,7 +407,7 @@ class StepsView extends GetView<StepsController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat.yMMMMd().format(log.date),
+                      DateFormat.yMMMMd(Get.locale?.languageCode).format(log.date),
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     SizedBox(height: 4),

@@ -309,7 +309,7 @@ class JobView extends GetView<JobController> {
                               ? 'not_logged_yet'.tr
                               : (today.status.name.tr +
                                   (today.checkInTime != null
-                                      ? ' (${DateFormat.Hm().format(today.checkInTime!)})'
+                                      ? ' (${TimeOfDay.fromDateTime(today.checkInTime!).format(context)})'
                                       : '')),
                           style: TextStyle(
                               color: theme.textTheme.bodySmall?.color,
@@ -590,7 +590,7 @@ class JobView extends GetView<JobController> {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        DateFormat.E(Get.locale?.languageCode).format(date).substring(0, 2),
+                        DateFormat.E(Get.locale?.languageCode).format(date),
                         style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     );
@@ -665,7 +665,7 @@ class JobView extends GetView<JobController> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                DateFormat.Hm().format(log.checkInTime!),
+                TimeOfDay.fromDateTime(log.checkInTime!).format(context),
                 style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -763,7 +763,7 @@ class JobView extends GetView<JobController> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(DateFormat.yMMMMd().format(picked),
+            Text(DateFormat.yMMMMd(Get.locale?.languageCode).format(picked),
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primary,
@@ -782,7 +782,7 @@ class JobView extends GetView<JobController> {
                     Get.snackbar(
                         'success'.tr,
                         'logged_for_day'.trParams(
-                            {'date': DateFormat.yMd().format(picked)}));
+                            {'date': DateFormat.yMd(Get.locale?.languageCode).format(picked)}));
                   },
                 );
               }).toList(),

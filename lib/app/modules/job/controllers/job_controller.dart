@@ -275,6 +275,7 @@ class JobController extends GetxController {
   String formatMinutes(int totalMinutes) {
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+    final anchor = DateTime(2000, 1, 1, hours, minutes);
+    return DateFormat.jm(Get.locale?.languageCode).format(anchor);
   }
 }

@@ -23,7 +23,7 @@ class Note {
   String get titleLower => title.toLowerCase();
 
   @Index(type: IndexType.value)
-  String? get contentLower => content?.toLowerCase();
+  String get contentLower => content?.toLowerCase() ?? '';
 
   Note({
     this.id = Isar.autoIncrement,

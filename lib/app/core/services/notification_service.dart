@@ -116,8 +116,8 @@ class NotificationService extends GetxService {
       await _waitForInit();
     }
 
-    // Convert to TZDateTime
-    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+    // Convert to UTC-safe TZDateTime to prevent offset drifts
+    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime.toUtc(), tz.UTC);
 
     // If time is in the past, don't schedule
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
@@ -126,6 +126,12 @@ class NotificationService extends GetxService {
     bool canScheduleExact = true;
     if (defaultTargetPlatform == TargetPlatform.android) {
       canScheduleExact = await Permission.scheduleExactAlarm.isGranted;
+    }
+    
+    // 🛡️ Governance: Do not silently fail if permissions are utterly revoked
+    if (!(await Permission.notification.isGranted)) {
+      talker.warning('⚠️ Notification permission explicitly denied by user. Aborting.');
+      return;
     }
 
     try {
@@ -180,13 +186,12 @@ class NotificationService extends GetxService {
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     
-    // Calculate how many days to add to reach the target day of week
     int daysToAdd = (dayOfWeek - scheduledDate.weekday + 7) % 7;
-    if (daysToAdd == 0 && scheduledDate.isBefore(now)) {
-      daysToAdd = 7;
-    }
-    
     scheduledDate = scheduledDate.add(Duration(days: daysToAdd));
+    
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
 
     // Check for exact alarm permission on Android 12+
     bool canScheduleExact = true;

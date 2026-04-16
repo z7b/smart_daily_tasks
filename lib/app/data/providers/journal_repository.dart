@@ -26,6 +26,35 @@ class JournalRepository {
     }
   }
 
+  /// Atomically add or update an entry for a specific date (Resolves Race Conditions)
+  Future<bool> addOrUpdateJournalForDate(DateTime date, Mood mood, String? note) async {
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      
+      await _isar.writeTxn(() async {
+        final existing = await _isar.journals
+            .filter()
+            .dateBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
+            .findFirst();
+        
+        final journal = Journal(
+          id: existing?.id ?? Isar.autoIncrement,
+          date: date,
+          mood: mood,
+          note: note,
+          createdAt: existing?.createdAt ?? DateTime.now(),
+        );
+        
+        await _isar.journals.put(journal);
+      });
+      return true;
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Atomic Database Error (Add/Update Journal)');
+      return false;
+    }
+  }
+
   // Read all
   Stream<List<Journal>> watchAllJournals({int limit = 300}) async* {
     yield* _isar.journals.where().sortByDateDesc().watch(fireImmediately: true);

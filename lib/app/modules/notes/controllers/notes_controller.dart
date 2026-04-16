@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import '../../../data/models/note_model.dart';
 import '../../../data/providers/note_repository.dart';
@@ -26,12 +27,15 @@ class NotesController extends GetxController {
   // (Logic moved to _applySearchFilter for efficiency)
 
   final isLoading = false.obs;
+  StreamSubscription? _notesSub;
 
   @override
   void onInit() {
     super.onInit();
-    notes.bindStream(_repository.watchAllNotes());
-    everAll([notes, searchQuery], (_) => _applySearchFilter());
+    _notesSub = _repository.watchAllNotes()
+        .listen((data) => notes.value = data);
+    debounce(searchQuery, (_) => _applySearchFilter(), time: const Duration(milliseconds: 300));
+    ever(notes, (_) => _applySearchFilter());
   }
 
   void _applySearchFilter() {
@@ -181,6 +185,7 @@ class NotesController extends GetxController {
 
   @override
   void onClose() {
+    _notesSub?.cancel();
     titleController.dispose();
     contentController.dispose();
     titleFocusNode.dispose();

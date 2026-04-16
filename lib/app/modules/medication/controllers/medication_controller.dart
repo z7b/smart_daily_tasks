@@ -91,6 +91,7 @@ class MedicationController extends GetxController {
     final List<String> times = [];
     
     if (intervalHours != null) {
+      if (intervalHours <= 0) return times;
       int count = 24 ~/ intervalHours;
       for (int i = 0; i < count; i++) {
         final hour = (startTime.hour + (i * intervalHours)) % 24;
@@ -98,6 +99,7 @@ class MedicationController extends GetxController {
         times.add(_formatTimeOfDay(time));
       }
     } else if (frequency != null) {
+      if (frequency <= 0 || frequency > 24) return times;
       final interval = 24 ~/ frequency;
       for (int i = 0; i < frequency; i++) {
         final hour = (startTime.hour + (i * interval)) % 24;
@@ -126,7 +128,12 @@ class MedicationController extends GetxController {
         var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
         
         // Subtract lead minutes (5m, 10m, etc.)
-        scheduledDate = scheduledDate.subtract(Duration(minutes: med.reminderLeadMinutes));
+        int leadMins = med.reminderLeadMinutes;
+        if (leadMins > 60) {
+          talker.warning('Lead minutes exceeds 60 for med: ${med.name}, capping to 60');
+          leadMins = 60;
+        }
+        scheduledDate = scheduledDate.subtract(Duration(minutes: leadMins));
 
         // If time already passed today, schedule for tomorrow
         if (scheduledDate.isBefore(now)) {
@@ -134,7 +141,7 @@ class MedicationController extends GetxController {
         }
 
         Get.find<NotificationService>().scheduleNotification(
-          id: (med.id % 21474836) * 100 + i, // ✅ Professional Collision-Free Mapping
+          id: (med.id.hashCode.abs() % 10000000) * 100 + i, // ✅ Professional Collision-Free Mapping
           title: '${'my_medications'.tr}: ${med.name}',
           body: '${med.dosage ?? ""} - ${med.instruction.name.tr}',
           scheduledTime: scheduledDate,
@@ -150,12 +157,23 @@ class MedicationController extends GetxController {
   void _cancelAllReminders(int medId) {
     // Cancel all potential slots (0-99) for this med
     for (int i = 0; i < 100; i++) {
-      Get.find<NotificationService>().cancelNotification((medId % 21474836) * 100 + i);
+      Get.find<NotificationService>().cancelNotification((medId.hashCode.abs() % 10000000) * 100 + i);
     }
   }
 
   Future<void> recordIntake(Medication med) async {
     final now = DateTime.now();
+    
+    // ✅ Duplicate Request Debounce Logic
+    if (med.intakeHistory.isNotEmpty) {
+      final lastIntake = med.intakeHistory.last;
+      if (now.difference(lastIntake).inMinutes < 5) {
+        talker.warning('⚠️ Duplicate intake ignored logically.');
+        Get.snackbar('warning'.tr, 'duplicate_intake'.tr);
+        return;
+      }
+    }
+
     final updatedIntake = List<DateTime>.from(med.intakeHistory)..add(now);
     final updatedMed = med.copyWith(intakeHistory: updatedIntake);
     

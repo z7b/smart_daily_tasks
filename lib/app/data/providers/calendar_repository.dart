@@ -53,15 +53,24 @@ class CalendarRepository {
   // Delete
   Future<void> deleteEvent(Id id) async {
     await _isar.writeTxn(() async {
-      await _isar.calendarEvents.delete(id);
+      final event = await _isar.calendarEvents.get(id);
+      if (event != null) {
+        await event.linkedTask.load();
+        if (event.linkedTask.value != null) {
+           await _isar.tasks.delete(event.linkedTask.value!.id);
+        }
+        await _isar.calendarEvents.delete(id);
+      }
     });
   }
 
   // Search by Date
   Future<List<CalendarEvent>> getEventsForDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
     return await _isar.calendarEvents
         .filter()
-        .dateEqualTo(date)
+        .dateBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
         .findAll();
   }
 

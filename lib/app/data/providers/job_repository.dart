@@ -19,14 +19,36 @@ class JobRepository {
     return profile;
   }
 
-  /// Update the WorkProfile settings
+  /// Update the WorkProfile settings with validation
   Future<void> updateWorkProfile(WorkProfile profile) async {
+    // Governance: Validate critical fields
+    if (profile.salaryDay < 1 || profile.salaryDay > 31) {
+      talker.warning('🔴 Invalid salary day: ${profile.salaryDay}');
+      return;
+    }
+    if (profile.startMinutes < 0 || profile.startMinutes >= 1440) {
+      talker.warning('🔴 Invalid start time: ${profile.startMinutes} minutes');
+      return;
+    }
+    if (profile.endMinutes < 0 || profile.endMinutes >= 1440) {
+      talker.warning('🔴 Invalid end time: ${profile.endMinutes} minutes');
+      return;
+    }
     await _isar.writeTxn(() => _isar.workProfiles.put(profile));
   }
 
-  /// Log daily attendance
+  /// Log daily attendance (Atomic to prevent duplicate indexing anomalies)
   Future<void> logAttendance(AttendanceLog log) async {
-    await _isar.writeTxn(() => _isar.attendanceLogs.put(log));
+    await _isar.writeTxn(() async {
+      final startOfDay = DateTime(log.date.year, log.date.month, log.date.day);
+      final existing = await _isar.attendanceLogs.filter().dateEqualTo(startOfDay).findFirst();
+      
+      if (existing != null) {
+        log.id = existing.id; // Override to prevent duplicate record insertion exception
+      }
+      
+      await _isar.attendanceLogs.put(log);
+    });
   }
 
   /// Get attendance log for a specific date
@@ -37,9 +59,11 @@ class JobRepository {
 
   /// Get attendance history for a range (e.g., Monthly/Yearly)
   Future<List<AttendanceLog>> getLogsInRange(DateTime start, DateTime end) async {
+    final normalStart = DateTime(start.year, start.month, start.day);
+    final normalEnd = DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
     return await _isar.attendanceLogs
         .filter()
-        .dateBetween(start, end)
+        .dateBetween(normalStart, normalEnd, includeLower: true, includeUpper: false)
         .sortByDateDesc()
         .findAll();
   }

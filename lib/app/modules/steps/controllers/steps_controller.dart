@@ -51,7 +51,10 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     _pollTimer?.cancel();
+    dailyGoalController.dispose();
+    manualStepsController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
   }
 
   @override
@@ -73,7 +76,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (isHealthAuthorized.value) {
+      if (isHealthAuthorized.value && !isLoading.value) {
         talker.info('⏱️ Real-time Polling Triggered');
         syncData();
       }
@@ -136,7 +139,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   double get progress => dailyGoal.value > 0 ? (stepsToday.value / dailyGoal.value).clamp(0.0, 1.0) : 0.0;
 
   void updateGoal(int newGoal) {
-    if (newGoal <= 0) return;
+    if (newGoal <= 0 || newGoal > 200000) return; // Reasonable bounds
     dailyGoal.value = newGoal;
     dailyGoalController.text = newGoal.toString();
     _storage.write('daily_step_goal', newGoal);

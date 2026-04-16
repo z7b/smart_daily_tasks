@@ -40,20 +40,31 @@ class TaskController extends GetxController {
   final currentTime = DateTime.now().obs;
   Timer? _timer;
 
+  StreamSubscription? _tasksSub;
+
   @override
   void onInit() {
     super.onInit();
     // ✅ Pro Feature: Listen to arguments for deep linking from Home
     if (Get.arguments != null && Get.arguments is Task) {
       loadTaskIntoForm(Get.arguments as Task);
-    } else if (Get.arguments != null && Get.arguments['selectedDate'] != null) {
-      selectedDate.value = DateTime.parse(Get.arguments['selectedDate']);
+    } else if (Get.arguments != null && Get.arguments is Map) {
+      try {
+        final date = Get.arguments['selectedDate'];
+        if (date is String) {
+          selectedDate.value = DateTime.parse(date);
+        }
+      } catch (e) {
+        talker.error('Invalid date: $e');
+      }
     }
-    tasks.bindStream(_repository.watchAllTasks());
     
-    // ✅ Optimization: Reactive Search Filter
-    // Listen to both list changes and search query changes
-    everAll([tasks, searchQuery], (_) => _applySearchFilter());
+    _tasksSub = _repository.watchAllTasks()
+        .listen((data) => tasks.value = data);
+    
+    // ✅ Optimization: Reactive Search Filter with Debounce
+    debounce(searchQuery, (_) => _applySearchFilter(), time: const Duration(milliseconds: 300));
+    ever(tasks, (_) => _applySearchFilter());
 
     _startTimeTick();
   }
@@ -105,7 +116,7 @@ class TaskController extends GetxController {
       final scheduledEnd = _combineDateAndTime(selectedDate.value, endTime.value);
 
       // 🛡️ Governance: Strict Temporal Integrity
-      if (scheduledEnd.isBefore(scheduledAt) || scheduledEnd.isAtSameMomentAs(scheduledAt)) {
+      if (scheduledEnd.isBefore(scheduledAt)) {
         _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
         return;
       }
@@ -164,7 +175,7 @@ class TaskController extends GetxController {
       final scheduledEnd = _combineDateAndTime(selectedDate.value, endTime.value);
 
       // 🛡️ Governance: Strict Temporal Integrity
-      if (scheduledEnd.isBefore(scheduledAt) || scheduledEnd.isAtSameMomentAs(scheduledAt)) {
+      if (scheduledEnd.isBefore(scheduledAt)) {
         _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
         return;
       }
@@ -216,7 +227,7 @@ class TaskController extends GetxController {
       try {
         if (task.scheduledAt.isAfter(DateTime.now())) {
           Get.find<NotificationService>().scheduleNotification(
-            id: task.id,
+            id: task.id + 1000000, // Offset to prevent collision with meds
             title: '${'tasks'.tr}: ${task.title}',
             body: task.note ?? '',
             scheduledTime: task.scheduledAt,
@@ -259,21 +270,49 @@ class TaskController extends GetxController {
       if (isNowCompleted) {
         await Get.find<NotificationService>().cancelNotification(task.id);
         
-        // --- Recurrence Engine: Clone-and-Spawn ---
+         // --- Recurrence Engine: Clone-and-Spawn ---
         if (updatedTask.recurrence != TaskRecurrence.none) {
-           Duration gap;
+           DateTime nextScheduledAt = updatedTask.scheduledAt;
+           DateTime? nextScheduledEnd;
+           
            switch(updatedTask.recurrence) {
-             case TaskRecurrence.daily: gap = const Duration(days: 1); break;
-             case TaskRecurrence.weekly: gap = const Duration(days: 7); break;
-             case TaskRecurrence.monthly: gap = const Duration(days: 30); break; // Simplified
-             default: gap = Duration.zero;
+             case TaskRecurrence.daily:
+                nextScheduledAt = updatedTask.scheduledAt.add(const Duration(days: 1));
+                nextScheduledEnd = updatedTask.scheduledEnd?.add(const Duration(days: 1));
+                break;
+             case TaskRecurrence.weekly:
+                nextScheduledAt = updatedTask.scheduledAt.add(const Duration(days: 7));
+                nextScheduledEnd = updatedTask.scheduledEnd?.add(const Duration(days: 7));
+                break;
+             case TaskRecurrence.monthly:
+                var nMonth = updatedTask.scheduledAt.month + 1;
+                var nYear = updatedTask.scheduledAt.year;
+                if (nMonth > 12) { nMonth = 1; nYear++; }
+                var nDay = updatedTask.scheduledAt.day;
+                var maxDays = DateTime(nYear, nMonth + 1, 0).day;
+                nDay = nDay > maxDays ? maxDays : nDay;
+                
+                nextScheduledAt = DateTime(nYear, nMonth, nDay, updatedTask.scheduledAt.hour, updatedTask.scheduledAt.minute);
+                
+                if (updatedTask.scheduledEnd != null) {
+                  var maxDaysEnd = DateTime(nYear, nMonth + 1, 0).day;
+                  var eDay = updatedTask.scheduledEnd!.day;
+                  eDay = eDay > maxDaysEnd ? maxDaysEnd : eDay;
+                  nextScheduledEnd = DateTime(nYear, nMonth, eDay, updatedTask.scheduledEnd!.hour, updatedTask.scheduledEnd!.minute);
+                }
+                break;
+             default: break;
            }
 
-          final nextScheduledAt = updatedTask.scheduledAt.add(gap);
-          final nextScheduledEnd = updatedTask.scheduledEnd?.add(gap);
-          
-          final nextTask = updatedTask.copyWith(
+          final nextTask = Task(
             id: Isar.autoIncrement, // New Task
+            title: updatedTask.title,
+            note: updatedTask.note,
+            color: updatedTask.color,
+            priority: updatedTask.priority,
+            tags: updatedTask.tags,
+            recurrence: updatedTask.recurrence,
+            isNotificationEnabled: updatedTask.isNotificationEnabled,
             status: TaskStatus.active,
             completedAt: null,
             scheduledAt: nextScheduledAt,
@@ -311,9 +350,9 @@ class TaskController extends GetxController {
       Get.showSnackbar(GetSnackBar(
         message: 'task_cancelled'.tr,
         mainButton: TextButton(
-          onPressed: () {
+          onPressed: () async {
             final undoTask = updatedTask.copyWith(status: TaskStatus.active, completedAt: null);
-            _repository.updateTask(undoTask);
+            await _repository.updateTask(undoTask);
             Get.back();
           },
           child: Text('undo_cancel'.tr, style: const TextStyle(color: Colors.white)),
@@ -357,6 +396,7 @@ class TaskController extends GetxController {
     titleFocusNode.dispose();
     noteFocusNode.dispose();
     _stopTimeTick();
+    _tasksSub?.cancel();
     super.onClose();
   }
 }

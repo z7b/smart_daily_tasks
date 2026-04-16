@@ -45,15 +45,15 @@ class AppLockService extends GetxService {
       // This will prompt for Fingerprint/FaceID or System PIN/Pattern automatically
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'authenticate_to_unlock_app'.tr,
-        options: const AuthenticationOptions(
+        options: AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // 💡 Essential: Allows falling back to System PIN/Code/Pattern
+          biometricOnly: isBiometricEnabled.value, // 💡 Fallback controlled by user setting
           useErrorDialogs: true,
         ),
       );
 
       if (didAuthenticate) {
-        hidePrivacyOverlay();
+        await hidePrivacyOverlay();
         return true;
       }
       
@@ -84,14 +84,14 @@ class AppLockService extends GetxService {
     }
   }
 
-  void showPrivacyOverlay() {
+  Future<void> showPrivacyOverlay() async {
     isOverlayVisible.value = true;
-    enablePrivacyProtection();
+    await enablePrivacyProtection();
   }
 
-  void hidePrivacyOverlay() {
+  Future<void> hidePrivacyOverlay() async {
     isOverlayVisible.value = false;
-    disablePrivacyProtection();
+    await disablePrivacyProtection();
   }
 
   Future<void> toggleAppLock() async {

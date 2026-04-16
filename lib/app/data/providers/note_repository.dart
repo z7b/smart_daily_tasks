@@ -39,8 +39,9 @@ class NoteRepository {
   /// Update an existing note with success result
   Future<bool> updateNote(Note note) async {
     try {
+      final noteWithTimestamp = note.copyWith(updatedAt: DateTime.now());
       await _isar.writeTxn(() async {
-        await _isar.notes.put(note);
+        await _isar.notes.put(noteWithTimestamp);
       });
       return true;
     } on IsarError catch (e, stack) {
@@ -61,12 +62,17 @@ class NoteRepository {
 
   // Search
   Future<List<Note>> searchNotes(String query) async {
-    return await _isar.notes
-        .filter()
-        .titleLowerContains(query.toLowerCase())
-        .or()
-        .contentLowerContains(query.toLowerCase())
-        .limit(50)
-        .findAll();
+    try {
+      return await _isar.notes
+          .filter()
+          .titleLowerContains(query.toLowerCase())
+          .or()
+          .contentLowerContains(query.toLowerCase())
+          .limit(50)
+          .findAll();
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Note search error');
+      return [];
+    }
   }
 }

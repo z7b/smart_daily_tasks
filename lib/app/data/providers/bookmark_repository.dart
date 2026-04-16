@@ -11,6 +11,16 @@ class BookmarkRepository {
   /// Create a new bookmark with success result
   Future<bool> addBookmark(Bookmark bookmark) async {
     try {
+      if (bookmark.url.length > 2048) {
+        talker.warning('🔴 Bookmark URL exceeds maximum 2048 safe length bounds.');
+        return false;
+      }
+      final uri = Uri.tryParse(bookmark.url);
+      if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        talker.warning('🔴 Security: Extracted URL fails HTTP/HTTPS scheme validation.');
+        return false;
+      }
+
       await _isar.writeTxn(() async {
         await _isar.bookmarks.put(bookmark);
       });
@@ -32,6 +42,16 @@ class BookmarkRepository {
   /// Update an existing bookmark with success result
   Future<bool> updateBookmark(Bookmark bookmark) async {
     try {
+      if (bookmark.url.length > 2048) {
+        talker.warning('🔴 Bookmark URL exceeds maximum 2048 safe length bounds.');
+        return false;
+      }
+      final uri = Uri.tryParse(bookmark.url);
+      if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        talker.warning('🔴 Security: Extracted URL fails HTTP/HTTPS scheme validation.');
+        return false;
+      }
+
       await _isar.writeTxn(() async {
         await _isar.bookmarks.put(bookmark);
       });

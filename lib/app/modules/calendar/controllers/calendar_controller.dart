@@ -13,6 +13,7 @@ import '../../../data/providers/medication_repository.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/helpers/log_helper.dart';
+import 'dart:async';
 
 class CalendarController extends GetxController {
   final CalendarRepository _calendarRepo = Get.find<CalendarRepository>();
@@ -31,12 +32,14 @@ class CalendarController extends GetxController {
   final selectedDate = DateTime.now().obs;
   final selectedEvents = <dynamic>[].obs; // Changed to dynamic for Harmony Sync
   final isLoading = false.obs;
+  StreamSubscription? _eventsSub;
 
   @override
   void onInit() {
     super.onInit();
-    // Bind stream from repository to observable list
-    events.bindStream(_calendarRepo.watchAllEvents());
+    // Use explicit subscription to prevent memory leaks
+    _eventsSub = _calendarRepo.watchAllEvents()
+        .listen((data) => events.value = data);
     talker.info('📅 CalendarController initialized');
     
     // Auto-update selected events when the main list or selected day changes
@@ -45,6 +48,7 @@ class CalendarController extends GetxController {
 
   @override
   void onClose() {
+    _eventsSub?.cancel();
     titleController.dispose();
     descriptionController.dispose();
     titleFocusNode.dispose();
@@ -55,7 +59,7 @@ class CalendarController extends GetxController {
   Future<void> _updateSelectedEvents() async {
     isLoading.value = true;
     try {
-      final date = selectedDay.value;
+      final date = DateTime(selectedDay.value.year, selectedDay.value.month, selectedDay.value.day);
       
       // Fetch from all sources in parallel
       final results = await Future.wait([

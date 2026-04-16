@@ -4,6 +4,7 @@ import 'package:isar/isar.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../data/providers/journal_repository.dart';
+import 'dart:async';
 
 class JournalController extends GetxController {
   final JournalRepository _repository;
@@ -22,21 +23,33 @@ class JournalController extends GetxController {
   final noteFocusNode = FocusNode();
 
   final isLoading = false.obs;
+  StreamSubscription? _journalsSub;
 
-  // Life OS: Mood Insights
-  RxMap<int, int> get moodInsights {
+  // Life OS: Mood Insights (O(1) Memory Stable)
+  final moodInsights = <int, int>{}.obs;
+  final journalsByDate = <DateTime, Journal>{}.obs;
+
+  void _processJournalData() {
     final counts = <int, int>{};
+    final mapByDate = <DateTime, Journal>{};
+    
     for (var journal in journals) {
       counts[journal.mood.index] = (counts[journal.mood.index] ?? 0) + 1;
+      final midnight = DateTime(journal.date.year, journal.date.month, journal.date.day);
+      mapByDate[midnight] = journal;
     }
-    return counts.obs;
+    
+    moodInsights.assignAll(counts);
+    journalsByDate.assignAll(mapByDate);
   }
 
   @override
   void onInit() {
     super.onInit();
-    journals.bindStream(_repository.watchAllJournals());
-    everAll([journals, searchQuery], (_) => _applySearchFilter());
+    _journalsSub = _repository.watchAllJournals().listen((data) => journals.value = data);
+    ever(journals, (_) => _processJournalData());
+    debounce(searchQuery, (_) => _applySearchFilter(), time: const Duration(milliseconds: 300));
+    ever(journals, (_) => _applySearchFilter());
   }
 
   void _applySearchFilter() {
@@ -55,6 +68,7 @@ class JournalController extends GetxController {
 
   @override
   void onClose() {
+    _journalsSub?.cancel();
     noteController.dispose();
     noteFocusNode.dispose();
     super.onClose();
@@ -62,14 +76,10 @@ class JournalController extends GetxController {
 
   Journal? getJournalForDate(DateTime date) {
     try {
-      return journals.firstWhereOrNull(
-        (element) =>
-            element.date.year == date.year &&
-            element.date.month == date.month &&
-            element.date.day == date.day,
-      );
+      final key = DateTime(date.year, date.month, date.day);
+      return journalsByDate[key];
     } catch (e, stack) {
-      talker.handle(e, stack, '🔴 Error finding journal');
+      talker.handle(e, stack, '🔴 Error finding journal in hash map');
       return null;
     }
   }
@@ -82,29 +92,14 @@ class JournalController extends GetxController {
       FocusManager.instance.primaryFocus?.unfocus();
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final existing = getJournalForDate(date);
+      final validNote = note.trim().isEmpty ? null : note.trim();
+      final validMood = Mood.values[moodIndex.clamp(0, 4)];
       
-      final journal = Journal(
-        id: existing?.id ?? Isar.autoIncrement,
-        date: date,
-        mood: Mood.values[moodIndex.clamp(0, 4)],
-        note: note.trim().isEmpty ? null : note.trim(),
-        createdAt: existing?.createdAt ?? DateTime.now(),
-      );
-      
-      bool success;
-      if (existing != null) {
-        success = await _repository.updateJournal(journal);
-      } else {
-        success = await _repository.addJournal(journal);
-      }
+      final success = await _repository.addOrUpdateJournalForDate(date, validMood, validNote);
 
       if (success) {
         Get.back();
-        _showSnackbar(
-          'success'.tr,
-          existing != null ? 'journal_updated_status'.tr : 'journal_entry_saved'.tr,
-        );
+        _showSnackbar('success'.tr, 'journal_entry_saved'.tr);
       } else {
         _showSnackbar('error'.tr, 'journal_save_error'.tr, isError: true);
       }
