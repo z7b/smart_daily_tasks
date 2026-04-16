@@ -260,7 +260,7 @@ class HomeController extends GetxController {
       final int total = dayTasks.length;
       final int completed = dayTasks.where((t) => t.status == TaskStatus.completed).length;
       final int cancelled = dayTasks.where((t) => t.status == TaskStatus.cancelled).length;
-      final int pending = dayTasks.where((t) => t.status == TaskStatus.pending).length;
+      final int pending = dayTasks.where((t) => t.status == TaskStatus.active).length;
       
       taskCount.value = total;
       tasksLeftCount.value = pending;
