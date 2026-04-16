@@ -256,9 +256,9 @@ class JobController extends GetxController {
       final startHour = scheduleMin ~/ 60;
       final startMin = scheduleMin % 60;
       
-      // Logic: id = 1000 + day
+      // Logic: id = SHIFT_OFFSET + day
       await service.scheduleWeeklyNotification( 
-        id: 1000 + day,
+        id: NotificationService.SHIFT_OFFSET + day,
         title: 'job_reminder_title'.tr, // "Work Duty"
         body: 'job_reminder_msg'.trParams({'time': formatMinutes(startMinGlobal)}), // Tells actual shift time
         dayOfWeek: day == 0 ? 7 : day, 
@@ -271,7 +271,7 @@ class JobController extends GetxController {
   void _cancelShiftReminders() {
     final service = Get.find<NotificationService>();
     for (int i = 0; i <= 7; i++) {
-       service.cancelNotification(1000 + i);
+       service.cancelNotification(NotificationService.SHIFT_OFFSET + i);
     }
   }
 

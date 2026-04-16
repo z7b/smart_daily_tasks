@@ -125,7 +125,7 @@ class CalendarController extends GetxController {
       if (startTime != null && endTime != null) {
         final startDt = DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute);
         final endDt = DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute);
-        if (!endDt.isAfter(startDt)) {
+        if (endDt.isBefore(startDt) || endDt.isAtSameMomentAs(startDt)) {
           _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
           return;
         }

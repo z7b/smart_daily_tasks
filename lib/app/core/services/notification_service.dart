@@ -11,6 +11,12 @@ class NotificationService extends GetxService {
       FlutterLocalNotificationsPlugin();
 
   final isInitialized = false.obs;
+  
+  // 🛡️ Global ID Governance (Triple Hardening)
+  static const int MED_OFFSET = 1000000;
+  static const int TASK_OFFSET = 2000000;
+  static const int SHIFT_OFFSET = 3000000;
+  static const int SLOTS_PER_ITEM = 100; // Legacy support for multi-dose meds
 
   @override
   void onInit() {
@@ -119,8 +125,11 @@ class NotificationService extends GetxService {
     // Convert to UTC-safe TZDateTime to prevent offset drifts
     final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime.toUtc(), tz.UTC);
 
-    // If time is in the past, don't schedule
-    if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
+    // If time is in the past (with 5s safety buffer for performance overhead), don't schedule
+    if (tzTime.isBefore(tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)))) {
+      talker.warning('🕒 Notification time is in the past or too close (buffer: 5s). Skipping.');
+      return;
+    }
 
     // Check for exact alarm permission on Android 12+
     bool canScheduleExact = true;

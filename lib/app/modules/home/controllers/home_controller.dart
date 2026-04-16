@@ -161,7 +161,12 @@ class HomeController extends GetxController {
     // Refreshes the dashboard stats and greetings automatically
     _pulseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _updateGreeting();
-      _loadRealData();
+      // ✅ Concept 9: Only pulse reload if current view is actually Today
+      if (selectedDate.value.year == DateTime.now().year &&
+          selectedDate.value.month == DateTime.now().month &&
+          selectedDate.value.day == DateTime.now().day) {
+        _loadRealData();
+      }
     });
         
     _journalSub = _isar.journals.watchLazy()
@@ -269,12 +274,17 @@ class HomeController extends GetxController {
         if (!normalizedView.isBefore(medStart) && 
            (medEnd == null || !normalizedView.isAfter(medEnd))) {
           
-          expected += med.reminderTimes.length;
+          final int expectedForThisMed = med.reminderTimes.length;
+          int takenForThisMed = 0;
           for (var intake in med.intakeHistory) {
              if (intake.isSameDay(viewDate)) {
-               taken++;
+               takenForThisMed++;
              }
           }
+          
+          expected += expectedForThisMed;
+          // ✅ Concept 6 Fix: Clamp taken doses per med to not exceed expected
+          taken += takenForThisMed > expectedForThisMed ? expectedForThisMed : takenForThisMed;
         }
       }
       medTakenDoses.value = taken;

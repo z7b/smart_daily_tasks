@@ -76,9 +76,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
 
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (isHealthAuthorized.value && !isLoading.value) {
-        talker.info('⏱️ Real-time Polling Triggered');
+    _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (isHealthAuthorized.value && !isLoading.value && !_isSyncing.value) {
+        talker.info('⏱️ Real-time Polling Triggered (60s)');
         syncData();
       }
     });

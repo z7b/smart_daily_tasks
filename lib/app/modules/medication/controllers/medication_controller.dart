@@ -92,7 +92,7 @@ class MedicationController extends GetxController {
     
     if (intervalHours != null) {
       if (intervalHours <= 0) return times;
-      int count = 24 ~/ intervalHours;
+      int count = (24 / intervalHours).ceil(); // ✅ Use ceiling to ensure all doses within 24h are captured
       for (int i = 0; i < count; i++) {
         final hour = (startTime.hour + (i * intervalHours)) % 24;
         final time = TimeOfDay(hour: hour, minute: startTime.minute);
@@ -141,7 +141,7 @@ class MedicationController extends GetxController {
         }
 
         Get.find<NotificationService>().scheduleNotification(
-          id: (med.id.hashCode.abs() % 10000000) * 100 + i, // ✅ Professional Collision-Free Mapping
+          id: NotificationService.MED_OFFSET + (med.id * NotificationService.SLOTS_PER_ITEM) + i, 
           title: '${'my_medications'.tr}: ${med.name}',
           body: '${med.dosage ?? ""} - ${med.instruction.name.tr}',
           scheduledTime: scheduledDate,
@@ -156,8 +156,8 @@ class MedicationController extends GetxController {
 
   void _cancelAllReminders(int medId) {
     // Cancel all potential slots (0-99) for this med
-    for (int i = 0; i < 100; i++) {
-      Get.find<NotificationService>().cancelNotification((medId.hashCode.abs() % 10000000) * 100 + i);
+    for (int i = 0; i < NotificationService.SLOTS_PER_ITEM; i++) {
+       Get.find<NotificationService>().cancelNotification(NotificationService.MED_OFFSET + (medId * NotificationService.SLOTS_PER_ITEM) + i);
     }
   }
 

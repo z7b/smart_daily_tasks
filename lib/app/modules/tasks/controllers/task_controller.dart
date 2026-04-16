@@ -228,7 +228,7 @@ class TaskController extends GetxController {
       try {
         if (task.scheduledAt.isAfter(DateTime.now())) {
           Get.find<NotificationService>().scheduleNotification(
-            id: task.id + 1000000, // Offset to prevent collision with meds
+            id: NotificationService.TASK_OFFSET + task.id, 
             title: '${'tasks'.tr}: ${task.title}',
             body: task.note ?? '',
             scheduledTime: task.scheduledAt,
@@ -242,7 +242,7 @@ class TaskController extends GetxController {
 
   void deleteTask(Task task) async {
     try {
-      await Get.find<NotificationService>().cancelNotification(task.id);
+      await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
       await _repository.deleteTask(task.id);
       _showSnackbar('success'.tr, 'event_deleted'.tr);
     } catch (e) {
@@ -265,7 +265,7 @@ class TaskController extends GetxController {
       await _repository.updateTask(updatedTask);
       
       if (isNowCompleted) {
-        await Get.find<NotificationService>().cancelNotification(task.id);
+        await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
         
          // --- Recurrence Engine: Clone-and-Spawn ---
         if (updatedTask.recurrence != TaskRecurrence.none) {
@@ -282,21 +282,11 @@ class TaskController extends GetxController {
                 nextScheduledEnd = updatedTask.scheduledEnd?.add(const Duration(days: 7));
                 break;
              case TaskRecurrence.monthly:
-                // Safe modular month arithmetic
-                final srcMonth = updatedTask.scheduledAt.month;
-                final srcYear = updatedTask.scheduledAt.year;
-                final nMonth = (srcMonth % 12) + 1; // 12 -> 1, 1 -> 2, etc.
-                final nYear = srcMonth == 12 ? srcYear + 1 : srcYear;
-                
-                final maxDays = DateTime(nYear, nMonth + 1, 0).day;
-                final nDay = updatedTask.scheduledAt.day > maxDays ? maxDays : updatedTask.scheduledAt.day;
-                
-                nextScheduledAt = DateTime(nYear, nMonth, nDay, updatedTask.scheduledAt.hour, updatedTask.scheduledAt.minute);
+                // Robust Month Rollback Proof Logic
+                nextScheduledAt = _addMonths(updatedTask.scheduledAt, 1);
                 
                 if (updatedTask.scheduledEnd != null) {
-                  final maxDaysEnd = DateTime(nYear, nMonth + 1, 0).day;
-                  final eDay = updatedTask.scheduledEnd!.day > maxDaysEnd ? maxDaysEnd : updatedTask.scheduledEnd!.day;
-                  nextScheduledEnd = DateTime(nYear, nMonth, eDay, updatedTask.scheduledEnd!.hour, updatedTask.scheduledEnd!.minute);
+                  nextScheduledEnd = _addMonths(updatedTask.scheduledEnd!, 1);
                 }
                 break;
              default: break;
@@ -346,7 +336,7 @@ class TaskController extends GetxController {
       );
       
       await _repository.updateTask(updatedTask);
-      await Get.find<NotificationService>().cancelNotification(task.id);
+      await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
       
       _showSnackbar('success'.tr, 'task_cancelled'.tr);
       
@@ -391,6 +381,18 @@ class TaskController extends GetxController {
     selectedColor.value = 0;
     isNotificationEnabled.value = true;
     recurrence.value = TaskRecurrence.none;
+  }
+
+  /// ✅ Professional Month Addition Logic
+  /// Handles year rollover and day-of-month clamping (e.g. Jan 31 -> Feb 28)
+  DateTime _addMonths(DateTime date, int months) {
+    var month = date.month - 1 + months;
+    var year = date.year + month ~/ 12;
+    month = month % 12 + 1;
+    var day = date.day;
+    var maxDays = DateTime(year, month + 1, 0).day;
+    if (day > maxDays) day = maxDays;
+    return DateTime(year, month, day, date.hour, date.minute);
   }
 
   @override
