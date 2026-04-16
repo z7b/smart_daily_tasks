@@ -62,7 +62,6 @@ class HomeController extends GetxController {
   final bodyProgress = 0.0.obs;
   final spiritProgress = 0.0.obs;
   final progressPercentage = 0.0.obs;
-  final tasksLeftCount = 0.obs;
 
   // Mood Analysis Stats
   final weeklyMoodTrend = 'neutral'.obs;
