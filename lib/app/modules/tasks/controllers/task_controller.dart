@@ -115,8 +115,8 @@ class TaskController extends GetxController {
       final scheduledAt = _combineDateAndTime(selectedDate.value, startTime.value);
       final scheduledEnd = _combineDateAndTime(selectedDate.value, endTime.value);
 
-      // 🛡️ Governance: Strict Temporal Integrity
-      if (scheduledEnd.isBefore(scheduledAt)) {
+      // 🛡️ Governance: Strict Temporal Integrity (Start must be strictly before End)
+      if (!scheduledEnd.isAfter(scheduledAt)) {
         _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
         return;
       }
@@ -252,12 +252,8 @@ class TaskController extends GetxController {
 
   void markTaskCompleted(Task task) async {
     try {
-      // ✅ Doctoral Logic: Strict Temporal Integrity
-      if (task.status == TaskStatus.active && task.scheduledAt.isAfter(DateTime.now())) {
-        _showSnackbar('security'.tr, 'strict_completion_error'.tr, isError: true);
-        HapticFeedback.heavyImpact();
-        return;
-      }
+      // Logic: Allow completing tasks at any time, even future ones, for maximum flexibility.
+      // Strict restrictions removed per user request.
 
       final isNowCompleted = task.status != TaskStatus.completed;
       final updatedTask = task.copyWith(
@@ -288,16 +284,15 @@ class TaskController extends GetxController {
                 var nMonth = updatedTask.scheduledAt.month + 1;
                 var nYear = updatedTask.scheduledAt.year;
                 if (nMonth > 12) { nMonth = 1; nYear++; }
-                var nDay = updatedTask.scheduledAt.day;
+                
                 var maxDays = DateTime(nYear, nMonth + 1, 0).day;
-                nDay = nDay > maxDays ? maxDays : nDay;
+                var nDay = updatedTask.scheduledAt.day > maxDays ? maxDays : updatedTask.scheduledAt.day;
                 
                 nextScheduledAt = DateTime(nYear, nMonth, nDay, updatedTask.scheduledAt.hour, updatedTask.scheduledAt.minute);
                 
                 if (updatedTask.scheduledEnd != null) {
                   var maxDaysEnd = DateTime(nYear, nMonth + 1, 0).day;
-                  var eDay = updatedTask.scheduledEnd!.day;
-                  eDay = eDay > maxDaysEnd ? maxDaysEnd : eDay;
+                  var eDay = updatedTask.scheduledEnd!.day > maxDaysEnd ? maxDaysEnd : updatedTask.scheduledEnd!.day;
                   nextScheduledEnd = DateTime(nYear, nMonth, eDay, updatedTask.scheduledEnd!.hour, updatedTask.scheduledEnd!.minute);
                 }
                 break;

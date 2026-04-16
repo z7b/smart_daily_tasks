@@ -288,33 +288,32 @@ class HomeController extends GetxController {
         final now = DateTime.now();
 
 
+        final NORMAL_VIEW_DATE = DateTime(viewDate.year, viewDate.month, viewDate.day);
+        final IS_VIEWING_FUTURE = NORMAL_VIEW_DATE.isAfter(DateTime(now.year, now.month, now.day));
+        
         for (var med in allMeds) {
           final medStartN = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
           final medEndN = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
-          final normalView = DateTime(viewDate.year, viewDate.month, viewDate.day);
-        
-          if (!normalView.isBefore(medStartN) && 
-             (medEndN == null || !normalView.isAfter(medEndN))) {
+          
+          if (!NORMAL_VIEW_DATE.isBefore(medStartN) && 
+             (medEndN == null || !NORMAL_VIEW_DATE.isAfter(medEndN))) {
             
             for (var timeStr in med.reminderTimes) {
-              try {
-                 final time = _parseRobustTime(timeStr);
-                 var scheduledDate = DateTime(viewDate.year, viewDate.month, viewDate.day, time.hour, time.minute);
-                 
-                 // if viewing today and time already passed, its next occurrence is tomorrow
-                 // if viewing future, we just take the time.
-                 if (isToday && scheduledDate.isBefore(now)) {
-                   continue; // Skip past doses today
-                 }
-                 
-                 // Find the closest upcoming dose
-                 if (nextDoseDateTime == null || scheduledDate.isBefore(nextDoseDateTime)) {
-                   nextDoseDateTime = scheduledDate;
-                   nextDoseName = med.name;
-                   nextDoseTimeStr = timeStr;
-                 }
-              } catch (e) {
-                 // ignore parsing errors
+              final time = _parseRobustTime(timeStr);
+              if (time == null) continue;
+
+              var scheduledDate = DateTime(viewDate.year, viewDate.month, viewDate.day, time.hour, time.minute);
+              
+              // Skip past doses only if viewing "Today"
+              if (isToday && scheduledDate.isBefore(now)) {
+                continue;
+              }
+              
+              // Find the closest upcoming dose
+              if (nextDoseDateTime == null || scheduledDate.isBefore(nextDoseDateTime)) {
+                nextDoseDateTime = scheduledDate;
+                nextDoseName = med.name;
+                nextDoseTimeStr = timeStr;
               }
             }
           }
@@ -449,7 +448,7 @@ class HomeController extends GetxController {
     
     final nextSalary = now.nextOccurrenceOfMonthDay(salDay);
     
-    daysUntilSalary.value = nextSalary.difference(now.normalized).inDays;
+    daysUntilSalary.value = nextSalary.difference(DateTime(now.year, now.month, now.day)).inDays;
   }
 
   Future<void> _loadReadingStats() async {
@@ -512,7 +511,8 @@ class HomeController extends GetxController {
 
   Future<void> _loadWeeklyData() async {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
+    final today = DateTime(now.year, now.month, now.day);
+    final sevenDaysAgo = today.subtract(const Duration(days: 6)); // Past 6 days + Today = 7 Days window
     
     // ✅ Optimization: Use property query to only fetch timestamps
     final completedDates = await _isar.tasks.filter()
@@ -559,16 +559,29 @@ class HomeController extends GetxController {
     if (index == 0) _loadRealData();
   }
 
-  DateTime _parseRobustTime(String timeStr) {
-    const english = ['0','1','2','3','4','5','6','7','8','9'];
-    const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-    String normalized = timeStr;
-    for (int i = 0; i < english.length; i++) {
-      normalized = normalized.replaceAll(arabic[i], english[i]);
+  DateTime? _parseRobustTime(String timeStr) {
+    try {
+      const english = ['0','1','2','3','4','5','6','7','8','9'];
+      const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      String normalized = timeStr.trim();
+      for (int i = 0; i < english.length; i++) {
+        normalized = normalized.replaceAll(arabic[i], english[i]);
+      }
+      
+      // Expand linguistic mapping
+      normalized = normalized
+          .replaceAll('ص', 'AM')
+          .replaceAll('م', 'PM')
+          .replaceAll('صباحاً', 'AM')
+          .replaceAll('مساءً', 'PM')
+          .replaceAll('am', 'AM')
+          .replaceAll('pm', 'PM');
+          
+      return DateFormat.jm().parse(normalized);
+    } catch (e) {
+      talker.error('🕒 Time Parse Error ($timeStr): $e');
+      return null;
     }
-    normalized = normalized.replaceAll('ص', 'AM').replaceAll('م', 'PM');
-    normalized = normalized.replaceAll('صباحاً', 'AM').replaceAll('مساءً', 'PM');
-    return DateFormat.jm().parse(normalized);
   }
 
   void _debugStepsData() async {
