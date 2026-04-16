@@ -34,15 +34,6 @@ class SettingsView extends GetView<SettingsController> {
               onChanged: (_) => controller.toggleTheme(),
             ),
             _divider(context),
-            _buildSwitchTile(
-              context,
-              title: 'material_you'.tr,
-              icon: CupertinoIcons.paintbrush_fill,
-              iconBgColor: const Color(0xFFFF9500),
-              value: controller.materialYou,
-              onChanged: (_) => controller.toggleMaterialYou(),
-            ),
-            _divider(context),
             _buildNavigationTile(
               context,
               title: 'font_type'.tr,
@@ -72,6 +63,16 @@ class SettingsView extends GetView<SettingsController> {
         _buildGroupedContainer(
           context,
           children: [
+            _buildNavigationTile(
+              context,
+              title: 'first_day_of_week'.tr,
+              icon: CupertinoIcons.calendar_today,
+              iconBgColor: const Color(0xFFFF9500),
+              valueBuilder: () => controller.firstDayOfWeek.value.tr,
+              onTap: () => controller.changeFirstDayOfWeek(),
+              isAr: isAr,
+            ),
+            _divider(context),
             _buildNavigationTile(
               context,
               title: 'language'.tr,
@@ -112,6 +113,26 @@ class SettingsView extends GetView<SettingsController> {
               value: controller.appLock,
               onChanged: (_) => controller.toggleAppLock(),
             ),
+            Obx(() {
+              if (controller.appLock.value) {
+                return Column(
+                  children: [
+                    if (controller.isBiometricAvailable.value) ...[
+                      _divider(context),
+                      _buildSwitchTile(
+                        context,
+                        title: 'biometric_login'.tr,
+                        icon: CupertinoIcons.viewfinder,
+                        iconBgColor: const Color(0xFF5856D6),
+                        value: controller.isBiometricEnabled,
+                        onChanged: (_) => controller.toggleBiometric(),
+                      ),
+                    ]
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            }),
             _divider(context),
             _buildSwitchTile(
               context,
@@ -120,6 +141,15 @@ class SettingsView extends GetView<SettingsController> {
               iconBgColor: const Color(0xFF8E8E93),
               value: controller.preventScreenshots,
               onChanged: (_) => controller.togglePreventScreenshots(),
+            ),
+            _divider(context),
+            _buildNavigationTile(
+              context,
+              title: 'notification_stability'.tr,
+              icon: CupertinoIcons.battery_100,
+              iconBgColor: const Color(0xFF32ADE6),
+              onTap: () => controller.requestBatteryOptimization(),
+              isAr: isAr,
             ),
           ],
         ),

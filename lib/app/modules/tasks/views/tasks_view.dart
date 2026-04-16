@@ -202,7 +202,7 @@ class TasksView extends GetView<TaskController> {
                       onCancel: () => controller.cancelTask(task),
                       onDelete: () => controller.deleteTask(task),
                     )
-                        .animate(delay: (40 * index).ms)
+                        .animate(key: ValueKey('anim_${task.id}'))
                         .fadeIn(duration: 300.ms)
                         .slideX(begin: 0.06),
                   );

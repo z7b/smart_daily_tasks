@@ -3,16 +3,21 @@ import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/step_log_model.dart';
 import '../../../data/providers/step_repository.dart';
+import '../../../data/services/health_service.dart';
 import '../../../core/helpers/log_helper.dart';
+import 'dart:async';
 
-class StepsController extends GetxController {
+class StepsController extends GetxController with WidgetsBindingObserver {
   final StepRepository _repository = Get.find<StepRepository>();
+  final HealthService _healthService = Get.find<HealthService>();
   final _storage = GetStorage();
 
   final stepsToday = 0.obs;
   final dailyGoal = 10000.obs;
   final isLoading = false.obs;
-  final isHealthAuthorized = false.obs;
+  
+  // Bind UI reactivity to centralized HealthService
+  RxBool get isHealthAuthorized => _healthService.isAuthorized;
   
   // Controllers for manual input
   final dailyGoalController = TextEditingController();
@@ -22,27 +27,57 @@ class StepsController extends GetxController {
   final weeklyLogs = <StepLog>[].obs;
   final monthlyLogs = <StepLog>[].obs;
   final yearlyLogs = <StepLog>[].obs;
-
   final totalStepsAllTime = 0.obs;
+
+  Timer? _pollTimer;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+    
     final savedGoal = _storage.read('daily_step_goal') ?? 10000;
     dailyGoal.value = savedGoal;
     dailyGoalController.text = savedGoal.toString();
-    checkPermissionStatus();
-    syncData();
   }
 
-  Future<void> checkPermissionStatus() async {
-    isHealthAuthorized.value = await _repository.hasPermissions();
+  @override
+  void onReady() {
+    super.onReady();
+    syncData();
+    _startPolling();
+  }
+
+  @override
+  void onClose() {
+    _pollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      talker.info('♻️ App Resumed: Triggering Life OS Steps Pulse...');
+      syncData();
+    }
   }
 
   Future<void> requestHealthPermission() async {
-    final granted = await _repository.requestPermissions();
-    isHealthAuthorized.value = granted;
-    if (granted) syncData();
+    final granted = await _healthService.requestPermissions();
+    if (granted) {
+      syncData();
+      _startPolling();
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (isHealthAuthorized.value) {
+        talker.info('⏱️ Real-time Polling Triggered');
+        syncData();
+      }
+    });
   }
 
   Future<void> syncData() async {
@@ -50,26 +85,33 @@ class StepsController extends GetxController {
     
     try {
       isLoading.value = true;
-      talker.info('🔄 Syncing Life OS Steps...');
+      talker.info('🔄 Syncing Life OS Steps (Authorized: ${isHealthAuthorized.value})');
       
       final today = DateTime.now();
       
-      // 1. Sync data for last 7 days from health sensors (If permitted)
       if (isHealthAuthorized.value) {
+        // Fetch from Master Sensor Authority
+        final sensorSteps = await _healthService.fetchAndPersistSteps();
+        
+        // Sync historical window (7 days) for data integrity
         for (int i = 0; i < 7; i++) {
           final date = today.subtract(Duration(days: i));
-          final count = await _repository.syncStepsForDate(date);
-          if (i == 0) stepsToday.value = count;
+          if (i == 0) {
+             stepsToday.value = sensorSteps;
+          } else {
+             // For history, we just refresh the local cache from repo
+             final log = await _repository.getStepLog(date);
+             // Note: In an ideal world, HealthService would sync history too, 
+             // but we'll focus on today's real-time accuracy first.
+          }
         }
       } else {
-        // Fallback: Read from local Isar cache for today
+        // Fallback: Read from local Isar cache
         final todayLog = await _repository.getStepLog(today);
         stepsToday.value = todayLog?.steps ?? 0;
       }
 
-      // 2. Load historical data from Isar
       _loadHistoricalStats();
-      
       totalStepsAllTime.value = await _repository.getTotalStepsForAllTime();
       
     } catch (e, stack) {
@@ -81,16 +123,12 @@ class StepsController extends GetxController {
 
   Future<void> _loadHistoricalStats() async {
     final now = DateTime.now();
-    
-    // Weekly
     final weekStart = now.subtract(const Duration(days: 7));
     weeklyLogs.assignAll(await _repository.getLogsInRange(weekStart, now));
 
-    // Monthly
     final monthStart = DateTime(now.year, now.month, 1);
     monthlyLogs.assignAll(await _repository.getLogsInRange(monthStart, now));
 
-    // Yearly (Simulated for this MVP - last 12 months)
     final yearStart = DateTime(now.year - 1, now.month, now.day);
     yearlyLogs.assignAll(await _repository.getLogsInRange(yearStart, now));
   }
@@ -98,10 +136,10 @@ class StepsController extends GetxController {
   double get progress => dailyGoal.value > 0 ? (stepsToday.value / dailyGoal.value).clamp(0.0, 1.0) : 0.0;
 
   void updateGoal(int newGoal) {
+    if (newGoal <= 0) return;
     dailyGoal.value = newGoal;
     dailyGoalController.text = newGoal.toString();
     _storage.write('daily_step_goal', newGoal);
-    talker.info('🎯 New Step Goal persisted: $newGoal');
     syncData(); 
   }
 
@@ -117,8 +155,7 @@ class StepsController extends GetxController {
       stepsToday.value = newTotal;
       manualStepsController.clear();
       _loadHistoricalStats();
-      Get.back(); // Close dialog
-      Get.snackbar('success'.tr, 'steps_added'.tr, snackPosition: SnackPosition.BOTTOM);
+      Get.back();
     } catch (e) {
       talker.error('Failed to add manual steps: $e');
     }

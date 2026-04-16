@@ -73,21 +73,30 @@ class JobView extends GetView<JobController> {
                 child: _buildAttendanceActionCard(context),
               ),
 
-              // ── Summary stats strip ──
+              // ── Performance/Consistency Score ──
               SliverToBoxAdapter(
-                child: _buildSummarySection(context),
+                child: _buildConsistencyScore(context),
               ),
 
               // ── Analytics header + chart ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Container(
+                        width: 4,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Text('attendance_analytics'.tr,
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Spacer(),
                       _buildStatBadge(
                         '${(controller.attendanceRate.value * 100).toInt()}%',
                         AppTheme.primary,
@@ -100,7 +109,7 @@ class JobView extends GetView<JobController> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
-                  child: _buildWeeklyChart(context),
+                  child: _buildEnhancedCharts(context),
                 ),
               ),
 
@@ -304,7 +313,8 @@ class JobView extends GetView<JobController> {
                                       : '')),
                           style: TextStyle(
                               color: theme.textTheme.bodySmall?.color,
-                              fontSize: 12),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -396,92 +406,192 @@ class JobView extends GetView<JobController> {
     );
   }
 
-  // ─── Summary strip ───────────────────────────────────────────
-  Widget _buildSummarySection(BuildContext context) {
-    final summary = controller.statsSummary;
-    final statusConfig = {
-      AttendanceStatus.present: [const Color(0xFF34C759), 'present_total'],
-      AttendanceStatus.absent: [const Color(0xFFFF3B30), 'absent_total'],
-      AttendanceStatus.sick: [const Color(0xFFFF9500), 'sick_total'],
-      AttendanceStatus.leave: [const Color(0xFF007AFF), 'leave_total'],
-      AttendanceStatus.holiday: [const Color(0xFFAF52DE), 'holiday_total'],
-    };
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  // ─── Consistency Score Card ──────────────────────────────────
+  Widget _buildConsistencyScore(BuildContext context) {
+    final theme = Theme.of(context);
+    final score = controller.consistencyRate.value;
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.dividerColor.withAlpha(12)),
+      ),
       child: Row(
-        children: statusConfig.entries.map((entry) {
-          final status = entry.key;
-          final color = entry.value[0] as Color;
-          final key = entry.value[1] as String;
-          final count = summary[status] ?? 0;
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: color.withAlpha(15),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: color.withAlpha(30)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.circle, color: color, size: 8),
-                  const SizedBox(width: 7),
-                  Text(
-                    key.trParams({'count': count.toString()}),
-                    style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
-                  ),
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primary.withAlpha(40),
+                  AppTheme.primary.withAlpha(10),
                 ],
               ),
+              shape: BoxShape.circle,
             ),
-          );
-        }).toList(),
+            child: Center(
+              child: Text(
+                '${(score * 100).toInt()}',
+                style: const TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.bold, 
+                  color: AppTheme.primary
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('consistency_rate'.tr, 
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: score,
+                    backgroundColor: theme.dividerColor.withAlpha(10),
+                    color: AppTheme.primary,
+                    minHeight: 6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          _buildStatBadge(
+            'performance_score'.tr,
+            Colors.grey,
+          ),
+        ],
       ),
     );
   }
 
-  // ─── Weekly bar chart ────────────────────────────────────────
-  Widget _buildWeeklyChart(BuildContext context) {
+  // ─── Enhanced Analytics Section ───────────────────────────────
+  Widget _buildEnhancedCharts(BuildContext context) {
+    return Column(
+      children: [
+        _buildPieDistribution(context),
+        const SizedBox(height: 16),
+        _buildWeeklyFrequencyChart(context),
+      ],
+    );
+  }
+
+  Widget _buildPieDistribution(BuildContext context) {
     final theme = Theme.of(context);
-    final stats = controller.weeklyStats;
+    final summary = controller.statsSummary;
+    if (summary.isEmpty) return const SizedBox.shrink();
+
+    final statusColors = {
+      AttendanceStatus.present: const Color(0xFF34C759),
+      AttendanceStatus.absent: const Color(0xFFFF3B30),
+      AttendanceStatus.sick: const Color(0xFFFF9500),
+      AttendanceStatus.leave: const Color(0xFF007AFF),
+      AttendanceStatus.holiday: const Color(0xFFAF52DE),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('attendance_distribution'.tr, 
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 180,
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 4,
+                      centerSpaceRadius: 40,
+                      sections: statusColors.entries.where((e) => summary.containsKey(e.key)).map((entry) {
+                        final count = summary[entry.key] ?? 0;
+                        return PieChartSectionData(
+                          color: entry.value,
+                          value: count.toDouble(),
+                          title: count > 0 ? '$count' : '',
+                          radius: 50,
+                          titleStyle: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: statusColors.entries.where((e) => summary.containsKey(e.key)).map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Container(width: 8, height: 8, decoration: BoxDecoration(color: entry.value, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Text(entry.key.name.tr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyFrequencyChart(BuildContext context) {
+    final theme = Theme.of(context);
+    final stats = controller.weeklyChartData;
     if (stats.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 180,
-      padding: const EdgeInsets.all(18),
+      height: 200,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
       ),
       child: BarChart(
         BarChartData(
           gridData: const FlGridData(show: false),
+          alignment: BarChartAlignment.spaceAround,
           titlesData: FlTitlesData(
-            leftTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   if (value >= 0 && value < stats.length) {
+                    final date = stats[value.toInt()].date;
                     return Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        DateFormat.E()
-                            .format(stats[value.toInt()].date)
-                            .substring(0, 1),
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.grey),
+                        DateFormat.E(Get.locale?.languageCode).format(date).substring(0, 2),
+                        style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     );
                   }
@@ -492,23 +602,23 @@ class JobView extends GetView<JobController> {
           ),
           borderData: FlBorderData(show: false),
           barGroups: List.generate(stats.length, (index) {
-            final log = stats[stats.length - 1 - index];
+            final log = stats[index];
             final isPresent = log.status == AttendanceStatus.present;
+            final color = isPresent ? AppTheme.primary : const Color(0xFFFF3B30).withAlpha(100);
+            
             return BarChartGroupData(
               x: index,
               barRods: [
                 BarChartRodData(
-                  toY: isPresent ? 1 : 0.2,
-                  gradient: isPresent
-                      ? const LinearGradient(
-                          colors: [Color(0xFF34C759), Color(0xFF30D158)],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                        )
-                      : null,
-                  color: isPresent ? null : const Color(0xFFFF3B30).withAlpha(100),
-                  width: 16,
-                  borderRadius: BorderRadius.circular(6),
+                  toY: isPresent ? 1 : 0.4,
+                  color: color,
+                  width: 14,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  backDrawRodData: BackgroundBarChartRodData(
+                    show: true,
+                    toY: 1,
+                    color: theme.dividerColor.withAlpha(5),
+                  ),
                 ),
               ],
             );

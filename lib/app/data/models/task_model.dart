@@ -74,14 +74,14 @@ class Task {
   /// Human-readable time left or status
   @ignore
   String get timeLeft {
-    if (status == TaskStatus.completed) return 'task_completed';
-    if (status == TaskStatus.cancelled) return 'cancelled';
+    if (status == TaskStatus.completed) return 'task_completed_status';
+    if (status == TaskStatus.cancelled) return 'cancelled_status';
     final now = DateTime.now();
     if (now.isAfter(scheduledAt) && (scheduledEnd == null || now.isBefore(scheduledEnd!))) {
-      return 'Active Now';
+      return 'active_now';
     }
     if (now.isAfter(scheduledAt) && scheduledEnd != null && now.isAfter(scheduledEnd!)) {
-      return 'Overdue';
+      return 'overdue';
     }
     
     final diff = scheduledAt.difference(now);

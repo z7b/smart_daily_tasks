@@ -4,7 +4,7 @@ import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/medication_model.dart';
 import '../../../core/helpers/log_helper.dart';
-import '../../../core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 
 class MedicationController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -30,6 +30,10 @@ class MedicationController extends GetxController {
   Future<void> addMedication(Medication med) async {
     if (isLoading.value) return;
     try {
+      if (med.name.trim().isEmpty) {
+        talker.warning('⚠️ Attempted to add medication with empty name');
+        return;
+      }
       isLoading.value = true;
       
       final Id id = await _isar.writeTxn(() async {
@@ -129,7 +133,7 @@ class MedicationController extends GetxController {
           scheduledDate = scheduledDate.add(const Duration(days: 1));
         }
 
-        NotificationService().scheduleNotification(
+        Get.find<NotificationService>().scheduleNotification(
           id: (med.id % 21474836) * 100 + i, // ✅ Professional Collision-Free Mapping
           title: '${'my_medications'.tr}: ${med.name}',
           body: '${med.dosage ?? ""} - ${med.instruction.name.tr}',
@@ -146,7 +150,7 @@ class MedicationController extends GetxController {
   void _cancelAllReminders(int medId) {
     // Cancel all potential slots (0-99) for this med
     for (int i = 0; i < 100; i++) {
-      NotificationService().cancelNotification((medId % 21474836) * 100 + i);
+      Get.find<NotificationService>().cancelNotification((medId % 21474836) * 100 + i);
     }
   }
 
@@ -179,6 +183,15 @@ class MedicationController extends GetxController {
     } catch (e) {
       talker.error('🔴 Med Delete Error: $e');
       Get.snackbar('error'.tr, 'med_delete_error'.tr);
+    }
+  }
+
+  TimeOfDay parseTimeStr(String timeStr) {
+    try {
+      final dt = _parseRobustTime(timeStr);
+      return TimeOfDay(hour: dt.hour, minute: dt.minute);
+    } catch (_) {
+      return TimeOfDay.now();
     }
   }
 

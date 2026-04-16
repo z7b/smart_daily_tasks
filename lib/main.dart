@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
@@ -23,9 +24,9 @@ import 'package:smart_daily_tasks/app/data/models/note_model.dart';
 import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
 import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
 import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
-import 'package:smart_daily_tasks/app/data/models/book_model.dart'; 
+import 'package:smart_daily_tasks/app/data/models/book_model.dart';
 import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
-import 'package:smart_daily_tasks/app/data/models/step_log_model.dart'; 
+import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 
@@ -34,7 +35,7 @@ import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/calendar_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/bookmark_repository.dart';
-import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart'; 
+import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/job_repository.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
@@ -45,7 +46,8 @@ import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_cont
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  FlutterError.onError = (details) => talker.handle(details.exception, details.stack);
+  FlutterError.onError = (details) =>
+      talker.handle(details.exception, details.stack);
   PlatformDispatcher.instance.onError = (error, stack) {
     talker.handle(error, stack);
     return true;
@@ -67,7 +69,6 @@ class AppBootstrapper extends StatefulWidget {
 class _AppBootstrapperState extends State<AppBootstrapper> {
   bool _isInit = false;
   String? _error;
-  AppLockObserver? _appLockObserver;
 
   @override
   void initState() {
@@ -83,27 +84,24 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       await Get.putAsync(() => AppLockService().init(), permanent: true);
 
       final dir = await getApplicationDocumentsDirectory();
-      
+
       // ✅ Step 1: Robust Isar Initialization with Retry & Recovery
       Isar? isar;
       int retryCount = 0;
       while (retryCount <= 2) {
         try {
-          isar = await Isar.open(
-            [
-              TaskSchema, 
-              NoteSchema, 
-              JournalSchema, 
-              CalendarEventSchema, 
-              BookmarkSchema, 
-              BookSchema,
-              MedicationSchema,
-              StepLogSchema,
-              WorkProfileSchema,
-              AttendanceLogSchema,
-            ],
-            directory: dir.path,
-          );
+          isar = await Isar.open([
+            TaskSchema,
+            NoteSchema,
+            JournalSchema,
+            CalendarEventSchema,
+            BookmarkSchema,
+            BookSchema,
+            MedicationSchema,
+            StepLogSchema,
+            WorkProfileSchema,
+            AttendanceLogSchema,
+          ], directory: dir.path);
           break; // Success
         } catch (e) {
           retryCount++;
@@ -111,7 +109,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
           if (retryCount <= 2) {
             final dbFile = File('${dir.path}/default.isar');
             if (await dbFile.exists()) {
-              final backupPath = '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
+              final backupPath =
+                  '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
               await dbFile.rename(backupPath);
               talker.warning('🚨 Corrupted DB backed up to: $backupPath');
             }
@@ -121,7 +120,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
         }
       }
 
-      if (isar == null) throw Exception('Failed to initialize database after retries');
+      if (isar == null)
+        throw Exception('Failed to initialize database after retries');
       Get.put<Isar>(isar, permanent: true);
 
       // ✅ Step 2: Register Repositories
@@ -132,10 +132,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(CalendarRepository(isar), permanent: true);
       Get.put(BookmarkRepository(isar), permanent: true);
       Get.put(MedicationRepository(isar), permanent: true);
-      
-      final stepRepo = StepRepository(isar);
-      await stepRepo.init(); // ✅ Safe async initialization
-      Get.put(stepRepo, permanent: true);
+
+      Get.put(StepRepository(isar), permanent: true);
 
       Get.put(JobRepository(isar), permanent: true);
 
@@ -145,16 +143,16 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       // ✅ Step 4: Initialize Features
       talker.info('🔔 Initializing Notifications...');
-      await NotificationService().init();
-      
-      _appLockObserver = AppLockObserver();
-      WidgetsBinding.instance.addObserver(_appLockObserver!);
+      await Get.putAsync(() => Future.value(NotificationService()), permanent: true);
+
+      final appLockObserver = AppLockObserver();
+      WidgetsBinding.instance.addObserver(appLockObserver);
+      Get.put<AppLockObserver>(appLockObserver, permanent: true);
 
       Get.put(SettingsController(), permanent: true);
 
       if (mounted) setState(() => _isInit = true);
       talker.info('✅ Life OS is Ready');
-
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Fatal System Init Error');
       if (mounted) setState(() => _error = e.toString());
@@ -163,7 +161,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   @override
   void dispose() {
-    if (_appLockObserver != null) WidgetsBinding.instance.removeObserver(_appLockObserver!);
+    if (Get.isRegistered<AppLockObserver>()) {
+      WidgetsBinding.instance.removeObserver(Get.find<AppLockObserver>());
+    }
     super.dispose();
   }
 
@@ -175,9 +175,12 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       home: Scaffold(
         backgroundColor: const Color(0xFF09090B),
         body: Center(
-          child: _error != null 
-            ? Text('Error: $_error', style: const TextStyle(color: Colors.red))
-            : const CircularProgressIndicator(color: Colors.blue),
+          child: _error != null
+              ? Text(
+                  'Error: $_error',
+                  style: const TextStyle(color: Colors.red),
+                )
+              : const CircularProgressIndicator(color: Colors.blue),
         ),
       ),
     );
@@ -190,12 +193,13 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeService = Get.find<ThemeService>();
+    final appLockService = Get.find<AppLockService>();
 
-    return GetMaterialApp(
+    return Obx(() => GetMaterialApp(
       title: 'Smart Daily Tasks',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: themeService.currentTheme,
+      darkTheme: themeService.currentDarkTheme,
       themeMode: themeService.theme,
       initialRoute: AppPages.initial,
       initialBinding: InitialBinding(),
@@ -209,6 +213,71 @@ class MainApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('ar')],
-    );
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!,
+            Obx(() {
+              if (!appLockService.isOverlayVisible.value) {
+                return const SizedBox.shrink();
+              }
+              
+              return Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => appLockService.authenticate(),
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        color: Colors.black.withAlpha(150),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(20),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withAlpha(40)),
+                              ),
+                              child: const Icon(
+                                Icons.security_rounded,
+                                color: Colors.white,
+                                size: 64,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'privacy_overlay_active'.tr,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'tap_to_unlock'.tr,
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(120),
+                                fontSize: 14,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    ));
   }
 }

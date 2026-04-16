@@ -2,8 +2,9 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
+import 'dart:async';
 
-import '../../../core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../core/helpers/log_helper.dart';
@@ -29,11 +30,15 @@ class TaskController extends GetxController {
 
   // Selection variables for new task
   var selectedDate = DateTime.now().obs;
-  var endTime = '9:30 PM'.obs;
-  var startTime = '9:30 AM'.obs;
+  var endTime = const TimeOfDay(hour: 21, minute: 30).obs;
+  var startTime = const TimeOfDay(hour: 9, minute: 30).obs;
   var selectedColor = 0.obs;
   var isNotificationEnabled = true.obs;
   var recurrence = TaskRecurrence.none.obs;
+  
+  // 🕒 Time Governance: Pulse Ticker for Live UI
+  final currentTime = DateTime.now().obs;
+  Timer? _timer;
 
   @override
   void onInit() {
@@ -49,6 +54,19 @@ class TaskController extends GetxController {
     // ✅ Optimization: Reactive Search Filter
     // Listen to both list changes and search query changes
     everAll([tasks, searchQuery], (_) => _applySearchFilter());
+
+    _startTimeTick();
+  }
+
+  void _startTimeTick() {
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      currentTime.value = DateTime.now();
+      talker.debug('🕒 Task Ticker: Pulse');
+    });
+  }
+
+  void _stopTimeTick() {
+    _timer?.cancel();
   }
 
   void _applySearchFilter() {
@@ -86,6 +104,12 @@ class TaskController extends GetxController {
       final scheduledAt = _combineDateAndTime(selectedDate.value, startTime.value);
       final scheduledEnd = _combineDateAndTime(selectedDate.value, endTime.value);
 
+      // 🛡️ Governance: Strict Temporal Integrity
+      if (scheduledEnd.isBefore(scheduledAt) || scheduledEnd.isAtSameMomentAs(scheduledAt)) {
+        _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
+        return;
+      }
+
       final task = Task(
         note: noteController.text.trim(),
         title: title,
@@ -117,27 +141,8 @@ class TaskController extends GetxController {
     }
   }
 
-  DateTime _combineDateAndTime(DateTime date, String timeStr) {
-    try {
-      final format = DateFormat.jm(); // Handle AM/PM
-      final time = format.parse(timeStr);
-      return DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    } catch (e) {
-      // Fallback robust parsing if regional jm() fails
-      try {
-        final parts = timeStr.split(' ');
-        final hm = parts[0].split(':');
-        int hour = int.parse(hm[0]);
-        int min = int.parse(hm[1]);
-        if (parts.length > 1) {
-          if (parts[1].toUpperCase() == 'PM' && hour != 12) hour += 12;
-          if (parts[1].toUpperCase() == 'AM' && hour == 12) hour = 0;
-        }
-        return DateTime(date.year, date.month, date.day, hour, min);
-      } catch (_) {
-         return DateTime(date.year, date.month, date.day, 9, 0);
-      }
-    }
+  DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   /// ✅ New: updateTask method to fix compilation error
@@ -158,6 +163,12 @@ class TaskController extends GetxController {
       final scheduledAt = _combineDateAndTime(selectedDate.value, startTime.value);
       final scheduledEnd = _combineDateAndTime(selectedDate.value, endTime.value);
 
+      // 🛡️ Governance: Strict Temporal Integrity
+      if (scheduledEnd.isBefore(scheduledAt) || scheduledEnd.isAtSameMomentAs(scheduledAt)) {
+        _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
+        return;
+      }
+
       final updatedTask = task.copyWith(
         title: title,
         note: noteController.text.trim(),
@@ -171,7 +182,7 @@ class TaskController extends GetxController {
       final success = await _repository.updateTask(updatedTask);
 
       if (success) {
-        await NotificationService().cancelNotification(task.id);
+        await Get.find<NotificationService>().cancelNotification(task.id);
         _scheduleTaskNotificationAsync(updatedTask);
         _showSnackbar('success'.tr, 'task_update_success'.tr);
 
@@ -204,7 +215,7 @@ class TaskController extends GetxController {
     Future.microtask(() async {
       try {
         if (task.scheduledAt.isAfter(DateTime.now())) {
-          NotificationService().scheduleNotification(
+          Get.find<NotificationService>().scheduleNotification(
             id: task.id,
             title: '${'tasks'.tr}: ${task.title}',
             body: task.note ?? '',
@@ -219,7 +230,7 @@ class TaskController extends GetxController {
 
   void deleteTask(Task task) async {
     try {
-      await NotificationService().cancelNotification(task.id);
+      await Get.find<NotificationService>().cancelNotification(task.id);
       await _repository.deleteTask(task.id);
       _showSnackbar('success'.tr, 'event_deleted'.tr);
     } catch (e) {
@@ -246,7 +257,7 @@ class TaskController extends GetxController {
       await _repository.updateTask(updatedTask);
       
       if (isNowCompleted) {
-        await NotificationService().cancelNotification(task.id);
+        await Get.find<NotificationService>().cancelNotification(task.id);
         
         // --- Recurrence Engine: Clone-and-Spawn ---
         if (updatedTask.recurrence != TaskRecurrence.none) {
@@ -292,7 +303,7 @@ class TaskController extends GetxController {
       );
       
       await _repository.updateTask(updatedTask);
-      await NotificationService().cancelNotification(task.id);
+      await Get.find<NotificationService>().cancelNotification(task.id);
       
       _showSnackbar('success'.tr, 'task_cancelled'.tr);
       
@@ -319,10 +330,10 @@ class TaskController extends GetxController {
     titleController.text = task.title;
     noteController.text = task.note ?? '';
     selectedDate.value = task.scheduledAt;
-    startTime.value = DateFormat.jm().format(task.scheduledAt);
+    startTime.value = TimeOfDay.fromDateTime(task.scheduledAt);
     endTime.value = task.scheduledEnd != null 
-        ? DateFormat.jm().format(task.scheduledEnd!) 
-        : '9:30 PM';
+        ? TimeOfDay.fromDateTime(task.scheduledEnd!) 
+        : const TimeOfDay(hour: 21, minute: 30);
     selectedColor.value = task.color ?? 0;
     isNotificationEnabled.value = task.isNotificationEnabled;
     recurrence.value = task.recurrence;
@@ -332,8 +343,8 @@ class TaskController extends GetxController {
     titleController.clear();
     noteController.clear();
     selectedDate.value = DateTime.now();
-    startTime.value = '9:30 AM';
-    endTime.value = '9:30 PM';
+    startTime.value = const TimeOfDay(hour: 9, minute: 30);
+    endTime.value = const TimeOfDay(hour: 21, minute: 30);
     selectedColor.value = 0;
     isNotificationEnabled.value = true;
     recurrence.value = TaskRecurrence.none;
@@ -345,6 +356,7 @@ class TaskController extends GetxController {
     noteController.dispose();
     titleFocusNode.dispose();
     noteFocusNode.dispose();
+    _stopTimeTick();
     super.onClose();
   }
 }

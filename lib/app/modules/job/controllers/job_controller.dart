@@ -5,7 +5,7 @@ import '../../../data/providers/job_repository.dart';
 import '../../../data/models/work_profile_model.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../core/helpers/log_helper.dart';
-import '../../../core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 
 class JobController extends GetxController {
@@ -21,7 +21,11 @@ class JobController extends GetxController {
   
   final daysUntilSalary = 0.obs;
   final attendanceRate = 0.0.obs;
+  final consistencyRate = 0.0.obs; // 🚀 New Performance Metric
   final isLoading = false.obs;
+  
+  // Weekly Chart Data (Sorted)
+  final weeklyChartData = <AttendanceLog>[].obs;
   
   // Statistical Summaries
   final statsSummary = <AttendanceStatus, int>{}.obs;
@@ -62,24 +66,37 @@ class JobController extends GetxController {
   Future<void> _loadAnalytics() async {
     final now = DateTime.now();
     
-    // Weekly
+    // Weekly (Ensure chronological order for charts)
     final weekStart = now.subtract(const Duration(days: 7));
-    weeklyStats.assignAll(await _repository.getLogsInRange(weekStart, now));
+    final weekLogs = await _repository.getLogsInRange(weekStart, now);
+    weekLogs.sort((a, b) => a.date.compareTo(b.date));
+    weeklyStats.assignAll(weekLogs);
+    weeklyChartData.assignAll(weekLogs);
 
     // Monthly
     final monthStart = DateTime(now.year, now.month, 1);
-    monthlyStats.assignAll(await _repository.getLogsInRange(monthStart, now));
+    final monthLogs = await _repository.getLogsInRange(monthStart, now);
+    monthlyStats.assignAll(monthLogs);
 
     // Yearly
     final yearStart = DateTime(now.year - 1, now.month, now.day);
     yearlyStats.assignAll(await _repository.getLogsInRange(yearStart, now));
 
-    // Calculate Rate (Monthly)
+    // Calculate Rate (Monthly Consistency Score)
     if (monthlyStats.isNotEmpty) {
       final presentCount = monthlyStats.where((l) => l.status == AttendanceStatus.present).length;
       attendanceRate.value = (presentCount / monthlyStats.length).clamp(0.0, 1.0);
+      
+      // Consistency: (Present + Holiday) / Total
+      final consistentCount = monthlyStats.where((l) => 
+        l.status == AttendanceStatus.present || 
+        l.status == AttendanceStatus.holiday || 
+        l.status == AttendanceStatus.leave
+      ).length;
+      consistencyRate.value = (consistentCount / monthlyStats.length).clamp(0.0, 1.0);
     } else {
       attendanceRate.value = 0.0;
+      consistencyRate.value = 0.0;
     }
 
     // Comprehensive Summary
@@ -223,7 +240,7 @@ class JobController extends GetxController {
   Future<void> _scheduleShiftReminders(WorkProfile p) async {
     _cancelShiftReminders(); // Clear old ones first
     
-    final service = NotificationService();
+    final service = Get.find<NotificationService>();
     
     for (var day in p.workingDays) {
       // ✅ Read distinct start minutes for this specific day using custom schedules logic
@@ -249,7 +266,7 @@ class JobController extends GetxController {
   }
 
   void _cancelShiftReminders() {
-    final service = NotificationService();
+    final service = Get.find<NotificationService>();
     for (int i = 0; i <= 7; i++) {
        service.cancelNotification(1000 + i);
     }

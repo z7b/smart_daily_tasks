@@ -628,18 +628,21 @@ class BookView extends GetView<BookController> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: CupertinoButton(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(16),
-                onPressed: () {
-                  final curr = int.tryParse(currentCtrl.text) ?? 0;
-                  final total = int.tryParse(totalCtrl.text) ?? book.totalPages;
-                  controller.updateProgress(book, curr, total);
-                  Get.back();
-                },
-                child: Text('save'.tr,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
+              child: Obx(() {
+                 final curr = int.tryParse(currentCtrl.text) ?? 0;
+                 final total = int.tryParse(totalCtrl.text) ?? book.totalPages;
+                 bool isInvalid = curr > total || curr < 0 || total <= 0;
+                 return CupertinoButton(
+                    color: isInvalid ? Colors.redAccent.withAlpha(200) : AppTheme.primary,
+                    borderRadius: BorderRadius.circular(16),
+                    onPressed: isInvalid ? null : () {
+                      controller.updateProgress(book, curr, total);
+                      Get.back();
+                    },
+                    child: Text(isInvalid ? 'invalid'.tr : 'save'.tr,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  );
+              }),
             ),
           ],
         ),
@@ -702,17 +705,93 @@ class BookView extends GetView<BookController> {
               child: Text('task_completed'.tr),
             ),
           CupertinoActionSheetAction(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(CupertinoIcons.pencil, size: 20),
+                const SizedBox(width: 8),
+                Text('edit_book'.tr),
+              ],
+            ),
+            onPressed: () {
+              Get.back();
+              _showEditMetadataSheet(context, book);
+            },
+          ),
+          CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () {
               Get.back();
               _confirmDeleteBook(context, book);
             },
-            child: Text('delete'.tr),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(CupertinoIcons.trash, size: 20, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('delete'.tr),
+              ],
+            ),
           ),
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Get.back(),
           child: Text('cancel'.tr),
+        ),
+      ),
+    );
+  }
+
+  void _showEditMetadataSheet(BuildContext context, Book book) {
+    final titleCtrl = TextEditingController(text: book.title);
+    final totalPagesCtrl = TextEditingController(text: book.totalPages.toString());
+    final theme = Theme.of(context);
+
+    BottomSheetHelper.showSafeBottomSheet(
+      builder: (context, setState) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 5, decoration: BoxDecoration(color: theme.dividerColor.withAlpha(60), borderRadius: BorderRadius.circular(10))),
+            ),
+            const SizedBox(height: 20),
+            Text('edit_book'.tr, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: titleCtrl,
+              decoration: InputDecoration(labelText: 'title'.tr, prefixIcon: const Icon(CupertinoIcons.bookmark)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: totalPagesCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'total_pages'.tr, prefixIcon: const Icon(CupertinoIcons.number)),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: CupertinoButton(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(16),
+                onPressed: () {
+                  final title = titleCtrl.text.trim();
+                  if (title.isEmpty) return;
+                  final total = int.tryParse(totalPagesCtrl.text) ?? book.totalPages;
+                  controller.updateMetadata(book, title: title, totalPages: total);
+                  Get.back();
+                },
+                child: Text('save'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
         ),
       ),
     );

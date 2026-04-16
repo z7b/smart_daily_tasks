@@ -149,7 +149,7 @@ class AddTaskView extends GetView<TaskController> {
                     icon: CupertinoIcons.time,
                     iconColor: const Color(0xFF007AFF),
                     trailing: Obx(() => Text(
-                      controller.startTime.value,
+                      controller.startTime.value.format(context),
                       style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color),
                     )),
                     onTap: () => _getTimeFromUser(isStartTime: true, context: context),
@@ -160,10 +160,24 @@ class AddTaskView extends GetView<TaskController> {
                     title: 'end_time'.tr,
                     icon: CupertinoIcons.time_solid,
                     iconColor: const Color(0xFF5E5CE6),
-                    trailing: Obx(() => Text(
-                      controller.endTime.value,
-                      style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color),
-                    )),
+                    trailing: Obx(() {
+                      final start = controller.startTime.value;
+                      final end = controller.endTime.value;
+                      // Simple check for invalid time range to show red color
+                      bool isInvalid = false;
+                      final s = DateTime(2000, 1, 1, start.hour, start.minute);
+                      final e = DateTime(2000, 1, 1, end.hour, end.minute);
+                      if (e.isBefore(s) || e.isAtSameMomentAs(s)) isInvalid = true;
+
+                      return Text(
+                        end.format(context),
+                        style: TextStyle(
+                          fontSize: 14, 
+                          color: isInvalid ? Colors.red : theme.textTheme.bodyMedium?.color,
+                          fontWeight: isInvalid ? FontWeight.bold : null,
+                        ),
+                      );
+                    }),
                     onTap: () => _getTimeFromUser(isStartTime: false, context: context),
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
@@ -172,7 +186,8 @@ class AddTaskView extends GetView<TaskController> {
                     title: 'remind_me'.tr,
                     icon: CupertinoIcons.bell_fill,
                     iconColor: const Color(0xFF32ADE6),
-                    value: controller.isNotificationEnabled,
+                    valueGetter: () => controller.isNotificationEnabled.value,
+                    onChanged: (val) => controller.isNotificationEnabled.value = val,
                   ),
                   Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
                   _buildSwitchTile(
@@ -180,7 +195,7 @@ class AddTaskView extends GetView<TaskController> {
                     title: 'daily_recurrence'.tr,
                     icon: CupertinoIcons.repeat,
                     iconColor: const Color(0xFF5856D6),
-                    value: RxBool(controller.recurrence.value == TaskRecurrence.daily),
+                    valueGetter: () => controller.recurrence.value == TaskRecurrence.daily,
                     onChanged: (val) {
                       controller.recurrence.value = val ? TaskRecurrence.daily : TaskRecurrence.none;
                     },
@@ -219,8 +234,8 @@ class AddTaskView extends GetView<TaskController> {
     required String title,
     required IconData icon,
     required Color iconColor,
-    required RxBool value,
-    Function(bool)? onChanged,
+    required bool Function() valueGetter,
+    required Function(bool) onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -238,9 +253,9 @@ class AddTaskView extends GetView<TaskController> {
           Text(title, style: const TextStyle(fontSize: 16)),
           const Spacer(),
           Obx(() => CupertinoSwitch(
-            value: value.value,
-            onChanged: onChanged ?? (val) => value.value = val,
-            activeColor: AppTheme.primary,
+            value: valueGetter(),
+            onChanged: onChanged,
+            activeTrackColor: AppTheme.primary,
           )),
         ],
       ),
@@ -293,26 +308,17 @@ class AddTaskView extends GetView<TaskController> {
     required bool isStartTime,
     required BuildContext context,
   }) async {
-    var pickedTime = await _showTimePicker(context);
-    if (pickedTime == null) return;
-    if (!context.mounted) return;
-    String formatedTime = pickedTime.format(context);
-    if (isStartTime) {
-      controller.startTime.value = formatedTime;
-    } else {
-      controller.endTime.value = formatedTime;
-    }
-  }
-
-  Future<TimeOfDay?> _showTimePicker(BuildContext context) {
-    return showTimePicker(
+    var pickedTime = await showTimePicker(
       initialEntryMode: TimePickerEntryMode.input,
       context: context,
-      initialTime: TimeOfDay(
-        hour: int.tryParse(controller.startTime.value.split(":")[0]) ?? 9,
-        minute: int.tryParse(controller.startTime.value.split(":")[1].split(" ")[0]) ?? 30,
-      ),
+      initialTime: isStartTime ? controller.startTime.value : controller.endTime.value,
     );
+    if (pickedTime == null) return;
+    if (isStartTime) {
+      controller.startTime.value = pickedTime;
+    } else {
+      controller.endTime.value = pickedTime;
+    }
   }
 
   Widget _colorPalette() {

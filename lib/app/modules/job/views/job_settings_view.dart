@@ -97,8 +97,6 @@ class JobSettingsView extends GetView<JobController> {
 
             // Section 4: Individual Day Overrides
             _buildSectionHeader(context, CupertinoIcons.clock_fill, 'custom_schedules'.tr),
-            const SizedBox(height: 8),
-            Text('option to be recurring for all times'.tr, style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 11)),
             const SizedBox(height: 16),
             _buildCustomOverridesList(context),
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smart Daily Tasks</string>
+    <!-- Health Connect Rationale Description required for Android 16 (SDK 35/36) -->
+    <string name="health_permissions_rationale">نحتاج للوصول لبيانات خطواتك وسعراتك الحرارية لعرض نشاطك الرياضي بدقة داخل لوحة تحكم Life OS.\n\nWe need access to your step and calorie data to accurately display your fitness activity within the Life OS dashboard.</string>
+</resources>

@@ -26,25 +26,32 @@ class AppLockObserver extends WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.inactive:
-        // Inactive often means system UI like Keyboard or Biometrics is showing.
-        // We do NOT set background here to prevent UI loops.
-        debugPrint('🟡 App Inactive (System UI/Transition)');
+        // 🛡️ Privacy Blur Trigger (Transition/App Switcher)
+        if (service.isAppLockEnabled.value) {
+          service.showPrivacyOverlay();
+        }
+        debugPrint('🟡 App Inactive - Protection Active');
         break;
 
       case AppLifecycleState.paused:
         _isInBackground = true;
-        debugPrint('🔒 App Paused (In Background)');
+        if (service.isAppLockEnabled.value) {
+          service.showPrivacyOverlay();
+        }
+        debugPrint('🔒 App Paused - Locked');
         break;
 
       case AppLifecycleState.resumed:
         if (_isInBackground && service.isAppLockEnabled.value) {
-          debugPrint('🔒 App Resumed - Preparing Auth');
           _isInBackground = false;
+          debugPrint('🔒 App Resumed - Triggering Native Auth');
           
-          // ✅ Fix: Add slight delay to allow system to settle before showing lock
+          // Show overlay immediately if it's not already visible
+          service.showPrivacyOverlay();
+
           _lifecycleThrottle.throttle(
             () => _showLockScreen(service),
-            duration: const Duration(milliseconds: 600),
+            duration: const Duration(milliseconds: 500),
           );
         } else {
           _isInBackground = false;
@@ -53,6 +60,15 @@ class AppLockObserver extends WidgetsBindingObserver {
 
       default:
         break;
+    }
+  }
+
+  // ✅ Public trigger for Cold Boot Security
+  void enforceColdBootLock() {
+    final service = _appLockService;
+    if (service != null && service.isAppLockEnabled.value) {
+      debugPrint('🔒 Enforcing Cold Boot App Lock');
+      _showLockScreen(service);
     }
   }
 
@@ -76,7 +92,7 @@ class AppLockObserver extends WidgetsBindingObserver {
       bool authenticated = await service.authenticate();
       
       if (!authenticated) {
-        _showAuthFailureDialog();
+        _showAuthFailureDialog(service);
       }
     } catch (e) {
       debugPrint('🔴 Lock screen critical error: $e');
@@ -85,21 +101,22 @@ class AppLockObserver extends WidgetsBindingObserver {
     }
   }
 
-  void _showAuthFailureDialog() {
+  void _showAuthFailureDialog(AppLockService service) {
     if (Get.isDialogOpen ?? false) return;
     
     Get.dialog(
       AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text('خطأ في التحقق', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text('يرجى إعادة المحاولة لفتح التطبيق.', style: TextStyle(color: Colors.white70)),
+        title: Text('auth_failure_title'.tr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('auth_failure_msg'.tr, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () {
               if (Get.isDialogOpen ?? false) Get.back();
               _isAuthenticating = false;
+              _showLockScreen(service); // Immediately retry authentication
             },
-            child: const Text('إعادة المحاولة'),
+            child: Text('retry'.tr),
           ),
         ],
       ),

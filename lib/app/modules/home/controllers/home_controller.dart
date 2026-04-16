@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart';
+import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
@@ -49,9 +50,12 @@ class HomeController extends GetxController {
   final calendarEventCount = 0.obs;
   final bookCount = 0.obs;
   
-  // Progress Logic
-  final tasksLeftCount = 0.obs;
+  // Progress Pillars (Doctoral Logic: Symmetry & Balance)
+  final mindProgress = 0.0.obs;
+  final bodyProgress = 0.0.obs;
+  final spiritProgress = 0.0.obs;
   final progressPercentage = 0.0.obs;
+  final tasksLeftCount = 0.obs;
 
   // Mood Analysis Stats
   final weeklyMoodTrend = 'neutral'.obs;
@@ -93,7 +97,7 @@ class HomeController extends GetxController {
   final weeklyLabels = <String>[].obs;
 
   void refreshDashboard() {
-    _healthService.syncSteps(); // Sync health data on manual refresh
+    _healthService.fetchAndPersistSteps(); // Sync health data on manual refresh
     _loadRealData();
   }
   
@@ -111,6 +115,24 @@ class HomeController extends GetxController {
     _setupRealtimeListeners();
     // ✅ Defer heavy DB work to the next frame to avoid ANR on startup
     Future.delayed(const Duration(milliseconds: 100), () => _loadRealData());
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    
+    // 🛡️ Enforce Cold Boot Security Locks
+    if (Get.isRegistered<AppLockObserver>()) {
+      Get.find<AppLockObserver>().enforceColdBootLock();
+    }
+
+    // ✅ Doctoral Logic: Navigation Governance
+    // Push the user-configured Start Screen *over* HomeView.
+    // This allows the Back button to gracefully return to the underlying Dashboard.
+    final startRoute = AppPages.savedStartRoute;
+    if (startRoute != null) {
+      Get.toNamed(startRoute);
+    }
   }
 
   @override
@@ -229,15 +251,17 @@ class HomeController extends GetxController {
       final allMeds = await _isar.medications.filter().isActiveEqualTo(true).findAll();
       int expected = 0;
       int taken = 0;
-      final now = DateTime.now();
+      final viewDate = selectedDate.value;
+      final isToday = viewDate.isSameDay(DateTime.now());
 
       for (var med in allMeds) {
-        if (now.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
-           (med.endDate == null || now.isBefore(med.endDate!.add(const Duration(days: 1))))) {
+        // Check if med was active on the selected date
+        if (viewDate.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
+           (med.endDate == null || viewDate.isBefore(med.endDate!.add(const Duration(days: 1))))) {
           
           expected += med.reminderTimes.length;
           for (var intake in med.intakeHistory) {
-             if (intake.isSameDay(now)) {
+             if (intake.isSameDay(viewDate)) {
                taken++;
              }
           }
@@ -246,54 +270,58 @@ class HomeController extends GetxController {
       medTakenDoses.value = taken;
       medExpectedDoses.value = expected;
 
-      // Calculate Next Dose Time
+      // Calculate Next Dose Time (Only relevant for today or future)
       nextMedicationTime.value = '';
       nextMedicationName.value = '';
       nextMedicationTimeLeft.value = '';
       
-      DateTime? nextDoseDateTime;
-      String nextDoseName = '';
-      String nextDoseTimeStr = '';
+      if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
+        DateTime? nextDoseDateTime;
+        String nextDoseName = '';
+        String nextDoseTimeStr = '';
+        final now = DateTime.now();
 
-      for (var med in allMeds) {
-        if (now.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
-           (med.endDate == null || now.isBefore(med.endDate!.add(const Duration(days: 1))))) {
-          
-          for (var timeStr in med.reminderTimes) {
-            try {
-               final time = _parseRobustTime(timeStr);
-               var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-               
-               // if time already passed today, its next occurrence is tomorrow
-               if (scheduledDate.isBefore(now)) {
-                 scheduledDate = scheduledDate.add(const Duration(days: 1));
-               }
-               
-               // Find the closest upcoming dose
-               if (nextDoseDateTime == null || scheduledDate.isBefore(nextDoseDateTime)) {
-                 nextDoseDateTime = scheduledDate;
-                 nextDoseName = med.name;
-                 nextDoseTimeStr = timeStr;
-               }
-            } catch (e) {
-               // ignore parsing errors
+        for (var med in allMeds) {
+          if (viewDate.isAfter(med.startDate.subtract(const Duration(days: 1))) && 
+             (med.endDate == null || viewDate.isBefore(med.endDate!.add(const Duration(days: 1))))) {
+            
+            for (var timeStr in med.reminderTimes) {
+              try {
+                 final time = _parseRobustTime(timeStr);
+                 var scheduledDate = DateTime(viewDate.year, viewDate.month, viewDate.day, time.hour, time.minute);
+                 
+                 // if viewing today and time already passed, its next occurrence is tomorrow
+                 // if viewing future, we just take the time.
+                 if (isToday && scheduledDate.isBefore(now)) {
+                   continue; // Skip past doses today
+                 }
+                 
+                 // Find the closest upcoming dose
+                 if (nextDoseDateTime == null || scheduledDate.isBefore(nextDoseDateTime)) {
+                   nextDoseDateTime = scheduledDate;
+                   nextDoseName = med.name;
+                   nextDoseTimeStr = timeStr;
+                 }
+              } catch (e) {
+                 // ignore parsing errors
+              }
             }
           }
         }
-      }
-      
-      if (nextDoseDateTime != null) {
-        nextMedicationTime.value = nextDoseTimeStr;
-        nextMedicationName.value = nextDoseName;
         
-        final diff = nextDoseDateTime.difference(now);
-        final hours = diff.inHours;
-        final minutes = diff.inMinutes % 60;
-        
-        if (hours > 0 || diff.inDays > 0) {
-          nextMedicationTimeLeft.value = '${hours}h ${minutes}m';
-        } else {
-          nextMedicationTimeLeft.value = '${minutes}m';
+        if (nextDoseDateTime != null) {
+          nextMedicationTime.value = nextDoseTimeStr;
+          nextMedicationName.value = nextDoseName;
+          
+          final diff = nextDoseDateTime.difference(now);
+          final hours = diff.inHours;
+          final minutes = diff.inMinutes % 60;
+          
+          if (hours > 0 || diff.inDays > 0) {
+            nextMedicationTimeLeft.value = '${hours}h ${minutes}m';
+          } else {
+            nextMedicationTimeLeft.value = '${minutes}m';
+          }
         }
       }
 
@@ -302,29 +330,38 @@ class HomeController extends GetxController {
       nextTaskTime.value = '';
       nextTaskTimeLeft.value = '';
 
-      final upcomingTasks = dayTasks
-          .where((t) => t.status == TaskStatus.active && t.scheduledAt.isAfter(now))
-          .toList();
-      
-      if (upcomingTasks.isNotEmpty) {
-        // Find the one closest to now
-        upcomingTasks.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-        final nextTask = upcomingTasks.first;
+      if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
+        final now = DateTime.now();
+        final upcomingTasks = dayTasks
+            .where((t) => t.status == TaskStatus.active)
+            .toList();
         
-        nextTaskTitle.value = nextTask.title;
-        nextTaskTime.value = DateFormat.jm().format(nextTask.scheduledAt);
-        nextTaskEndTime.value = nextTask.scheduledEnd != null ? DateFormat.jm().format(nextTask.scheduledEnd!) : '';
-        nextTaskPriority.value = nextTask.priority;
-        nextTaskFullDate.value = DateFormat('dd MMMM yyyy').format(nextTask.scheduledAt) + ' • ' + nextTaskTime.value;
-        
-        final diff = nextTask.scheduledAt.difference(now);
-        final hours = diff.inHours;
-        final minutes = diff.inMinutes % 60;
-        
-        if (hours > 0 || diff.inDays > 0) {
-           nextTaskTimeLeft.value = '${hours}h ${minutes}m';
-        } else {
-           nextTaskTimeLeft.value = '${minutes}m';
+        if (upcomingTasks.isNotEmpty) {
+          upcomingTasks.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+          final nextTask = upcomingTasks.first;
+          
+          nextTaskTitle.value = nextTask.title;
+          nextTaskTime.value = DateFormat.jm().format(nextTask.scheduledAt);
+          nextTaskEndTime.value = nextTask.scheduledEnd != null ? DateFormat.jm().format(nextTask.scheduledEnd!) : '';
+          nextTaskPriority.value = nextTask.priority;
+          nextTaskFullDate.value = DateFormat('dd MMMM yyyy').format(nextTask.scheduledAt) + ' • ' + nextTaskTime.value;
+          
+          final diff = nextTask.scheduledAt.difference(now);
+          if (diff.isNegative) {
+            final hours = diff.inHours.abs();
+            final minutes = diff.inMinutes.abs() % 60;
+            // Negative time denotes overdue/debt time
+            nextTaskTimeLeft.value = '-${hours > 0 ? '${hours}h ' : ''}${minutes}m';
+          } else {
+            final hours = diff.inHours;
+            final minutes = diff.inMinutes % 60;
+            
+            if (hours > 0 || diff.inDays > 0) {
+               nextTaskTimeLeft.value = '${hours}h ${minutes}m';
+            } else {
+               nextTaskTimeLeft.value = '${minutes}m';
+            }
+          }
         }
       }
 
@@ -355,33 +392,32 @@ class HomeController extends GetxController {
       // Calculate Salary Countdown for Bento
       _updateSalaryCountdown(profile);
 
-      // Final Unified Progress Calculation
+      // --- Unified Life OS Governance: Tri-Pillar Calculation ---
       tasksLeftCount.value = total - completed;
       
-      // Doctoral Logic: Only count meds/tasks if they actually exist
-      double weightedProgress = 0.0;
-      double totalWeight = 0.0;
+      // 1. Mind Pillar (Tasks & Intellectual Growth)
+      final taskScore = total > 0 ? (completed / total) : 1.0;
+      final bookScore = currentBookProgress.value;
+      mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
 
-      if (total > 0) {
-        weightedProgress += taskProgress * (isWorkDay ? 0.35 : 0.4);
-        totalWeight += (isWorkDay ? 0.35 : 0.4);
-      }
-      if (expected > 0) {
-        weightedProgress += medProgress * (isWorkDay ? 0.20 : 0.25);
-        totalWeight += (isWorkDay ? 0.20 : 0.25);
-      }
-      weightedProgress += journalProgress * (isWorkDay ? 0.10 : 0.15);
-      totalWeight += (isWorkDay ? 0.10 : 0.15);
-      
-      weightedProgress += stepProgress * (isWorkDay ? 0.15 : 0.2);
-      totalWeight += (isWorkDay ? 0.15 : 0.2);
+      // 2. Body Pillar (Physical Health & Vitality)
+      final stepScore = stepsProgress.value;
+      final medScore = medProgress;
+      bodyProgress.value = (stepScore * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
 
-      if (isWorkDay) {
-        weightedProgress += workProgress * 0.20;
-        totalWeight += 0.20;
-      }
+      // 3. Spirit Pillar (Mindfulness & Reflection)
+      final moodMap = {
+        'happy': 1.0,
+        'relaxed': 0.8,
+        'neutral': 0.6,
+        'stressed': 0.4,
+        'sad': 0.2,
+      };
+      final moodScore = moodMap[weeklyMoodTrend.value] ?? 0.6;
+      spiritProgress.value = (journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
 
-      progressPercentage.value = totalWeight > 0 ? (weightedProgress / totalWeight) : 0.0;
+      // Global Governance Average
+      progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
 
       // ✅ Parallelize non-essential analytics to speed up UI responsiveness
       Future.wait([

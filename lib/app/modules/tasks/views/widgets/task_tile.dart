@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:smart_daily_tasks/app/modules/tasks/controllers/task_controller.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -71,18 +72,25 @@ class TaskTile extends StatelessWidget {
             child: Stack(
               children: [
                 // Top Progress Bar for active tasks
-                if (!isCompleted && !isCancelled && task.progress > 0 && task.progress < 1)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 3,
-                    child: LinearProgressIndicator(
-                      value: task.progress,
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: 0.5)),
-                    ),
-                  ),
+                if (!isCompleted && !isCancelled)
+                  Obx(() {
+                    // Access currentTime to trigger rebuilds on ticks
+                    Get.find<TaskController>().currentTime.value;
+                    final progress = task.progress;
+                    if (progress <= 0 || progress >= 1) return const SizedBox.shrink();
+                    
+                    return Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 3,
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: 0.5)),
+                      ),
+                    );
+                  }),
 
                 Row(
                   children: [
@@ -174,7 +182,7 @@ class TaskTile extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    "${DateFormat('dd/MM/yyyy').format(task.scheduledAt)} • ${DateFormat.jm().format(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${DateFormat.jm().format(task.scheduledEnd!)}' : ''}",
+                                    "${DateFormat('dd/MM/yyyy').format(task.scheduledAt)} • ${TimeOfDay.fromDateTime(task.scheduledAt).format(context)}${task.scheduledEnd != null ? ' - ${TimeOfDay.fromDateTime(task.scheduledEnd!).format(context)}' : ''}",
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
@@ -185,22 +193,26 @@ class TaskTile extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                // The "Intelligence" Part: Time Left
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    task.timeLeft,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: color.withValues(alpha: 0.8),
+                                // The "Intelligence" Part: Time Left (Reactive)
+                                Obx(() {
+                                  // Access currentTime to trigger rebuild on tick
+                                  Get.find<TaskController>().currentTime.value;
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
-                                  ),
-                                ),
+                                    child: Text(
+                                      task.timeLeft.tr, // .tr added for localization
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: color.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  );
+                                }),
                               ],
                             ),
                             if (task.note?.isNotEmpty ?? false) ...[

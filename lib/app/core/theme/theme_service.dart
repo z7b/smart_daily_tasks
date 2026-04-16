@@ -13,11 +13,11 @@ class ThemeService extends GetxService {
   // Reactive state so UI can observe
   final isDarkModeRx = true.obs;
   final fontTypeRx = 'Rubik'.obs;
-  final fontSizeRx = 'Large'.obs;
+  final fontSizeRx = 'medium'.obs;
 
   bool get isDarkMode => _loadThemeFromBox();
   String get fontType => _box.read(_fontTypeKey) ?? 'Rubik';
-  String get fontSize => _box.read(_fontSizeKey) ?? 'Large';
+  String get fontSize => _box.read(_fontSizeKey) ?? 'medium';
 
   ThemeMode get theme => _loadThemeFromBox() ? ThemeMode.dark : ThemeMode.light;
 
@@ -46,7 +46,6 @@ class ThemeService extends GetxService {
       _box.write(_fontTypeKey, fontName);
       fontTypeRx.value = fontName;
       debugPrint('🎨 Font changed to: $fontName');
-      _rebuildTheme();
     } catch (e) {
       debugPrint('⚠️ Error switching font: $e');
     }
@@ -57,62 +56,23 @@ class ThemeService extends GetxService {
       _box.write(_fontSizeKey, size);
       fontSizeRx.value = size;
       debugPrint('📏 Font size changed to: $size');
-      _rebuildTheme();
     } catch (e) {
       debugPrint('⚠️ Error switching font size: $e');
     }
   }
 
-  /// Rebuild theme by applying new ThemeData built from updated storage values.
-  /// Uses Get.changeTheme for instant, flicker-free rebuild.
-  void _rebuildTheme() {
-    try {
-      // Import AppTheme dynamically to avoid circular deps at compile time;
-      // since it's a static getter, it will re-read GetStorage on each call.
-      final bool isDark = _loadThemeFromBox();
-      if (isDark) {
-        Get.changeTheme(ThemeData.dark()); // temporary
-        Future.delayed(const Duration(milliseconds: 50), () {
-          Get.changeTheme(
-            _buildDarkTheme(),
-          );
-          Get.changeThemeMode(ThemeMode.dark);
-        });
-      } else {
-        Get.changeTheme(ThemeData.light()); // temporary
-        Future.delayed(const Duration(milliseconds: 50), () {
-          Get.changeTheme(
-            _buildLightTheme(),
-          );
-          Get.changeThemeMode(ThemeMode.light);
-        });
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error rebuilding theme: $e');
-    }
-  }
+  // ✅ Reactive Theme Getters for Root Rebuild
+  ThemeData get currentTheme => AppTheme.buildTheme(
+    isDark: false, 
+    fontName: fontTypeRx.value, 
+    fontSizeKey: fontSizeRx.value,
+  );
 
-  /// Wrapper that imports AppTheme lazily to build light theme.
-  ThemeData _buildLightTheme() {
-    // ignore: avoid_dynamic_calls
-    try {
-      // We call the static getter which reads from GetStorage each time.
-      return AppTheme.lightTheme;
-    } catch (e) {
-      debugPrint('⚠️ Fallback light theme used: $e');
-      return ThemeData.light();
-    }
-  }
-
-  /// Wrapper that imports AppTheme lazily to build dark theme.
-  ThemeData _buildDarkTheme() {
-    try {
-      return AppTheme.darkTheme;
-    } catch (e) {
-      debugPrint('⚠️ Fallback dark theme used: $e');
-      return ThemeData.dark();
-    }
-  }
+  ThemeData get currentDarkTheme => AppTheme.buildTheme(
+    isDark: true, 
+    fontName: fontTypeRx.value, 
+    fontSizeKey: fontSizeRx.value,
+  );
 
   // --- Locale ---
   Locale getLocale() {
@@ -156,7 +116,7 @@ class ThemeService extends GetxService {
     try {
       isDarkModeRx.value = _loadThemeFromBox();
       fontTypeRx.value = _box.read(_fontTypeKey) ?? 'Rubik';
-      fontSizeRx.value = _box.read(_fontSizeKey) ?? 'Large';
+      fontSizeRx.value = _box.read(_fontSizeKey) ?? 'medium';
     } catch (e) {
       debugPrint('⚠️ ThemeService init error: $e');
     }

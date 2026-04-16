@@ -464,8 +464,14 @@ class MedicationView extends GetView<MedicationController> {
     final frequencyCount = 1.obs;
     final intervalHours = 8.obs;
     final firstDoseTime = TimeOfDay.now().obs;
+    if (isEdit && med.reminderTimes.isNotEmpty) {
+      try {
+        final time = controller.parseTimeStr(med.reminderTimes.first);
+        firstDoseTime.value = time;
+      } catch (_) {}
+    }
     final reminderTimes = <String>[].obs;
-    if (isEdit) reminderTimes.assignAll(med!.reminderTimes);
+    if (isEdit) reminderTimes.assignAll(med.reminderTimes);
 
     final theme = Theme.of(context);
 
@@ -505,7 +511,7 @@ class MedicationView extends GetView<MedicationController> {
                       if (isEdit)
                         GestureDetector(
                           onTap: () {
-                            controller.deleteMedication(med!);
+                            controller.deleteMedication(med);
                             Get.back();
                           },
                           child: Container(
@@ -561,7 +567,7 @@ class MedicationView extends GetView<MedicationController> {
                                   ? 7
                                   : durationDays.value,
                               underline: const SizedBox(),
-                              items: [3, 5, 7, 10, 14, 30]
+                              items: ([3, 5, 7, 10, 14, 30, durationDays.value].toSet().toList()..sort())
                                   .map((e) => DropdownMenuItem(
                                       value: e,
                                       child: Text('$e ${'days'.tr}')))
@@ -616,7 +622,7 @@ class MedicationView extends GetView<MedicationController> {
                                   const Spacer(),
                                   DropdownButton<int>(
                                     value: frequencyCount.value,
-                                    items: [1, 2, 3, 4, 5, 6]
+                                    items: ([1, 2, 3, 4, 5, 6, frequencyCount.value].toSet().toList()..sort())
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
@@ -641,7 +647,7 @@ class MedicationView extends GetView<MedicationController> {
                                   const Spacer(),
                                   DropdownButton<int>(
                                     value: intervalHours.value,
-                                    items: [4, 6, 8, 12]
+                                    items: ([4, 6, 8, 12, intervalHours.value].toSet().toList()..sort())
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
@@ -717,10 +723,19 @@ class MedicationView extends GetView<MedicationController> {
                   color: AppTheme.primary,
                   borderRadius: BorderRadius.circular(16),
                   onPressed: () {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      Get.snackbar('error'.tr, 'title_required'.tr, 
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.redAccent.withAlpha(30),
+                        colorText: Colors.redAccent);
+                      return;
+                    }
+
                     final endDateValue = startDate.value
                         .add(Duration(days: durationDays.value));
                     final updatedMed = Medication(
-                      id: isEdit ? med!.id : Isar.autoIncrement,
+                      id: isEdit ? med.id : Isar.autoIncrement,
                       name: nameController.text.trim(),
                       dosage: dosageController.text.trim(),
                       type: selectedType.value,
@@ -732,9 +747,9 @@ class MedicationView extends GetView<MedicationController> {
                           : reminderTimes.toList(),
                       isNotificationEnabled: notificationsEnabled.value,
                       createdAt:
-                          isEdit ? med!.createdAt : DateTime.now(),
+                          isEdit ? med.createdAt : DateTime.now(),
                       intakeHistory:
-                          isEdit ? med!.intakeHistory : [],
+                          isEdit ? med.intakeHistory : [],
                     );
                     if (isEdit) {
                       controller.updateMedication(updatedMed);

@@ -106,6 +106,8 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
+
+
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -124,21 +126,12 @@ class HomeView extends GetView<HomeController> {
               crossAxisSpacing: 16,
               childAspectRatio: 1.45,
               children: [
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'tasks'.tr,
-                    controller.taskCount.value,
-                    Icons.task_alt,
-                    const Color(0xFF007AFF),
-                    Routes.TASKS,
-                  ),
-                ),
+
                 Obx(
                   () => _buildBentoItem(
                     context,
                     'notes'.tr,
-                    controller.noteCount.value,
+                    '${controller.noteCount.value} ${'entries'.tr}',
                     Icons.edit_note,
                     const Color(0xFFFF9500),
                     Routes.NOTES,
@@ -148,7 +141,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'journal'.tr,
-                    controller.journalCount.value,
+                    '${controller.journalCount.value} ${'logs'.tr}',
                     Icons.book,
                     const Color(0xFF34C759),
                     Routes.JOURNAL,
@@ -158,7 +151,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'bookmarks'.tr,
-                    controller.bookmarkCount.value,
+                    '${controller.bookmarkCount.value} ${'saved'.tr}',
                     Icons.bookmark,
                     const Color(0xFFFF3B30),
                     Routes.BOOKMARKS,
@@ -168,7 +161,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'my_library'.tr,
-                    controller.bookCount.value,
+                    '${controller.bookCount.value} ${'books'.tr}',
                     Icons.menu_book,
                     const Color(0xFF5E5CE6),
                     Routes.BOOKS,
@@ -178,27 +171,18 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'calendar'.tr,
-                    controller.calendarEventCount.value,
+                    '${controller.calendarEventCount.value} ${'events'.tr}',
                     Icons.calendar_month,
                     const Color(0xFFBF5AF2),
                     Routes.CALENDAR,
                   ),
                 ),
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'my_medications'.tr,
-                    controller.medicationCount.value,
-                    CupertinoIcons.heart_fill,
-                    Colors.redAccent,
-                    '/medication',
-                  ),
-                ),
+
                 Obx(
                   () => _buildBentoItem(
                     context,
                     'my_steps'.tr,
-                    controller.stepsCount.value,
+                    '${controller.stepsCount.value} ${'steps'.tr}',
                     Icons.directions_walk,
                     Colors.tealAccent,
                     Routes.STEPS,
@@ -208,7 +192,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'my_job'.tr,
-                    controller.daysUntilSalary.value,
+                    '${controller.daysUntilSalary.value} ${'days_left'.tr}',
                     Icons.work_outline,
                     const Color(0xFF5E5CE6),
                     Routes.JOB,
@@ -351,7 +335,7 @@ class HomeView extends GetView<HomeController> {
   Widget _buildBentoItem(
     BuildContext context,
     String title,
-    int count,
+    String subtitle,
     IconData icon,
     Color color,
     String route,
@@ -363,33 +347,42 @@ class HomeView extends GetView<HomeController> {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: color.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$count',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.withAlpha(200),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -605,6 +598,7 @@ class HomeView extends GetView<HomeController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ===== الرأس: الأيقونة والعنوان والعداد =====
               Row(
                 children: [
                   const Icon(
@@ -632,10 +626,13 @@ class HomeView extends GetView<HomeController> {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // ===== تفاصيل العلاج القادم =====
               if (controller.nextMedicationTime.value.isNotEmpty) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // النص: الاسم والوقت المتبقي
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,10 +647,7 @@ class HomeView extends GetView<HomeController> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
-                          if (controller
-                              .nextMedicationTimeLeft
-                              .value
-                              .isNotEmpty)
+                          if (controller.nextMedicationTimeLeft.value.isNotEmpty)
                             Text(
                               '${'remaining'.tr}: ${controller.nextMedicationTimeLeft.value}',
                               style: const TextStyle(
@@ -666,35 +660,39 @@ class HomeView extends GetView<HomeController> {
                         ],
                       ),
                     ),
+
+                    // الوقت: مع Shimmer Animation
                     Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            controller.nextMedicationTime.value,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.redAccent,
-                            ),
-                          ),
-                        )
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        controller.nextMedicationTime.value,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    )
                         .animate(onPlay: (c) => c.repeat())
                         .shimmer(duration: const Duration(seconds: 2)),
                   ],
                 ),
                 const SizedBox(height: 16),
               ],
+
+              // ===== شريط التقدم =====
               LinearProgressIndicator(
                 value: controller.medExpectedDoses.value > 0
                     ? (controller.medTakenDoses.value /
-                              controller.medExpectedDoses.value)
-                          .clamp(0.0, 1.0)
+                          controller.medExpectedDoses.value)
+                        .clamp(0.0, 1.0)
                     : 1.0,
                 backgroundColor: Colors.redAccent.withAlpha(20),
                 valueColor: const AlwaysStoppedAnimation<Color>(
@@ -712,6 +710,7 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildTaskHomeCard(BuildContext context) {
     const accentColor = Color(0xFF007AFF); // Blue
+
     return Obx(
       () => GestureDetector(
         onTap: () => Get.toNamed(Routes.TASKS),
@@ -725,6 +724,7 @@ class HomeView extends GetView<HomeController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ===== الرأس: الأيقونة والعنوان والعداد =====
               Row(
                 children: [
                   Icon(
@@ -753,24 +753,30 @@ class HomeView extends GetView<HomeController> {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // ===== تفاصيل المهمة القادمة =====
               if (controller.nextTaskTitle.value.isNotEmpty) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // النص: الاسم والوقت المتبقي والتاريخ
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // الأولوية (نقطة ملونة) + الاسم
                           Row(
                             children: [
                               Obx(() => Container(
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: controller.nextTaskPriority.value == TaskPriority.high 
-                                      ? Colors.redAccent 
-                                      : controller.nextTaskPriority.value == TaskPriority.medium 
-                                          ? accentColor 
+                                  color: controller.nextTaskPriority.value ==
+                                      TaskPriority.high
+                                      ? Colors.redAccent
+                                      : controller.nextTaskPriority.value ==
+                                          TaskPriority.medium
+                                          ? accentColor
                                           : Colors.greenAccent,
                                   shape: BoxShape.circle,
                                 ),
@@ -789,20 +795,22 @@ class HomeView extends GetView<HomeController> {
                               ),
                             ],
                           ),
-                          const SizedBox(
-                            height: 4,
-                          ), // Matched with Medication Card
+                          const SizedBox(height: 4),
+
+                          // الوقت المتبقي
                           if (controller.nextTaskTimeLeft.value.isNotEmpty)
                             Text(
                               '${'remaining'.tr}: ${controller.nextTaskTimeLeft.value}',
                               style: const TextStyle(
-                                fontSize: 12, // Matched with Medication Card
+                                fontSize: 12,
                                 color: Colors.grey,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           const SizedBox(height: 4),
+
+                          // التاريخ الكامل
                           Text(
                             controller.nextTaskFullDate.value,
                             style: TextStyle(
@@ -816,38 +824,42 @@ class HomeView extends GetView<HomeController> {
                         ],
                       ),
                     ),
+
+                    // الوقت: مع Shimmer Animation
                     Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accentColor.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            controller.nextTaskEndTime.value.isNotEmpty 
-                                ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}' 
-                                : controller.nextTaskTime.value,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: accentColor,
-                            ),
-                          ),
-                        )
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accentColor.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        controller.nextTaskEndTime.value.isNotEmpty
+                            ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
+                            : controller.nextTaskTime.value,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
+                        ),
+                      ),
+                    )
                         .animate(onPlay: (c) => c.repeat())
                         .shimmer(duration: const Duration(seconds: 2)),
                   ],
                 ),
                 const SizedBox(height: 16),
               ],
+
+              // ===== شريط التقدم =====
               LinearProgressIndicator(
                 value: controller.taskCount.value > 0
                     ? ((controller.taskCount.value -
-                                  controller.tasksLeftCount.value) /
-                              controller.taskCount.value)
-                          .clamp(0.0, 1.0)
+                          controller.tasksLeftCount.value) /
+                        controller.taskCount.value)
+                        .clamp(0.0, 1.0)
                     : 1.0,
                 backgroundColor: accentColor.withAlpha(20),
                 valueColor: const AlwaysStoppedAnimation<Color>(accentColor),
@@ -863,19 +875,22 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildWelcomeCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF007AFF), Color(0xFF5E5CE6)],
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF007AFF),
+            const Color(0xFF5E5CE6),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5E5CE6).withAlpha(50),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: const Color(0xFF007AFF).withAlpha(60),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
@@ -883,79 +898,107 @@ class HomeView extends GetView<HomeController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'life_os_progress'.tr, // ✅ Integrated Life OS
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'dashboard_head'.tr,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
-                    const SizedBox(height: 6),
-                    Obx(
-                      () => Text(
-                        'unified_status'.trParams({
-                          'percent': (controller.progressPercentage.value * 100)
-                              .toInt()
-                              .toString(),
-                        }),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Obx(() => Text(
+                    'unified_status'.trParams({
+                      'percent': (controller.progressPercentage.value * 100).toInt().toString()
+                    }),
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(180),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                  )),
+                ],
               ),
               const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
             ],
           ),
-          const SizedBox(height: 16),
-          // Mind • Body • Spirit Indicators
-          Row(
+          const SizedBox(height: 32),
+          
+          // Unified Master Progress Bar
+          Stack(
             children: [
-              Text(
-                'mind_body_spirit'.tr,
-                style: const TextStyle(
-                  color: Colors.white60,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+              Container(
+                height: 12,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(30),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              const Spacer(),
-              Obx(
-                () => Text(
-                  '${(controller.progressPercentage.value * 100).toInt()}%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Obx(() => AnimatedContainer(
+                duration: const Duration(seconds: 1),
+                curve: Curves.easeOutCubic,
+                height: 12,
+                width: MediaQuery.of(context).size.width * 
+                       (controller.progressPercentage.value.clamp(0.05, 1.0)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white.withAlpha(100),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
-              ),
+              )),
             ],
           ),
-          const SizedBox(height: 8),
-          Obx(
-            () => LinearProgressIndicator(
-              value: controller.progressPercentage.value,
-              backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 10,
-              borderRadius: BorderRadius.circular(5),
-            ),
+          
+          const SizedBox(height: 20),
+          
+          // Subtle Pillar Status Row (Minimalist Balance)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniPillar('mind'.tr, controller.mindProgress),
+              _buildMiniPillar('body'.tr, controller.bodyProgress),
+              _buildMiniPillar('spirit'.tr, controller.spiritProgress),
+            ],
           ),
         ],
       ),
-    ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+    ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)).slideY(begin: 0.05, end: 0);
+  }
+
+  Widget _buildMiniPillar(String label, RxDouble progress) {
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: Colors.white70,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Obx(() => Text(
+          '$label: ${(progress.value * 100).toInt()}%',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        )),
+      ],
+    );
   }
 }

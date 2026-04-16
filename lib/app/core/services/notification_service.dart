@@ -6,79 +6,100 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../helpers/log_helper.dart';
 
-class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-
-  factory NotificationService() {
-    return _instance;
-  }
-
-  NotificationService._internal();
-
+class NotificationService extends GetxService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  Future<void> init() async {
-    // Defer initialization to avoid blocking the main thread during startup
-    Future.delayed(const Duration(seconds: 1), () async {
-      try {
-        tz.initializeTimeZones();
+  final isInitialized = false.obs;
 
-        const AndroidInitializationSettings initializationSettingsAndroid =
-            AndroidInitializationSettings('@mipmap/ic_launcher');
-
-        const InitializationSettings initializationSettings =
-            InitializationSettings(android: initializationSettingsAndroid);
-
-        await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-        // Create channel for high importance notifications
-        const AndroidNotificationChannel channel = AndroidNotificationChannel(
-          'daily_tasks_channel', // id
-          'Smart Daily Tasks', // title
-          description: 'Notifications for your scheduled tasks', // description
-          importance: Importance.high,
-        );
-
-        await flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >()
-            ?.createNotificationChannel(channel);
-
-        // Create channel for work shifts
-        const AndroidNotificationChannel shiftChannel = AndroidNotificationChannel(
-          'work_shifts_channel', 
-          'Work Shifts',
-          description: 'Reminders for your work shift start times',
-          importance: Importance.max,
-        );
-
-        await flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >()
-            ?.createNotificationChannel(shiftChannel);
-            
-        await requestPermissions(); // ✅ Request permissions explicitly
-        
-        talker.info('✅ Notifications initialized successfully');
-      } catch (e, stack) {
-        talker.handle(e, stack, '⚠️ Error initializing notifications');
-      }
-    });
+  @override
+  void onInit() {
+    super.onInit();
+    init();
   }
 
-  Future<void> requestPermissions() async {
-    // Request basic notification permission (Android 13+)
+  Future<void> init() async {
+    try {
+      tz.initializeTimeZones();
+
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (details) {
+          talker.info('🔔 Notification tapped: ${details.payload}');
+        },
+      );
+
+      // Create channel for high importance notifications
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'daily_tasks_channel', // id
+        'Smart Daily Tasks', // title
+        description: 'Notifications for your scheduled tasks', // description
+        importance: Importance.high,
+      );
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(channel);
+
+      // Create channel for work shifts
+      const AndroidNotificationChannel shiftChannel = AndroidNotificationChannel(
+        'work_shifts_channel', 
+        'Work Shifts',
+        description: 'Reminders for your work shift start times',
+        importance: Importance.max,
+      );
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(shiftChannel);
+          
+      await requestFullPermissions(); // ✅ Request permissions explicitly
+      
+      isInitialized.value = true;
+      talker.info('✅ Notifications Ready (GetX Service)');
+    } catch (e, stack) {
+      talker.handle(e, stack, '⚠️ Error initializing notifications');
+    }
+  }
+
+  /// ✅ Pro Governance: Advanced Permission Request Logic for Android 13/14/15/16
+  Future<void> requestFullPermissions() async {
+    // 1. Post Notifications (Android 13+)
     if (await Permission.notification.isDenied) {
-      await Permission.notification.request();
+      final status = await Permission.notification.request();
+      talker.info('📢 Notification Permission Status: $status');
     }
     
-    // Request exact alarm scheduling (Android 12/14) if needed
+    // 2. Exact Alarms (Android 12+)
     if (defaultTargetPlatform == TargetPlatform.android) {
-      if (await Permission.scheduleExactAlarm.isDenied) {
+      final status = await Permission.scheduleExactAlarm.status;
+      if (status.isDenied) {
+        talker.warning('🕒 Exact Alarm Permission is Denied. Reminders might be delayed.');
         await Permission.scheduleExactAlarm.request();
+      }
+    }
+
+    // 3. Android 16 Stability: Request Battery Optimization Exemption
+    await requestBatteryExemption();
+  }
+
+  /// ✅ Android 16 Stability: Ensure app survives aggressive background quotas
+  Future<void> requestBatteryExemption() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (status.isDenied) {
+        talker.info('🔋 Requesting Battery Optimization Exemption for Android 16 stability...');
+        await Permission.ignoreBatteryOptimizations.request();
       }
     }
   }
@@ -89,6 +110,12 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
   }) async {
+    // Safety check for initialization
+    if (!isInitialized.value) {
+      talker.warning('⚠️ Scheduling attempted before notification service ready. Deferring...');
+      await _waitForInit();
+    }
+
     // Convert to TZDateTime
     final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
@@ -114,11 +141,12 @@ class NotificationService {
             channelDescription: 'Notifications for scheduled tasks',
             importance: Importance.max,
             priority: Priority.high,
+            showWhen: true,
           ),
         ),
         androidScheduleMode: canScheduleExact 
             ? AndroidScheduleMode.exactAllowWhileIdle 
-            : AndroidScheduleMode.inexactAllowWhileIdle, // ✅ Safe Fallback
+            : AndroidScheduleMode.inexactAllowWhileIdle, 
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -127,9 +155,18 @@ class NotificationService {
     }
   }
 
+  Future<void> _waitForInit() async {
+    int attempts = 0;
+    while (!isInitialized.value && attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      attempts++;
+    }
+  }
+
   Future<void> cancelNotification(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
   }
+
   Future<void> scheduleWeeklyNotification({
     required int id,
     required String title,
@@ -138,6 +175,8 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
+    if (!isInitialized.value) await _waitForInit();
+
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     
@@ -172,27 +211,14 @@ class NotificationService {
         ),
         androidScheduleMode: canScheduleExact 
             ? AndroidScheduleMode.exactAllowWhileIdle 
-            : AndroidScheduleMode.inexactAllowWhileIdle, // ✅ Safe Fallback
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, 
       );
-      talker.info('📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute (Mode: ${canScheduleExact ? "Exact" : "Inexact"})');
+      talker.info('📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute');
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Weekly notification scheduling failed');
     }
-  }
-
-  Future<void> openAlarmSettings() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      await openAppSettings();
-    }
-  }
-
-  Future<bool> checkExactAlarmPermission() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return await Permission.scheduleExactAlarm.isGranted;
-    }
-    return true;
   }
 }

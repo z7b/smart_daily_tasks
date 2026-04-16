@@ -27,13 +27,18 @@ const StepLogSchema = CollectionSchema(
       name: r'goal',
       type: IsarType.long,
     ),
-    r'progress': PropertySchema(
+    r'isManual': PropertySchema(
       id: 2,
+      name: r'isManual',
+      type: IsarType.bool,
+    ),
+    r'progress': PropertySchema(
+      id: 3,
       name: r'progress',
       type: IsarType.double,
     ),
     r'steps': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'steps',
       type: IsarType.long,
     )
@@ -83,8 +88,9 @@ void _stepLogSerialize(
 ) {
   writer.writeDateTime(offsets[0], object.date);
   writer.writeLong(offsets[1], object.goal);
-  writer.writeDouble(offsets[2], object.progress);
-  writer.writeLong(offsets[3], object.steps);
+  writer.writeBool(offsets[2], object.isManual);
+  writer.writeDouble(offsets[3], object.progress);
+  writer.writeLong(offsets[4], object.steps);
 }
 
 StepLog _stepLogDeserialize(
@@ -97,7 +103,8 @@ StepLog _stepLogDeserialize(
     date: reader.readDateTime(offsets[0]),
     goal: reader.readLongOrNull(offsets[1]) ?? 10000,
     id: id,
-    steps: reader.readLongOrNull(offsets[3]) ?? 0,
+    isManual: reader.readBoolOrNull(offsets[2]) ?? false,
+    steps: reader.readLongOrNull(offsets[4]) ?? 0,
   );
   return object;
 }
@@ -114,8 +121,10 @@ P _stepLogDeserializeProp<P>(
     case 1:
       return (reader.readLongOrNull(offset) ?? 10000) as P;
     case 2:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 3:
+      return (reader.readDouble(offset)) as P;
+    case 4:
       return (reader.readLongOrNull(offset) ?? 0) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -519,6 +528,16 @@ extension StepLogQueryFilter
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterFilterCondition> isManualEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isManual',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterFilterCondition> progressEqualTo(
     double value, {
     double epsilon = Query.epsilon,
@@ -666,6 +685,18 @@ extension StepLogQuerySortBy on QueryBuilder<StepLog, StepLog, QSortBy> {
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByIsManual() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isManual', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByIsManualDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isManual', Sort.desc);
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterSortBy> sortByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'progress', Sort.asc);
@@ -729,6 +760,18 @@ extension StepLogQuerySortThenBy
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByIsManual() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isManual', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByIsManualDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isManual', Sort.desc);
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QAfterSortBy> thenByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'progress', Sort.asc);
@@ -768,6 +811,12 @@ extension StepLogQueryWhereDistinct
     });
   }
 
+  QueryBuilder<StepLog, StepLog, QDistinct> distinctByIsManual() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isManual');
+    });
+  }
+
   QueryBuilder<StepLog, StepLog, QDistinct> distinctByProgress() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'progress');
@@ -798,6 +847,12 @@ extension StepLogQueryProperty
   QueryBuilder<StepLog, int, QQueryOperations> goalProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'goal');
+    });
+  }
+
+  QueryBuilder<StepLog, bool, QQueryOperations> isManualProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isManual');
     });
   }
 

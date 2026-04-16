@@ -83,11 +83,11 @@ class SecurityService extends GetxService {
   /// Get security status summary
   String getSecurityStatus() {
     if (isRooted.value || isJailbroken.value) {
-      return 'غير آمن - تم اكتشاف Root/Jailbreak';
+      return 'security_status_unsafe'.tr;
     } else if (isScreenshotPrevented.value) {
-      return 'آمن - منع لقطات الشاشة مفعل';
+      return 'security_status_safe'.tr;
     } else {
-      return 'عادي';
+      return 'security_status_normal'.tr;
     }
   }
 }

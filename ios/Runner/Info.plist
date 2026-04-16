@@ -44,6 +44,9 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>We need access to your health data to monitor your daily activity and steps for the Life OS dashboard.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>We need access to your health data to update your daily activity logs within the app.</string>
 </dict>
 </plist>

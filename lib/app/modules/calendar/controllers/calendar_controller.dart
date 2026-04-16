@@ -118,6 +118,15 @@ class CalendarController extends GetxController {
 
       final date = selectedDay.value;
 
+      if (startTime != null && endTime != null) {
+        final startDt = DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute);
+        final endDt = DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute);
+        if (!endDt.isAfter(startDt)) {
+          _showSnackbar('error'.tr, 'invalid_time_range'.tr, isError: true);
+          return;
+        }
+      }
+
       final event = CalendarEvent(
         title: titleTrimmed,
         description: description?.trim().isEmpty ?? true ? null : description?.trim(),
@@ -135,7 +144,7 @@ class CalendarController extends GetxController {
       
       if (success) {
         Get.back();
-        _showSnackbar('error'.tr, 'event_added'.tr);
+        _showSnackbar('success'.tr, 'event_added'.tr);
       } else {
         _showSnackbar('error'.tr, 'Could not save event', isError: true);
       }
@@ -155,9 +164,9 @@ class CalendarController extends GetxController {
       final success = await _calendarRepo.updateEvent(event);
       if (success) {
         Get.back();
-        _showSnackbar('Success'.tr, 'event_added'.tr);
+        _showSnackbar('success'.tr, 'event_added'.tr); // Reusing event_added for consistency
       } else {
-        _showSnackbar('Error'.tr, 'Failed to update event', isError: true);
+        _showSnackbar('error'.tr, 'Failed to update event', isError: true);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Event update exception');

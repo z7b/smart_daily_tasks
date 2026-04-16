@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../core/config/settings_enums.dart';
@@ -6,6 +7,7 @@ import '../../../core/theme/theme_service.dart';
 import '../../../core/services/backup_service.dart';
 import '../../../core/services/security_service.dart';
 import '../../../core/services/app_lock_service.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart' as ns;
 import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../core/config/storage_keys.dart';
@@ -22,11 +24,14 @@ class SettingsController extends GetxController {
   // Settings Observables
   RxString startScreen = 'home'.obs;
   RxString fontType = 'Rubik'.obs;
-  RxString fontSize = 'large'.obs;
+  RxString fontSize = 'medium'.obs;
   RxString firstDayOfWeek = 'sunday'.obs;
   RxBool preventScreenshots = false.obs;
   RxBool appLock = false.obs;
-  RxBool materialYou = true.obs;
+  
+  // Biometrics Governance
+  RxBool get isBiometricAvailable => _appLockService.isBiometricAvailable;
+  RxBool get isBiometricEnabled => _appLockService.isBiometricEnabled;
 
   final List<String> fontOptions = ['Rubik', 'Cairo', 'Amiri', 'Tajawal'];
   final List<String> fontSizeKeys = ['small', 'medium', 'large'];
@@ -57,7 +62,6 @@ class SettingsController extends GetxController {
       
       startScreen.value = _box.read(StorageKeys.startScreen) ?? 'home';
       firstDayOfWeek.value = _box.read('firstDayOfWeek') ?? 'sunday';
-      materialYou.value = _box.read('materialYou') ?? true;
     } catch (e) {
       talker.error('⚠️ Settings Load Error: $e');
     }
@@ -116,10 +120,9 @@ class SettingsController extends GetxController {
     appLock.value = _appLockService.isAppLockEnabled.value;
   }
 
-  void toggleMaterialYou() {
-    materialYou.toggle();
-    _box.write('materialYou', materialYou.value);
-    Get.snackbar('material_you_title'.tr, materialYou.value ? 'material_you_enabled'.tr : 'material_you_disabled'.tr);
+
+  void toggleBiometric() {
+    _appLockService.toggleBiometric();
   }
 
   void changeStartScreen() {
@@ -142,6 +145,12 @@ class SettingsController extends GetxController {
         _box.write('firstDayOfWeek', value);
       },
     );
+  }
+
+  void requestBatteryOptimization() {
+    _themeService.init().then((_) {
+       Get.find<ns.NotificationService>().requestBatteryExemption();
+    });
   }
 
   // --- Helpers with Pro Translation Logic ---
@@ -177,7 +186,13 @@ class SettingsController extends GetxController {
           child: Wrap(
             children: fontOptions.map((font) {
               return Obx(() => ListTile(
-                title: Text(font, style: TextStyle(fontFamily: font, fontWeight: fontType.value == font ? FontWeight.bold : FontWeight.normal)),
+                title: Text(
+                  font, 
+                  style: GoogleFonts.getFont(
+                    font, 
+                    fontWeight: fontType.value == font ? FontWeight.bold : FontWeight.normal
+                  ),
+                ),
                 trailing: fontType.value == font ? const Icon(Icons.check_circle, color: Colors.blue) : null,
                 onTap: () {
                   fontType.value = font;
@@ -192,6 +207,48 @@ class SettingsController extends GetxController {
     );
   }
 
-  Future<void> createBackup() async => await BackupService().createBackup();
-  Future<void> restoreBackup() async => await BackupService().restoreBackup();
+  Future<void> createBackup() async {
+    try {
+      await BackupService().createBackup();
+      Get.snackbar(
+        'success'.tr, 
+        'data_exported_successfully'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withAlpha(50),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      talker.error('Error creating backup: $e');
+      Get.snackbar(
+        'error'.tr, 
+        'failed_to_export_data'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withAlpha(50),
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> restoreBackup() async {
+    try {
+      await BackupService().restoreBackup();
+      Get.snackbar(
+        'success'.tr, 
+        'data_imported_successfully'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withAlpha(50),
+        colorText: Colors.white,
+      );
+      // Optional: Delay then redirect/re-initialize data so UI reflects changes
+    } catch (e) {
+      talker.error('Error restoring backup: $e');
+      Get.snackbar(
+        'error'.tr, 
+        'failed_to_import_data'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withAlpha(50),
+        colorText: Colors.white,
+      );
+    }
+  }
 }

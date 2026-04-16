@@ -1,56 +1,19 @@
 import 'package:isar/isar.dart';
-import 'package:health/health.dart';
 import 'package:get_storage/get_storage.dart';
 import '../models/step_log_model.dart';
 import '../../core/helpers/log_helper.dart';
 
 class StepRepository {
   final Isar _isar;
-  final Health _health = Health();
   final _storage = GetStorage();
 
   int get _currentGoal => _storage.read('daily_step_goal') ?? 10000;
 
   StepRepository(this._isar);
 
-  Future<void> init() async {
-    try {
-      // Basic configuration for the singleton
-      await _health.configure();
-      talker.info('🏥 Health Service Configured');
-    } catch (e) {
-      talker.error('❌ Health Configuration Error: $e');
-    }
-  }
-
-  Future<bool> hasPermissions() async {
-    return await _health.hasPermissions(_types) ?? false;
-  }
-
-  Future<bool> requestPermissions() async {
-    return await _health.requestAuthorization(_types);
-  }
-
-  // Define the data types we want to read
-  final List<HealthDataType> _types = [HealthDataType.STEPS];
-
-  /// Syncs steps from Health sensors for a specific date
-  Future<int> syncStepsForDate(DateTime date) async {
-    final start = DateTime(date.year, date.month, date.day);
-    final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
-
-    try {
-      if (await hasPermissions()) {
-        final int? steps = await _health.getTotalStepsInInterval(start, end);
-        final stepCount = steps ?? 0;
-        return await updateStepsLocally(start, stepCount);
-      }
-    } catch (e, stack) {
-      talker.handle(e, stack, '🔴 Step sync error for $date');
-    }
-    return 0;
-  }
-
+  /// DAO Pattern: Updates total steps in local Isar cache.
+  /// If isManual is true, we add to the existing total.
+  /// If false (sync), we replace with the sensor count.
   Future<int> updateStepsLocally(
     DateTime date,
     int steps, {
@@ -65,14 +28,19 @@ class StepRepository {
           .dateEqualTo(start)
           .findFirst();
       if (existing != null) {
-        // If manual, we add to existing. If sync, we take the sensor count.
         finalSteps = isManual ? (existing.steps + steps) : steps;
         existing.steps = finalSteps;
+        existing.isManual = isManual; // Tag the log's provenance
         if (existing.goal == 10000) existing.goal = _currentGoal;
         await _isar.stepLogs.put(existing);
       } else {
         await _isar.stepLogs.put(
-          StepLog(date: start, steps: finalSteps, goal: _currentGoal),
+          StepLog(
+            date: start, 
+            steps: finalSteps, 
+            goal: _currentGoal,
+            isManual: isManual,
+          ),
         );
       }
     });
@@ -94,13 +62,9 @@ class StepRepository {
         .findAll();
   }
 
-  /// Fetch total steps for years (Summary)
+  /// Total steps for Lifetime summary
   Future<int> getTotalStepsForAllTime() async {
     final all = await _isar.stepLogs.where().findAll();
-    int total = 0;
-    for (var log in all) {
-      total += log.steps;
-    }
-    return total;
+    return all.fold<int>(0, (sum, log) => sum + log.steps);
   }
 }

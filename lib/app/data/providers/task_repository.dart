@@ -39,6 +39,11 @@ class TaskRepository {
     return await _isar.tasks.get(id);
   }
 
+  /// Get all tasks (Future)
+  Future<List<Task>> getAllTasks() async {
+    return await _isar.tasks.where().findAll();
+  }
+
   /// Update an existing task with success result
   Future<bool> updateTask(Task task) async {
     try {

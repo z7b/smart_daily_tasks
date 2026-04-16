@@ -11,6 +11,7 @@ class StepLog {
 
   int steps;
   int goal;
+  bool isManual;
 
   double get progress => goal > 0 ? (steps / goal).clamp(0.0, 1.0) : 0.0;
 
@@ -19,6 +20,7 @@ class StepLog {
     required this.date,
     this.steps = 0,
     this.goal = 10000,
+    this.isManual = false,
   });
 
   StepLog copyWith({

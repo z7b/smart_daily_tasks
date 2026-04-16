@@ -8,6 +8,5 @@ class StorageKeys {
   static const String preventScreenshots = 'prevent_screenshots';
   static const String appLockEnabled = 'app_lock_enabled';
   static const String biometricEnabled = 'biometric_enabled';
-  static const String pinHash = 'app_lock_pin_hash';
   static const String startScreen = 'start_screen_route';
 }

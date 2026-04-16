@@ -95,18 +95,26 @@ class BookmarksController extends GetxController {
 
     try {
       isLoading.value = true;
+      
+      // 🛡️ Governance: Validation Alignment
+      if (bookmark.title.trim().isEmpty || bookmark.url.trim().isEmpty) {
+        _showSnackbar('error'.tr, 'title_required'.tr, isError: true);
+        return;
+      }
+
       final success = await _repository.updateBookmark(bookmark);
       if (success) {
         Get.back();
         _showSnackbar(
-          'Success'.tr,
+          'success'.tr,
           'bookmark_updated'.tr,
         );
       } else {
-        _showSnackbar('Error'.tr, 'Failed to update bookmark', isError: true);
+        _showSnackbar('error'.tr, 'Could not update bookmark', isError: true);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Bookmark update exception');
+      _showSnackbar('error'.tr, 'An unexpected error occurred', isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -126,9 +134,9 @@ class BookmarksController extends GetxController {
   Future<void> deleteBookmark(Id id) async {
     try {
       await _repository.deleteBookmark(id);
-      _showSnackbar('Success'.tr, 'bookmark_deleted'.tr);
+      _showSnackbar('success'.tr, 'bookmark_deleted'.tr);
     } catch (e) {
-      _showSnackbar('Error'.tr, 'Failed to delete bookmark', isError: true);
+      _showSnackbar('error'.tr, 'Failed to delete bookmark', isError: true);
     }
   }
 

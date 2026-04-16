@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:isar/isar.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../data/providers/journal_repository.dart';
@@ -81,20 +82,28 @@ class JournalController extends GetxController {
       FocusManager.instance.primaryFocus?.unfocus();
       await Future.delayed(const Duration(milliseconds: 100));
 
+      final existing = getJournalForDate(date);
+      
       final journal = Journal(
+        id: existing?.id ?? Isar.autoIncrement,
         date: date,
         mood: Mood.values[moodIndex.clamp(0, 4)],
         note: note.trim().isEmpty ? null : note.trim(),
-        createdAt: DateTime.now(),
+        createdAt: existing?.createdAt ?? DateTime.now(),
       );
       
-      final success = await _repository.addJournal(journal);
+      bool success;
+      if (existing != null) {
+        success = await _repository.updateJournal(journal);
+      } else {
+        success = await _repository.addJournal(journal);
+      }
 
       if (success) {
         Get.back();
         _showSnackbar(
           'success'.tr,
-          'journal_entry_saved'.tr,
+          existing != null ? 'journal_updated_status'.tr : 'journal_entry_saved'.tr,
         );
       } else {
         _showSnackbar('error'.tr, 'journal_save_error'.tr, isError: true);

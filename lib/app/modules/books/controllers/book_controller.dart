@@ -83,8 +83,32 @@ class BookController extends GetxController {
   }
 
   Future<void> updateProgress(Book book, int page, int total) async {
-    final updated = book.copyWith(currentPage: page, totalPages: total, lastReadAt: DateTime.now());
+    // 🛡️ Governance: Strict Progress Validation
+    if (page < 0 || total <= 0 || page > total) {
+      Get.snackbar('error'.tr, 'invalid_progress_data'.tr, 
+        backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+        colorText: Colors.redAccent);
+      return;
+    }
+
+    final updated = book.copyWith(
+      currentPage: page, 
+      totalPages: total, 
+      lastReadAt: DateTime.now(),
+      isCompleted: page == total,
+      completedAt: (page == total && !book.isCompleted) ? DateTime.now() : book.completedAt,
+    );
     await _isar.writeTxn(() async => await _isar.books.put(updated));
+    talker.info('📚 Progress updated for: ${book.title} ($page/$total)');
+  }
+
+  Future<void> updateMetadata(Book book, {String? title, int? totalPages}) async {
+    final updated = book.copyWith(
+      title: title ?? book.title, 
+      totalPages: totalPages ?? book.totalPages
+    );
+    await _isar.writeTxn(() async => await _isar.books.put(updated));
+    Get.snackbar('success'.tr, 'book_updated'.tr);
   }
 
   Future<void> markAsCompleted(Book book) async {

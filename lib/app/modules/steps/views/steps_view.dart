@@ -218,42 +218,57 @@ class StepsView extends GetView<StepsController> {
     final theme = Theme.of(context);
     return Obx(() {
       final isAuthorized = controller.isHealthAuthorized.value;
-      return Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: (isAuthorized ? Colors.green : Colors.orange).withAlpha(10),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: (isAuthorized ? Colors.green : Colors.orange).withAlpha(30)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isAuthorized ? CupertinoIcons.checkmark_shield_fill : CupertinoIcons.exclamationmark_shield_fill,
-              color: isAuthorized ? Colors.green : Colors.orange,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isAuthorized ? 'sensors_connected'.tr : 'sensors_disconnected'.tr,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  Text(
-                    isAuthorized ? 'syncing_with_device'.tr : 'connect_to_sync'.tr,
-                    style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color),
-                  ),
-                ],
+      
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        child: Container(
+          key: ValueKey('sensor_card_$isAuthorized'),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: (isAuthorized ? Colors.green : Colors.orange).withAlpha(10),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: (isAuthorized ? Colors.green : Colors.orange).withAlpha(30)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isAuthorized ? CupertinoIcons.checkmark_shield_fill : CupertinoIcons.exclamationmark_shield_fill,
+                color: isAuthorized ? Colors.green : Colors.orange,
+              ).animate(target: isAuthorized ? 1 : 0).shimmer(),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAuthorized 
+                        ? 'sensors_connected'.tr 
+                        : (controller.isLoading.value ? 'syncing'.tr : 'sensors_disconnected'.tr),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    Text(
+                      isAuthorized 
+                        ? 'syncing_with_device'.tr 
+                        : (controller.isLoading.value ? 'please_wait'.tr : 'connect_to_sync'.tr),
+                      style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (!isAuthorized)
-              TextButton(
-                onPressed: () => controller.requestHealthPermission(),
-                child: Text('connect'.tr, style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-          ],
-        ),
+              if (controller.isLoading.value)
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: isAuthorized ? Colors.green : Colors.orange),
+                ).animate().rotate(),
+              if (!isAuthorized && !controller.isLoading.value)
+                TextButton(
+                  onPressed: () => controller.requestHealthPermission(),
+                  child: Text('connect'.tr, style: TextStyle(fontWeight: FontWeight.bold)),
+                ).animate().fadeIn().scale(),
+            ],
+          ),
+        ).animate().slideX(begin: isAuthorized ? 0 : 0.05, duration: Duration(milliseconds: 400)),
       );
     });
   }

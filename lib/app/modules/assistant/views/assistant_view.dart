@@ -226,40 +226,58 @@ class AssistantView extends GetView<AssistantController> {
         .fadeOut(duration: 300.ms);
   }
 
-  Widget _buildQuickActions(TextEditingController controller) {
-    final actions = [
-      {'label': 'quick_action_task'.tr, 'text': 'ضيف مهمة '},
-      {'label': 'quick_action_note'.tr, 'text': 'اكتب ملاحظة '},
-      {'label': 'quick_action_journal'.tr, 'text': 'سجل '},
-      {'label': 'calendar'.tr, 'text': 'افتح التقويم'},
-    ];
+  Widget _buildQuickActions(TextEditingController messageController) {
+    return Obx(() {
+      final state = controller.currentState.value;
+      final List<Map<String, String>> actions;
 
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: actions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final action = actions[index];
-          return ActionChip(
-            label: Text(action['label']!),
-            onPressed: () {
-              controller.text = action['text']!;
-              controller.selection = TextSelection.fromPosition(
-                TextPosition(offset: controller.text.length),
-              );
-            },
-            backgroundColor: Theme.of(context).cardColor,
-            side: BorderSide.none,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          );
-        },
-      ),
-    );
+      if (state != AssistantState.idle) {
+        actions = [
+          {'label': 'cancel'.tr, 'text': 'الغاء'},
+        ];
+      } else {
+        actions = [
+          {'label': 'quick_action_task'.tr, 'text': 'أضف مهمة '},
+          {'label': 'quick_action_note'.tr, 'text': 'أضف ملاحظة '},
+          {'label': 'quick_action_journal'.tr, 'text': 'سجل تدوينة '},
+          {'label': 'steps'.tr, 'text': 'مشيت 5000 خطوة'},
+          {'label': 'goal'.tr, 'text': 'هدفي اليومي 10000 خطوة'},
+          {'label': 'calendar'.tr, 'text': 'افتح التقويم'},
+        ];
+      }
+
+      return SizedBox(
+        height: 40,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: actions.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final action = actions[index];
+            return ActionChip(
+              label: Text(action['label']!),
+              onPressed: () {
+                messageController.text = action['text']!;
+                messageController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: messageController.text.length),
+                );
+                // Auto-submit if it's a specific action or handle manually
+                if (action['text'] == 'الغاء') {
+                  controller.sendMessage(action['text']!);
+                  messageController.clear();
+                }
+              },
+              backgroundColor: Theme.of(context).cardColor,
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            );
+          },
+        ),
+      );
+    });
   }
 
   Widget _buildInputArea(

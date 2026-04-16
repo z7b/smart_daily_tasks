@@ -18,9 +18,10 @@ class AppTheme {
 
   static double _fontSizeScale(String sizeKey) {
     switch (sizeKey.toLowerCase()) {
-      case 'small': return 0.85;
-      case 'large': return 1.25; // Boosted for better visibility
-      case 'medium': default: return 1.0;
+      case 'small': return 0.88;
+      case 'medium': return 1.0;
+      case 'large': return 1.15; // Balanced scaling
+      default: return 1.0;
     }
   }
 
@@ -82,46 +83,51 @@ class AppTheme {
     try {
       final box = GetStorage();
       final String fontName = box.read('fontType') ?? 'Rubik';
-      final String sizeKey  = box.read('fontSize') ?? 'large';
+      final String sizeKey  = box.read('fontSize') ?? 'medium';
       return (fontName, _fontSizeScale(sizeKey));
     } catch (_) {
       return ('Rubik', 1.0);
     }
   }
 
-  static ThemeData get lightTheme {
-    final (fontName, scale) = _readFontPrefs();
+  static ThemeData buildTheme({
+    required bool isDark,
+    required String fontName,
+    required String fontSizeKey,
+  }) {
+    final scale = _fontSizeScale(fontSizeKey);
+    final bg = isDark ? backgroundDark : backgroundLight;
+    final surface = isDark ? surfaceDark : surfaceLight;
+    final textPrimary = isDark ? textPrimaryDark : textPrimaryLight;
+    final brightness = isDark ? Brightness.dark : Brightness.light;
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: brightness,
       primaryColor: primary,
-      scaffoldBackgroundColor: backgroundLight,
-      cardColor: surfaceLight,
+      scaffoldBackgroundColor: bg,
+      cardColor: surface,
       textTheme: _buildCompleteTextTheme(
         fontName: fontName,
         scale: scale,
-        primaryColor: textPrimaryLight,
+        primaryColor: textPrimary,
       ),
-      colorScheme: const ColorScheme.light(primary: primary, surface: surfaceLight, onSurface: textPrimaryLight),
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, centerTitle: true),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primary,
+        brightness: brightness,
+        surface: surface,
+        onSurface: textPrimary,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        centerTitle: true
+      ),
     );
   }
 
-  static ThemeData get darkTheme {
-    final (fontName, scale) = _readFontPrefs();
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      primaryColor: primary,
-      scaffoldBackgroundColor: backgroundDark,
-      cardColor: surfaceDark,
-      textTheme: _buildCompleteTextTheme(
-        fontName: fontName,
-        scale: scale,
-        primaryColor: textPrimaryDark,
-      ),
-      colorScheme: const ColorScheme.dark(primary: primary, surface: surfaceDark, onSurface: textPrimaryDark),
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, centerTitle: true),
-    );
-  }
+  // Deprecated getters - maintained for backward compatibility if needed, 
+  // but buildTheme is preferred for reactive logic.
+  static ThemeData get lightTheme => buildTheme(isDark: false, fontName: 'Rubik', fontSizeKey: 'medium');
+  static ThemeData get darkTheme => buildTheme(isDark: true, fontName: 'Rubik', fontSizeKey: 'medium');
 }
