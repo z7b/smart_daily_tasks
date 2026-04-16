@@ -127,11 +127,10 @@ class MedicationController extends GetxController {
         final now = DateTime.now();
         var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
         
-        // Subtract lead minutes (5m, 10m, etc.)
-        int leadMins = med.reminderLeadMinutes;
-        if (leadMins > 60) {
-          talker.warning('Lead minutes exceeds 60 for med: ${med.name}, capping to 60');
-          leadMins = 60;
+        // ✅ Concept A1 Fix: Clamp lead minutes to prevent logical inversion (subtraction adding time)
+        int leadMins = med.reminderLeadMinutes.clamp(0, 60);
+        if (leadMins != med.reminderLeadMinutes) {
+          talker.warning('⚠️ Lead minutes out of 0-60 range for ${med.name}, clamped to $leadMins');
         }
         scheduledDate = scheduledDate.subtract(Duration(minutes: leadMins));
 

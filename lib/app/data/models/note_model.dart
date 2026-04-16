@@ -23,7 +23,8 @@ class Note {
   String get titleLower => title.toLowerCase();
 
   @Index(type: IndexType.value)
-  String get contentLower => content?.toLowerCase() ?? '';
+  // ✅ Concept A2 Fix: Use distinct marker for null to differentiate from empty strings in Isar indices
+  String get contentLower => content?.toLowerCase() ?? '\0NULL_MARKER\0';
 
   Note({
     this.id = Isar.autoIncrement,

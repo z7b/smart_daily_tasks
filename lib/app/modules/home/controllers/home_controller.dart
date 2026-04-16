@@ -45,6 +45,9 @@ class HomeController extends GetxController {
 
   // Real-time Database Counts
   final taskCount = 0.obs;
+  final tasksLeftCount = 0.obs; // Active/Pending
+  final completedTasksCount = 0.obs;
+  final cancelledTasksCount = 0.obs;
   final noteCount = 0.obs;
   final journalCount = 0.obs;
   final bookmarkCount = 0.obs;
@@ -256,6 +259,14 @@ class HomeController extends GetxController {
           .findAll();
       final int total = dayTasks.length;
       final int completed = dayTasks.where((t) => t.status == TaskStatus.completed).length;
+      final int cancelled = dayTasks.where((t) => t.status == TaskStatus.cancelled).length;
+      final int pending = dayTasks.where((t) => t.status == TaskStatus.pending).length;
+      
+      taskCount.value = total;
+      tasksLeftCount.value = pending;
+      completedTasksCount.value = completed;
+      cancelledTasksCount.value = cancelled;
+
       final double taskProgress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 1.0;
       
       // 2. Health Progress (30%) - Medication Adherence
@@ -289,6 +300,14 @@ class HomeController extends GetxController {
       }
       medTakenDoses.value = taken;
       medExpectedDoses.value = expected;
+      
+      // ✅ Concept R1 Fix: Zero out expected doses for future dates to prevent misleading adherence percentages
+      final todayNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final normalizedView = DateTime(viewDate.year, viewDate.month, viewDate.day);
+      if (normalizedView.isAfter(todayNormalized)) {
+        medTakenDoses.value = 0;
+        medExpectedDoses.value = 0;
+      }
 
       // Calculate Next Dose Time (Only relevant for today or future)
       nextMedicationTime.value = '';
@@ -519,8 +538,9 @@ class HomeController extends GetxController {
     for (var j in logs) {
       counts[j.mood] = (counts[j.mood] ?? 0) + 1;
     }
+    // ✅ Concept M1: Use >= for tie-break stability (ensures latest dominant mood is picked)
     final topMood = counts.entries
-        .fold<MapEntry<Mood, int>?>(null, (max, e) => (max == null || e.value > max.value) ? e : max)
+        .fold<MapEntry<Mood, int>?>(null, (max, e) => (max == null || e.value >= max.value) ? e : max)
         ?.key ?? Mood.neutral;
     weeklyMoodTrend.value = topMood.name;
     

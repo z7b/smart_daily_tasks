@@ -441,9 +441,11 @@ class HomeView extends GetView<HomeController> {
     return Obx(() {
       final days = controller.daysUntilSalary.value;
       final now = DateTime.now();
+      
+      // ✅ Concept M2/C1 Fix: Stability over time. Show Progress in current month cycle.
       final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-      final progress =
-          ((daysInMonth - days).clamp(0, daysInMonth) / daysInMonth);
+      final elapsedDays = now.day; // Progress through current calendar month
+      final progress = (elapsedDays / daysInMonth).clamp(0.0, 1.0);
 
       return GestureDetector(
         onTap: () => Get.toNamed(Routes.JOB),
@@ -743,7 +745,7 @@ class HomeView extends GetView<HomeController> {
                   ),
                   const Spacer(),
                   Text(
-                    '${controller.taskCount.value - controller.tasksLeftCount.value} / ${controller.taskCount.value}',
+                    '${controller.completedTasksCount.value} / ${controller.taskCount.value - controller.cancelledTasksCount.value}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,

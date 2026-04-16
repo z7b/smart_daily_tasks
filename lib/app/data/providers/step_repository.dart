@@ -55,6 +55,12 @@ class StepRepository {
 
   /// Get all logs for a range
   Future<List<StepLog>> getLogsInRange(DateTime start, DateTime end) async {
+    // ✅ Concept D2 Fix: Reverse range recovery
+    if (start.isAfter(end)) {
+      final temp = start;
+      start = end;
+      end = temp;
+    }
     final normalStart = DateTime(start.year, start.month, start.day);
     final normalEnd = DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
     return await _isar.stepLogs
@@ -67,6 +73,18 @@ class StepRepository {
   /// Total steps for Lifetime summary
   Future<int> getTotalStepsForAllTime() async {
     final all = await _isar.stepLogs.where().findAll();
-    return all.fold<int>(0, (sum, log) => sum + log.steps);
+    // ✅ Concept P1 Fix: Prevent integer wrapping for extreme performance history
+    int total = 0;
+    for (var log in all) {
+      if (log.steps > 0) {
+        // Defensive check against overflow (64-bit safe but expert-guided)
+        if (total > 9007199254740991 - log.steps) { // Number.MAX_SAFE_INTEGER for JS parity
+             total = 9007199254740991; 
+             break;
+        }
+        total += log.steps;
+      }
+    }
+    return total;
   }
 }

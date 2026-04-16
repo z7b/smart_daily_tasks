@@ -59,6 +59,12 @@ class JobRepository {
 
   /// Get attendance history for a range (e.g., Monthly/Yearly)
   Future<List<AttendanceLog>> getLogsInRange(DateTime start, DateTime end) async {
+    // ✅ Concept D2 Fix: Reverse range recovery
+    if (start.isAfter(end)) {
+       final temp = start;
+       start = end;
+       end = temp;
+    }
     final normalStart = DateTime(start.year, start.month, start.day);
     final normalEnd = DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
     return await _isar.attendanceLogs
@@ -73,6 +79,9 @@ class JobRepository {
     final logs = await getLogsInRange(start, end);
     final stats = <AttendanceStatus, int>{};
     
+    // ✅ Concept P2 Fix: Division guard logic (returns empty map if no logs exist)
+    if (logs.isEmpty) return stats;
+
     for (var status in AttendanceStatus.values) {
       stats[status] = logs.where((l) => l.status == status).length;
     }
