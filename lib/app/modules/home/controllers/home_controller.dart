@@ -324,13 +324,19 @@ class HomeController extends GetxController {
           nextMedicationName.value = nextDoseName;
           
           final diff = nextDoseDateTime.difference(now);
-          final hours = diff.inHours;
-          final minutes = diff.inMinutes % 60;
           
-          if (hours > 0 || diff.inDays > 0) {
-            nextMedicationTimeLeft.value = '${hours}h ${minutes}m';
+          if (diff.isNegative) {
+            // Dose is in the past (should not happen due to skip logic, but guard)
+            nextMedicationTimeLeft.value = 'dose_missed'.tr;
           } else {
-            nextMedicationTimeLeft.value = '${minutes}m';
+            final hours = diff.inHours;
+            final minutes = (diff.inMinutes % 60).abs();
+            
+            if (hours > 0) {
+              nextMedicationTimeLeft.value = '${hours}h ${minutes}m';
+            } else {
+              nextMedicationTimeLeft.value = '${minutes}m';
+            }
           }
         }
       }
@@ -358,15 +364,17 @@ class HomeController extends GetxController {
           
           final diff = nextTask.scheduledAt.difference(now);
           if (diff.isNegative) {
-            final hours = diff.inHours.abs();
-            final minutes = (diff.inMinutes.abs() % 60);
-            // Negative time denotes overdue/debt time
-            nextTaskTimeLeft.value = '-${hours > 0 ? '${hours}h ' : ''}${minutes}m';
+            final absDiff = diff.abs();
+            final hours = absDiff.inHours;
+            final minutes = absDiff.inMinutes % 60;
+            nextTaskTimeLeft.value = hours > 0 
+                ? '-${hours}h ${minutes}m'
+                : '-${minutes}m';
           } else {
             final hours = diff.inHours;
             final minutes = diff.inMinutes % 60;
             
-            if (hours > 0 || diff.inDays > 0) {
+            if (hours > 0) {
                nextTaskTimeLeft.value = '${hours}h ${minutes}m';
             } else {
                nextTaskTimeLeft.value = '${minutes}m';
@@ -387,14 +395,18 @@ class HomeController extends GetxController {
       final stepLog = await _isar.stepLogs.filter().dateEqualTo(startOfDay).findFirst();
       stepsCount.value = stepLog?.steps ?? 0;
       stepsGoal.value = stepLog?.goal ?? 10000;
-      stepsProgress.value = stepLog?.progress ?? 0.0;
+      stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
       final double stepProgress = stepsProgress.value;
 
       // 5. Work Progress (20%) - Attendance (Only if working day)
       final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
       workCompany.value = profile.companyName ?? '';
       workPosition.value = profile.jobPosition ?? '';
-      final isWorkDay = profile.workingDays.contains(startOfDay.weekday % 7);
+      // WorkProfile.workingDays uses 0=Sun,1=Mon..6=Sat
+      // DateTime.weekday uses 1=Mon..7=Sun
+      // Convert: Sunday(7)->0, Monday(1)->1, etc.
+      final dayIndex = startOfDay.weekday == 7 ? 0 : startOfDay.weekday;
+      final isWorkDay = profile.workingDays.contains(dayIndex);
       
       final attendanceLog = await _isar.attendanceLogs.filter().dateEqualTo(startOfDay).findFirst();
       final double workProgress = attendanceLog?.status == AttendanceStatus.present ? 1.0 : 0.0;
@@ -448,7 +460,8 @@ class HomeController extends GetxController {
     
     final nextSalary = now.nextOccurrenceOfMonthDay(salDay);
     
-    daysUntilSalary.value = nextSalary.difference(DateTime(now.year, now.month, now.day)).inDays;
+    // Normalize both sides to midnight for exact day count
+    daysUntilSalary.value = nextSalary.normalized.difference(now.normalized).inDays;
   }
 
   Future<void> _loadReadingStats() async {
@@ -511,7 +524,7 @@ class HomeController extends GetxController {
 
   Future<void> _loadWeeklyData() async {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = now.normalized;
     final sevenDaysAgo = today.subtract(const Duration(days: 6)); // Past 6 days + Today = 7 Days window
     
     // ✅ Optimization: Use property query to only fetch timestamps
@@ -568,17 +581,31 @@ class HomeController extends GetxController {
         normalized = normalized.replaceAll(arabic[i], english[i]);
       }
       
-      // Expand linguistic mapping
+      // Expand linguistic mapping (order matters: longer strings first)
       normalized = normalized
-          .replaceAll('ص', 'AM')
-          .replaceAll('م', 'PM')
           .replaceAll('صباحاً', 'AM')
           .replaceAll('مساءً', 'PM')
+          .replaceAll('في الصباح', 'AM')
+          .replaceAll('في المساء', 'PM')
+          .replaceAll('ص', 'AM')
+          .replaceAll('م', 'PM')
           .replaceAll('am', 'AM')
           .replaceAll('pm', 'PM');
           
       return DateFormat.jm().parse(normalized);
     } catch (e) {
+      // Fallback: try extracting HH:MM pattern via regex
+      try {
+        final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
+        if (match != null) {
+          final h = int.parse(match.group(1)!);
+          final m = int.parse(match.group(2)!);
+          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+            return DateTime(1970, 1, 1, h, m);
+          }
+        }
+      } catch (_) {}
+      
       talker.error('🕒 Time Parse Error ($timeStr): $e');
       return null;
     }

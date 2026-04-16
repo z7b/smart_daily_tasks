@@ -183,8 +183,8 @@ class NotificationService extends GetxService {
   }) async {
     if (!isInitialized.value) await _waitForInit();
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    final now = tz.TZDateTime.now(tz.UTC);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.UTC, now.year, now.month, now.day, hour, minute);
     
     int daysToAdd = (dayOfWeek - scheduledDate.weekday + 7) % 7;
     scheduledDate = scheduledDate.add(Duration(days: daysToAdd));

@@ -248,7 +248,7 @@ class HomeView extends GetView<HomeController> {
                         fontSize: 11,
                         color: Theme.of(
                           context,
-                        ).textTheme.bodySmall?.color?.withAlpha(150),
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -283,7 +283,7 @@ class HomeView extends GetView<HomeController> {
             children: [
               Icon(
                 Icons.menu_book_rounded,
-                color: const Color(0xFF5E5CE6).withAlpha(200),
+                color: const Color(0xFF5E5CE6).withValues(alpha: 0.8),
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -320,7 +320,7 @@ class HomeView extends GetView<HomeController> {
           Obx(
             () => LinearProgressIndicator(
               value: controller.currentBookProgress.value,
-              backgroundColor: const Color(0xFF5E5CE6).withAlpha(20),
+              backgroundColor: const Color(0xFF5E5CE6).withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(0xFF5E5CE6),
               ),

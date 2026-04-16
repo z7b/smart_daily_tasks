@@ -116,11 +116,11 @@ class MedicationView extends GetView<MedicationController> {
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFFF2D55).withAlpha(15),
+                            color: const Color(0xFFFF2D55).withValues(alpha: 0.1),
                           ),
                           child: Icon(CupertinoIcons.heart_fill,
                               size: 56,
-                              color: const Color(0xFFFF2D55).withAlpha(80)),
+                              color: const Color(0xFFFF2D55).withValues(alpha: 0.3)),
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -177,7 +177,7 @@ class MedicationView extends GetView<MedicationController> {
         padding: const EdgeInsets.only(right: 24),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
-          color: const Color(0xFFFF3B30).withAlpha(200),
+          color: const Color(0xFFFF3B30).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(24),
         ),
         child: const Icon(CupertinoIcons.trash, color: Colors.white),
@@ -186,11 +186,11 @@ class MedicationView extends GetView<MedicationController> {
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: isDark
-              ? theme.cardColor.withAlpha(180)
+              ? theme.cardColor.withValues(alpha: 0.7)
               : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: complianceColor.withAlpha(compliance > 0 ? 30 : 10),
+            color: complianceColor.withValues(alpha: compliance > 0 ? 0.12 : 0.04),
             width: 1.5,
           ),
           boxShadow: [
@@ -212,7 +212,7 @@ class MedicationView extends GetView<MedicationController> {
                   minHeight: 3,
                   backgroundColor: Colors.transparent,
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(complianceColor.withAlpha(120)),
+                      AlwaysStoppedAnimation<Color>(complianceColor.withValues(alpha: 0.5)),
                 ),
 
               Padding(
@@ -225,7 +225,7 @@ class MedicationView extends GetView<MedicationController> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withAlpha(18),
+                            color: AppTheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
@@ -272,7 +272,7 @@ class MedicationView extends GetView<MedicationController> {
                                 value: compliance,
                                 strokeWidth: 3.5,
                                 backgroundColor:
-                                    theme.dividerColor.withAlpha(20),
+                                    theme.dividerColor.withValues(alpha: 0.1),
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                     complianceColor),
                               ),
@@ -325,7 +325,7 @@ class MedicationView extends GetView<MedicationController> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 7),
                             decoration: BoxDecoration(
-                              color: AppTheme.primary.withAlpha(12),
+                              color: AppTheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(CupertinoIcons.pencil,
@@ -344,7 +344,7 @@ class MedicationView extends GetView<MedicationController> {
                                 horizontal: 16, vertical: 7),
                             decoration: BoxDecoration(
                               color: compliance >= 1.0
-                                  ? const Color(0xFF34C759).withAlpha(15)
+                                  ? const Color(0xFF34C759).withValues(alpha: 0.1)
                                   : AppTheme.primary,
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -370,7 +370,7 @@ class MedicationView extends GetView<MedicationController> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withAlpha(12),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(

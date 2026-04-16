@@ -281,18 +281,20 @@ class TaskController extends GetxController {
                 nextScheduledEnd = updatedTask.scheduledEnd?.add(const Duration(days: 7));
                 break;
              case TaskRecurrence.monthly:
-                var nMonth = updatedTask.scheduledAt.month + 1;
-                var nYear = updatedTask.scheduledAt.year;
-                if (nMonth > 12) { nMonth = 1; nYear++; }
+                // Safe modular month arithmetic
+                final srcMonth = updatedTask.scheduledAt.month;
+                final srcYear = updatedTask.scheduledAt.year;
+                final nMonth = (srcMonth % 12) + 1; // 12 -> 1, 1 -> 2, etc.
+                final nYear = srcMonth == 12 ? srcYear + 1 : srcYear;
                 
-                var maxDays = DateTime(nYear, nMonth + 1, 0).day;
-                var nDay = updatedTask.scheduledAt.day > maxDays ? maxDays : updatedTask.scheduledAt.day;
+                final maxDays = DateTime(nYear, nMonth + 1, 0).day;
+                final nDay = updatedTask.scheduledAt.day > maxDays ? maxDays : updatedTask.scheduledAt.day;
                 
                 nextScheduledAt = DateTime(nYear, nMonth, nDay, updatedTask.scheduledAt.hour, updatedTask.scheduledAt.minute);
                 
                 if (updatedTask.scheduledEnd != null) {
-                  var maxDaysEnd = DateTime(nYear, nMonth + 1, 0).day;
-                  var eDay = updatedTask.scheduledEnd!.day > maxDaysEnd ? maxDaysEnd : updatedTask.scheduledEnd!.day;
+                  final maxDaysEnd = DateTime(nYear, nMonth + 1, 0).day;
+                  final eDay = updatedTask.scheduledEnd!.day > maxDaysEnd ? maxDaysEnd : updatedTask.scheduledEnd!.day;
                   nextScheduledEnd = DateTime(nYear, nMonth, eDay, updatedTask.scheduledEnd!.hour, updatedTask.scheduledEnd!.minute);
                 }
                 break;
@@ -392,6 +394,7 @@ class TaskController extends GetxController {
     noteFocusNode.dispose();
     _stopTimeTick();
     _tasksSub?.cancel();
+    _tasksSub = null;
     super.onClose();
   }
 }

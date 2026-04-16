@@ -60,7 +60,7 @@ class JobController extends GetxController {
     
     final nextSalary = now.nextOccurrenceOfMonthDay(salDay);
     
-    daysUntilSalary.value = nextSalary.difference(now.normalized).inDays;
+    daysUntilSalary.value = nextSalary.normalized.difference(now.normalized).inDays;
   }
 
   Future<void> _loadAnalytics() async {

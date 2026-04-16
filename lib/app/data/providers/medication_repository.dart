@@ -87,16 +87,18 @@ class MedicationRepository {
   // Get active medications for a specific date (Harmony Sync)
   Future<List<Medication>> getActiveMedicationsForDate(DateTime date) async {
     final normalizedDate = DateTime(date.year, date.month, date.day);
+    final nextDay = normalizedDate.add(const Duration(days: 1));
+    
     return await _isar.medications
         .filter()
         .isActiveEqualTo(true)
         .and()
-        .startDateLessThan(normalizedDate.add(const Duration(days: 1)))
+        .startDateLessThan(nextDay) // started on or before this day
         .and()
         .group((q) => q
-            .endDateIsNull()
+            .endDateIsNull() // no end date (perpetual)
             .or()
-            .endDateGreaterThan(normalizedDate.subtract(const Duration(days: 1)))
+            .endDateGreaterThan(normalizedDate) // ends after this day's midnight
         )
         .findAll();
   }

@@ -22,7 +22,7 @@ android {
     defaultConfig {
         applicationId = "com.example.smart_daily_tasks"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -36,13 +36,6 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-
-    configurations.all {
-        resolutionStrategy {
-            force("androidx.core:core-ktx:1.13.1")
-            force("androidx.core:core:1.13.1")
         }
     }
 }

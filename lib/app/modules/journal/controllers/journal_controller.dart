@@ -39,8 +39,10 @@ class JournalController extends GetxController {
       mapByDate[midnight] = journal;
     }
     
-    moodInsights.assignAll(counts);
-    journalsByDate.assignAll(mapByDate);
+    moodInsights.clear();
+    moodInsights.addAll(counts);
+    journalsByDate.clear();
+    journalsByDate.addAll(mapByDate);
   }
 
   @override
