@@ -215,7 +215,17 @@ class HealthService extends GetxService {
                await _isar.stepLogs.put(existing);
                talker.info('💾 Updated: ${existing.steps} steps');
             } else {
-               talker.info('⛔ Skipped sync (Manual mode protected)');
+               // ✅ Critical Fix: Merge sensor data with manual entry (take higher value)
+               // Previously this blocked sync forever after any manual entry
+               if (steps! > existing.steps) {
+                 existing.steps = steps;
+                 existing.isManual = false; // Sensor took over
+                 existing.lastSyncedAt = now;
+                 await _isar.stepLogs.put(existing);
+                 talker.info('💾 Sensor override: ${existing.steps} steps (was manual)');
+               } else {
+                 talker.info('⛔ Manual value higher (${ existing.steps} > $steps), keeping manual');
+               }
             }
           } else {
             final newLog = StepLog(

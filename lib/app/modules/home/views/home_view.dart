@@ -744,14 +744,20 @@ class HomeView extends GetView<HomeController> {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    '${controller.completedTasksCount.value} / ${controller.taskCount.value - controller.cancelledTasksCount.value}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: accentColor,
-                    ),
-                  ),
+                  // ✅ Safety Guard: Prevent "0/0" when all tasks cancelled
+                  Builder(builder: (_) {
+                    final activeTasks = controller.taskCount.value - controller.cancelledTasksCount.value;
+                    return Text(
+                      activeTasks > 0
+                        ? '${controller.completedTasksCount.value} / $activeTasks'
+                        : controller.taskCount.value > 0 ? '- / -' : '0',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: accentColor,
+                      ),
+                    );
+                  }),
                 ],
               ),
               const SizedBox(height: 16),

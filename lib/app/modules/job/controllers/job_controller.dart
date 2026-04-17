@@ -129,10 +129,15 @@ class JobController extends GetxController {
     
     if (status == AttendanceStatus.present) {
       if (isCheckOut) {
-        checkIn ??= DateTime.now();
+        // ✅ Critical Fix: Prevent ghost check-out without check-in
+        if (checkIn == null) {
+          talker.warning('⚠️ Cannot check out without checking in first.');
+          Get.snackbar('error'.tr, 'check_in_required'.tr);
+          return;
+        }
         checkOut = DateTime.now();
       } else {
-        checkIn = date != null ? targetDate : DateTime.now(); // Retain precise time if selected manually, otherwise now
+        checkIn = date != null ? targetDate : DateTime.now();
       }
     } else {
       checkIn = null;

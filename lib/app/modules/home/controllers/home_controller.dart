@@ -266,7 +266,8 @@ class HomeController extends GetxController {
       completedTasksCount.value = completed;
       cancelledTasksCount.value = cancelled;
 
-      final double taskProgress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 1.0;
+      // ✅ Critical Fix: "Null Success Bug" - No tasks should NOT mean 100% success
+      final double taskProgress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
       
       // 2. Health Progress (30%) - Medication Adherence
       final allMeds = await _isar.medications.filter().isActiveEqualTo(true).findAll();
@@ -306,6 +307,8 @@ class HomeController extends GetxController {
       if (normalizedView.isAfter(todayNormalized)) {
         medTakenDoses.value = 0;
         medExpectedDoses.value = 0;
+        expected = 0; // ✅ Reset locals so medProgress below uses correct values
+        taken = 0;
       }
 
       // Calculate Next Dose Time (Only relevant for today or future)
@@ -396,12 +399,8 @@ class HomeController extends GetxController {
           
           final diff = nextTask.scheduledAt.difference(now);
           if (diff.isNegative) {
-            final absDiff = diff.abs();
-            final hours = absDiff.inHours;
-            final minutes = absDiff.inMinutes % 60;
-            nextTaskTimeLeft.value = hours > 0 
-                ? '-${hours}h ${minutes}m'
-                : '-${minutes}m';
+            // ✅ Fix: Show 'overdue' instead of misleading negative "remaining" time
+            nextTaskTimeLeft.value = 'overdue'.tr;
           } else {
             final hours = diff.inHours;
             final minutes = diff.inMinutes % 60;
@@ -415,7 +414,8 @@ class HomeController extends GetxController {
         }
       }
 
-      final double medProgress = expected > 0 ? (taken / expected).clamp(0.0, 1.0) : 1.0;
+      // ✅ Critical Fix: No meds should NOT mean 100% compliance
+      final double medProgress = expected > 0 ? (taken / expected).clamp(0.0, 1.0) : 0.0;
 
       // 3. Mind Progress (15%) - Journaling
       final journalToday = await _isar.journals.filter()
@@ -441,7 +441,13 @@ class HomeController extends GetxController {
       final isWorkDay = profile.workingDays.contains(dayIndex);
       
       final attendanceLog = await _isar.attendanceLogs.filter().dateEqualTo(startOfDay).findFirst();
-      final double workProgress = attendanceLog?.status == AttendanceStatus.present ? 1.0 : 0.0;
+      // ✅ Fix: Non-work days should not penalize progress (treat as neutral 1.0)
+      final double workProgress;
+      if (!isWorkDay) {
+        workProgress = 1.0; // Day off - no penalty
+      } else {
+        workProgress = attendanceLog?.status == AttendanceStatus.present ? 1.0 : 0.0;
+      }
       
       // Calculate Salary Countdown for Bento
       _updateSalaryCountdown(profile);
@@ -450,7 +456,8 @@ class HomeController extends GetxController {
       tasksLeftCount.value = total - completed;
       
       // 1. Mind Pillar (Tasks & Intellectual Growth)
-      final taskScore = total > 0 ? (completed / total).clamp(0.0, 1.0) : 1.0;
+      // ✅ Critical Fix: No tasks = 0 progress, not 100%
+      final taskScore = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
       final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
       mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
 
@@ -522,9 +529,11 @@ class HomeController extends GetxController {
   }
 
   Future<void> _analyzeMoodData() async {
-    final now = DateTime.now();
+    // ✅ Critical Fix: Use selectedDate context, not always DateTime.now()
+    final targetDate = selectedDate.value;
+    final weekStart = targetDate.subtract(const Duration(days: 7));
     final logs = await _isar.journals.filter()
-        .dateGreaterThan(now.subtract(const Duration(days: 7)))
+        .dateGreaterThan(weekStart)
         .findAll();
     
     if (logs.isEmpty) {
