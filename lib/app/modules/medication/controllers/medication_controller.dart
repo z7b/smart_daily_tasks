@@ -67,7 +67,7 @@ class MedicationController extends GetxController {
       });
       
       // Reschedule notifications
-      _cancelAllReminders(med.id);
+      _cancelAllReminders(med);
       if (med.isNotificationEnabled) {
         _scheduleAllReminders(med);
       }
@@ -152,8 +152,14 @@ class MedicationController extends GetxController {
           scheduledDate = scheduledDate.add(const Duration(days: 1));
         }
 
-        Get.find<NotificationService>().scheduleNotification(
-          id: NotificationService.MED_OFFSET + (med.id * NotificationService.SLOTS_PER_ITEM) + i, 
+        final notifyService = Get.find<NotificationService>();
+        final deterministicId = notifyService.getDeterministicId(
+          '${med.name}_${timeStr}', 
+          offset: NotificationService.MED_OFFSET
+        );
+
+        notifyService.scheduleNotification(
+          id: deterministicId, 
           title: '${'my_medications'.tr}: ${med.name}',
           body: '${med.dosage ?? ""} - ${med.instruction.name.tr}',
           scheduledTime: scheduledDate,
@@ -166,10 +172,15 @@ class MedicationController extends GetxController {
     }
   }
 
-  void _cancelAllReminders(int medId) {
-    // Cancel all potential slots (0-99) for this med
-    for (int i = 0; i < NotificationService.SLOTS_PER_ITEM; i++) {
-       Get.find<NotificationService>().cancelNotification(NotificationService.MED_OFFSET + (medId * NotificationService.SLOTS_PER_ITEM) + i);
+  void _cancelAllReminders(Medication med) {
+    // Phase 4: Use deterministic keys to cancel
+    final notifyService = Get.find<NotificationService>();
+    for (final timeStr in med.reminderTimes) {
+       final deterministicId = notifyService.getDeterministicId(
+         '${med.name}_${timeStr}', 
+         offset: NotificationService.MED_OFFSET
+       );
+       notifyService.cancelNotification(deterministicId);
     }
   }
 
@@ -213,7 +224,7 @@ class MedicationController extends GetxController {
 
   Future<void> deleteMedication(Medication med) async {
     try {
-      _cancelAllReminders(med.id);
+      _cancelAllReminders(med);
       await _isar.writeTxn(() async {
         await _isar.medications.delete(med.id);
       });

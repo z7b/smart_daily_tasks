@@ -21,6 +21,7 @@ class Task {
   @Index()
   DateTime scheduledAt;
 
+  @Index()
   DateTime? scheduledEnd;
 
   @Index()

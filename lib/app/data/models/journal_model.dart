@@ -6,6 +6,7 @@ part 'journal_model.g.dart';
 class Journal {
   Id id = Isar.autoIncrement;
 
+  @Index()
   DateTime date = DateTime.now();
 
   @Index()

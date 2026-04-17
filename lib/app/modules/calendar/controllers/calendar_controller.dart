@@ -116,11 +116,24 @@ class CalendarController extends GetxController {
 
       final titleTrimmed = title.trim();
       if (titleTrimmed.isEmpty) {
-        _showSnackbar('error'.tr, 'Title is required', isError: true);
+        _showSnackbar('error'.tr, 'title_required'.tr, isError: true);
         return;
       }
 
       final date = selectedDay.value;
+
+      // ✅ Phase 4: Conflict detection
+      if (startTime != null && endTime != null) {
+        final startDt = DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute);
+        final endDt = DateTime(date.year, date.month, date.day, endTime.hour, endTime.minute);
+        
+        final conflict = _hasConflict(startDt, endDt);
+        if (conflict) {
+          _showSnackbar('warning'.tr, 'conflict_warning'.tr, isError: false);
+          // We allow saving (UX preference) but warn as per plan
+        }
+      }
+
 
       if (startTime != null && endTime != null) {
         final startDt = DateTime(date.year, date.month, date.day, startTime.hour, startTime.minute);
@@ -150,11 +163,11 @@ class CalendarController extends GetxController {
         Get.back();
         _showSnackbar('success'.tr, 'event_added'.tr);
       } else {
-        _showSnackbar('error'.tr, 'Could not save event', isError: true);
+        _showSnackbar('error'.tr, 'save_event_error'.tr, isError: true);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Event creation exception');
-      _showSnackbar('error'.tr, 'An unexpected error occurred', isError: true);
+      _showSnackbar('error'.tr, 'unexpected_error_occurred'.tr, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -197,5 +210,14 @@ class CalendarController extends GetxController {
       colorText: isError ? Colors.redAccent : Colors.green,
       duration: const Duration(seconds: 2),
     );
+  }
+
+  // ✅ Phase 4: Conflict detection logic
+  bool _hasConflict(DateTime start, DateTime end) {
+    return events.any((e) {
+      if (e.startTime == null || e.endTime == null) return false;
+      // Standard intersection: (StartA < EndB) && (EndA > StartB)
+      return start.isBefore(e.endTime!) && end.isAfter(e.startTime!);
+    });
   }
 }

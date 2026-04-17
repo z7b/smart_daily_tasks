@@ -94,4 +94,61 @@ class TaskRepository {
         .scheduledAtBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
         .findAll();
   }
+
+  /// ✅ Phase 4: Intelligence - Automatic Recurrence Instantiation
+  /// This ensures that daily/weekly/monthly tasks appear for 'today' if they don't exist yet.
+  Future<void> instantiateRecurringTasks() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    talker.info('♻️ Running Recurrence Engine...');
+    
+    // 1. Get all tasks that are recurring (Candidates)
+    final recurringTemplates = await _isar.tasks
+        .filter()
+        .not()
+        .recurrenceEqualTo(TaskRecurrence.none)
+        .findAll();
+        
+    if (recurringTemplates.isEmpty) return;
+
+    await _isar.writeTxn(() async {
+      for (final template in recurringTemplates) {
+        // Calculate if it's due today
+        bool isDue = false;
+        if (template.recurrence == TaskRecurrence.daily) isDue = true;
+        if (template.recurrence == TaskRecurrence.weekly) {
+          isDue = template.scheduledAt.weekday == now.weekday;
+        }
+        if (template.recurrence == TaskRecurrence.monthly) {
+          isDue = template.scheduledAt.day == now.day;
+        }
+
+        if (!isDue) continue;
+
+        // Check if an instance already exists for today with the same title
+        final existing = await _isar.tasks
+            .filter()
+            .titleEqualTo(template.title)
+            .scheduledAtBetween(today, today.add(const Duration(days: 1)), includeLower: true, includeUpper: false)
+            .findFirst();
+
+        if (existing == null) {
+          // Create new instance for today
+          final instance = template.copyWith(
+            id: Isar.autoIncrement,
+            scheduledAt: DateTime(today.year, today.month, today.day, template.scheduledAt.hour, template.scheduledAt.minute),
+            scheduledEnd: template.scheduledEnd != null 
+                ? DateTime(today.year, today.month, today.day, template.scheduledEnd!.hour, template.scheduledEnd!.minute)
+                : null,
+            status: TaskStatus.active,
+            completedAt: null,
+            createdAt: now,
+          );
+          await _isar.tasks.put(instance);
+          talker.info('✨ Instantiated recurring task: ${template.title}');
+        }
+      }
+    });
+  }
 }

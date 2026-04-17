@@ -65,11 +65,20 @@ class BookmarkRepository {
     }
   }
 
-  // Delete
-  Future<void> deleteBookmark(Id id) async {
-    await _isar.writeTxn(() async {
-      await _isar.bookmarks.delete(id);
-    });
+  /// Delete a bookmark with safety governance
+  Future<bool> deleteBookmark(Id id) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.bookmarks.delete(id);
+      });
+      return true;
+    } on IsarError catch (e, stack) {
+      talker.handle(e, stack, '🔴 Isar Database Error (Delete Bookmark)');
+      return false;
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Delete Bookmark)');
+      return false;
+    }
   }
 
   // Search

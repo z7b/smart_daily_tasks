@@ -43,8 +43,8 @@ class HealthService extends GetxService {
         talker.warning('⚠️ Not authorized - requesting permissions...');
         await requestPermissions();
       } else {
-        talker.info('✅ Already authorized - syncing steps');
-        await fetchAndPersistSteps();
+        talker.info('✅ Already authorized - Pulse synchronization ready');
+        // ✅ Defer sync to after startup (Phase 5 Optimization)
       }
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Health Service Init Error');

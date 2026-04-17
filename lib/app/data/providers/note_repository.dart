@@ -53,11 +53,20 @@ class NoteRepository {
     }
   }
 
-  // Delete
-  Future<void> deleteNote(Id id) async {
-    await _isar.writeTxn(() async {
-      await _isar.notes.delete(id);
-    });
+  /// Delete a note with safety governance
+  Future<bool> deleteNote(Id id) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.notes.delete(id);
+      });
+      return true;
+    } on IsarError catch (e, stack) {
+      talker.handle(e, stack, '🔴 Isar Database Error (Delete Note)');
+      return false;
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Delete Note)');
+      return false;
+    }
   }
 
   // Search

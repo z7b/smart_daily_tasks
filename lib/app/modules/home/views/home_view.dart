@@ -124,7 +124,7 @@ class HomeView extends GetView<HomeController> {
               crossAxisCount: 2,
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 1.45,
+              childAspectRatio: 1.2, // ✅ Phase 4: More defensive ratio for large fonts
               children: [
 
                 Obx(
@@ -369,20 +369,21 @@ class HomeView extends GetView<HomeController> {
             const Spacer(),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 13,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.2,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.withAlpha(200),
-                fontWeight: FontWeight.w500,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.grey,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

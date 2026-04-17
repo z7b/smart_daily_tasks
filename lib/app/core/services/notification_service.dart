@@ -12,11 +12,23 @@ class NotificationService extends GetxService {
 
   final isInitialized = false.obs;
   
-  // 🛡️ Global ID Governance (Triple Hardening)
-  static const int MED_OFFSET = 1000000;
-  static const int TASK_OFFSET = 2000000;
-  static const int SHIFT_OFFSET = 3000000;
-  static const int SLOTS_PER_ITEM = 100; // Legacy support for multi-dose meds
+  // 🛡️ Global ID Governance (Phase 4: Triple Hardening)
+  static const int MED_OFFSET = 100000000;
+  static const int TASK_OFFSET = 200000000;
+  static const int SHIFT_OFFSET = 300000000;
+  static const int CALENDAR_OFFSET = 400000000;
+
+  /// ✅ Phase 4: Deterministic ID Strategy
+  /// Ensures notifications are consistent across app installs/restores.
+  int getDeterministicId(String key, {int offset = 0}) {
+    // Basic hash logic: sum of chars * prime
+    int hash = 0;
+    for (int i = 0; i < key.length; i++) {
+      hash = (31 * hash + key.codeUnitAt(i)) & 0x7FFFFFFF;
+    }
+    return (offset + (hash % 10000000));
+  }
+
 
   @override
   void onInit() {

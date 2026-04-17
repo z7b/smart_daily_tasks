@@ -24,6 +24,7 @@ import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
+import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 
 class HomeController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -139,6 +140,14 @@ class HomeController extends GetxController {
     if (startRoute != Routes.HOME) {
       Get.toNamed(startRoute);
     }
+
+    // ✅ Phase 5 Optimization: Defer health sync to background after UI is ready
+    Future.delayed(const Duration(seconds: 2), () {
+      if (_healthService.isAuthorized.value) {
+        talker.info('🏥 Phase 5: Triggering background pulse sync...');
+        _healthService.fetchAndPersistSteps();
+      }
+    });
   }
 
   @override
@@ -235,9 +244,15 @@ class HomeController extends GetxController {
 
   Future<void> _loadRealData() async {
     if (_isBusy.value) return;
+    _isBusy.value = true;
+    
     try {
-      _isBusy.value = true;
-      // Logic: Only load from Isar here. 
+      final taskRepo = Get.find<TaskRepository>();
+      
+      // ✅ Phase 4: Intelligence - Automatic Recurrence
+      await taskRepo.instantiateRecurringTasks();
+      
+      final now = DateTime.now(); 
       // Health syncing is handled by the initial pulse and manual refresh to avoid infinite loops.
       taskCount.value = await _isar.tasks.count();
       noteCount.value = await _isar.notes.count();

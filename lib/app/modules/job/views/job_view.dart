@@ -94,8 +94,7 @@ class JobView extends GetView<JobController> {
                       ),
                       const SizedBox(width: 12),
                       Text('attendance_analytics'.tr,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                       const Spacer(),
                       _buildStatBadge(
                         '${(controller.attendanceRate.value * 100).toInt()}%',
@@ -118,8 +117,7 @@ class JobView extends GetView<JobController> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
                   child: Text('previous_days'.tr,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 ),
               ),
 
@@ -166,6 +164,7 @@ class JobView extends GetView<JobController> {
 
   // ─── Salary card ─────────────────────────────────────────────
   Widget _buildSalaryCard(BuildContext context) {
+    final theme = Theme.of(context);
     final days = controller.daysUntilSalary.value;
     final progress = controller.salaryProgress.value; // ✅ Phase 3: Accurate cross-month calculation
 
@@ -197,16 +196,14 @@ class JobView extends GetView<JobController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('salary_countdown'.tr,
-                      style: TextStyle(
+                      style: theme.textTheme.labelSmall?.copyWith(
                           color: Colors.white.withAlpha(200),
-                          fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(height: 6),
                   Text(
                     '$days ${'days_left'.tr}',
-                    style: const TextStyle(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
-                        fontSize: 30,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1),
                   ),
@@ -299,8 +296,8 @@ class JobView extends GetView<JobController> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('today_status'.tr,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 15)),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold)),
                         Text(
                           today == null
                               ? 'not_logged_yet'.tr
@@ -308,9 +305,7 @@ class JobView extends GetView<JobController> {
                                   (today.checkInTime != null
                                       ? ' (${TimeOfDay.fromDateTime(today.checkInTime!).format(context)})'
                                       : '')),
-                          style: TextStyle(
-                              color: theme.textTheme.bodySmall?.color,
-                              fontSize: 12,
+                          style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -433,8 +428,7 @@ class JobView extends GetView<JobController> {
             child: Center(
               child: Text(
                 '${(score * 100).toInt()}',
-                style: const TextStyle(
-                  fontSize: 18, 
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold, 
                   color: AppTheme.primary
                 ),
@@ -447,7 +441,7 @@ class JobView extends GetView<JobController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('consistency_rate'.tr, 
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
@@ -505,7 +499,8 @@ class JobView extends GetView<JobController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('attendance_distribution'.tr, 
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+              style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 24),
           SizedBox(
             height: 180,
@@ -524,8 +519,8 @@ class JobView extends GetView<JobController> {
                           value: count.toDouble(),
                           title: count > 0 ? '$count' : '',
                           radius: 50,
-                          titleStyle: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white
+                          titleStyle: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold, color: Colors.white
                           ),
                         );
                       }).toList(),
@@ -543,7 +538,7 @@ class JobView extends GetView<JobController> {
                           children: [
                             Container(width: 8, height: 8, decoration: BoxDecoration(color: entry.value, shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text(entry.key.name.tr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(entry.key.name.tr, style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
                           ],
                         ),
                       );
@@ -588,7 +583,7 @@ class JobView extends GetView<JobController> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         DateFormat.E(Get.locale?.languageCode).format(date),
-                        style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                        style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     );
                   }

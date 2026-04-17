@@ -227,8 +227,14 @@ class TaskController extends GetxController {
     Future.microtask(() async {
       try {
         if (task.scheduledAt.isAfter(DateTime.now())) {
-          Get.find<NotificationService>().scheduleNotification(
-            id: NotificationService.TASK_OFFSET + task.id, 
+          final notifyService = Get.find<NotificationService>();
+          final deterministicId = notifyService.getDeterministicId(
+            '${task.title}_${task.scheduledAt.toIso8601String()}', 
+            offset: NotificationService.TASK_OFFSET
+          );
+
+          notifyService.scheduleNotification(
+            id: deterministicId, 
             title: '${'tasks'.tr}: ${task.title}',
             body: task.note ?? '',
             scheduledTime: task.scheduledAt,
@@ -242,7 +248,13 @@ class TaskController extends GetxController {
 
   void deleteTask(Task task) async {
     try {
-      await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
+      final notifyService = Get.find<NotificationService>();
+      final deterministicId = notifyService.getDeterministicId(
+        '${task.title}_${task.scheduledAt.toIso8601String()}', 
+        offset: NotificationService.TASK_OFFSET
+      );
+      
+      await notifyService.cancelNotification(deterministicId);
       await _repository.deleteTask(task.id);
       _showSnackbar('success'.tr, 'event_deleted'.tr);
     } catch (e) {

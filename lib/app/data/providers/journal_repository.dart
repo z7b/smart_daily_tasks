@@ -81,10 +81,19 @@ class JournalRepository {
     }
   }
 
-  // Delete
-  Future<void> deleteJournal(Id id) async {
-    await _isar.writeTxn(() async {
-      await _isar.journals.delete(id);
-    });
+  /// Delete a journal entry with safety governance
+  Future<bool> deleteJournal(Id id) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.journals.delete(id);
+      });
+      return true;
+    } on IsarError catch (e, stack) {
+      talker.handle(e, stack, '🔴 Isar Database Error (Delete Journal)');
+      return false;
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Delete Journal)');
+      return false;
+    }
   }
 }
