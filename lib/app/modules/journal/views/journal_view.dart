@@ -149,7 +149,7 @@ class JournalView extends GetView<JournalController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Obx(() => Text(
-                '${controller.journals.length} ${'entries'.tr}',
+                '${controller.calculateStreak()} ${'days_streak'.tr}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,

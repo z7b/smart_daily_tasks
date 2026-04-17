@@ -46,6 +46,30 @@ class JournalController extends GetxController {
     journalsByDate.addAll(mapByDate);
   }
 
+  // ✅ Phase 3: Proper consecutive days streak logic
+  int calculateStreak() {
+    if (journalsByDate.isEmpty) return 0;
+    
+    int streak = 0;
+    DateTime current = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    
+    // Check if user wrote today; if not, check if they wrote yesterday to keep streak alive
+    if (!journalsByDate.containsKey(current)) {
+      final yesterday = current.subtract(const Duration(days: 1));
+      if (!journalsByDate.containsKey(yesterday)) {
+        return 0; // Streak broken
+      }
+      current = yesterday; // Streak is alive, start counting from yesterday
+    }
+    
+    while (journalsByDate.containsKey(current)) {
+      streak++;
+      current = current.subtract(const Duration(days: 1));
+    }
+    
+    return streak;
+  }
+
   @override
   void onInit() {
     super.onInit();

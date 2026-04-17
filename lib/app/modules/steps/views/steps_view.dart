@@ -203,7 +203,9 @@ class StepsView extends GetView<StepsController> {
                   context,
                   CupertinoIcons.arrow_right_circle_fill,
                   'remaining'.tr,
-                  '${(controller.dailyGoal.value - controller.stepsToday.value).clamp(0, 99999)}',
+                  controller.stepsToday.value >= controller.dailyGoal.value 
+                      ? '+${controller.stepsToday.value - controller.dailyGoal.value}' 
+                      : '${controller.dailyGoal.value - controller.stepsToday.value}',
                   AppTheme.primary,
                 ),
               ),
@@ -296,6 +298,7 @@ class StepsView extends GetView<StepsController> {
 
   Widget _buildHistoricalChart(BuildContext context) {
     final theme = Theme.of(context);
+    // ✅ Phase 3: Display chronologically left-to-right
     final logs = controller.weeklyLogs.reversed.toList();
     if (logs.isEmpty) return SizedBox.shrink();
 

@@ -92,22 +92,35 @@ class MedicationController extends GetxController {
     
     if (intervalHours != null) {
       if (intervalHours <= 0) return times;
-      int count = (24 / intervalHours).ceil(); // ✅ Use ceiling to ensure all doses within 24h are captured
+      int count = (24 / intervalHours).ceil(); 
       for (int i = 0; i < count; i++) {
-        final hour = (startTime.hour + (i * intervalHours)) % 24;
+        int hour = (startTime.hour + (i * intervalHours)) % 24;
+        
+        // ✅ Phase 3: Sleep-Zone Clamping (Prevent doses during 00:00 - 05:00)
+        // Shift midnight doses to 23:00 (before sleep) or 06:00 (upon waking) depending on proximity
+        if (hour >= 0 && hour <= 5) {
+          hour = hour < 3 ? 23 : 6;
+        }
+        
+        // Prevent duplicate hours after clamping
         final time = TimeOfDay(hour: hour, minute: startTime.minute);
-        times.add(_formatTimeOfDay(time));
+        final formatted = _formatTimeOfDay(time);
+        if (!times.contains(formatted)) times.add(formatted);
       }
     } else if (frequency != null) {
       if (frequency <= 0 || frequency > 24) return times;
-      final interval = 24 ~/ frequency;
+      // ✅ Phase 3: Spread frequency over Waking Hours (16 hours) instead of 24
+      final wakingHours = 16; 
+      final interval = frequency > 1 ? wakingHours ~/ (frequency - 1) : 0;
       for (int i = 0; i < frequency; i++) {
-        final hour = (startTime.hour + (i * interval)) % 24;
+        int hour = (startTime.hour + (i * interval)) % 24;
         final time = TimeOfDay(hour: hour, minute: startTime.minute);
-        times.add(_formatTimeOfDay(time));
+        final formatted = _formatTimeOfDay(time);
+        if (!times.contains(formatted)) times.add(formatted);
       }
     }
     
+    times.sort((a, b) => _parseRobustTime(a).compareTo(_parseRobustTime(b)));
     return times;
   }
 
@@ -165,11 +178,19 @@ class MedicationController extends GetxController {
     
     // ✅ Duplicate Request Debounce Logic
     if (med.intakeHistory.isNotEmpty) {
-      final lastIntake = med.intakeHistory.last;
-      if (now.difference(lastIntake).inMinutes < 5) {
-        talker.warning('⚠️ Duplicate intake ignored logically.');
-        Get.snackbar('warning'.tr, 'duplicate_intake'.tr);
-        return;
+      // Phase 3 Fix: Check against today's intakes to avoid double-logging the exact same dose period
+      final todaysIntakes = med.intakeHistory.where((dt) => 
+        dt.year == now.year && dt.month == now.month && dt.day == now.day
+      ).toList();
+      
+      if (todaysIntakes.isNotEmpty) {
+        final lastIntake = todaysIntakes.last;
+        // Debounce boosted to 30 mins to prevent spamming multiple doses accidentally
+        if (now.difference(lastIntake).inMinutes < 30) {
+          talker.warning('⚠️ Duplicate intake ignored (Debounce guard: < 30m).');
+          Get.snackbar('warning'.tr, 'duplicate_intake'.tr);
+          return;
+        }
       }
     }
 

@@ -239,7 +239,10 @@ class SettingsController extends GetxController {
         backgroundColor: Colors.green.withAlpha(50),
         colorText: Colors.white,
       );
-      // Optional: Delay then redirect/re-initialize data so UI reflects changes
+      // ✅ Phase 3: Force Re-initialization of core data so UI reflects backup changes instantly
+      talker.info('🔄 Restarting UI Stack to reflect restored Backup...');
+      await Future.delayed(const Duration(milliseconds: 800));
+      Get.offAllNamed('/home'); // Routing to home wipes the nav stack and forces fresh OnInit logic
     } catch (e) {
       talker.error('Error restoring backup: $e');
       Get.snackbar(

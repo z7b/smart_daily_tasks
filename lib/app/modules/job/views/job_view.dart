@@ -167,10 +167,7 @@ class JobView extends GetView<JobController> {
   // ─── Salary card ─────────────────────────────────────────────
   Widget _buildSalaryCard(BuildContext context) {
     final days = controller.daysUntilSalary.value;
-    final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final progress =
-        ((daysInMonth - days).clamp(0, daysInMonth) / daysInMonth);
+    final progress = controller.salaryProgress.value; // ✅ Phase 3: Accurate cross-month calculation
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),

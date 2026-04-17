@@ -46,6 +46,7 @@ class ThemeService extends GetxService {
       _box.write(_fontTypeKey, fontName);
       fontTypeRx.value = fontName;
       debugPrint('🎨 Font changed to: $fontName');
+      Get.forceAppUpdate(); // ✅ Phase 3: Force rebuild everywhere immediately
     } catch (e) {
       debugPrint('⚠️ Error switching font: $e');
     }
@@ -56,6 +57,7 @@ class ThemeService extends GetxService {
       _box.write(_fontSizeKey, size);
       fontSizeRx.value = size;
       debugPrint('📏 Font size changed to: $size');
+      Get.forceAppUpdate(); // ✅ Phase 3: Force rebuild everywhere immediately
     } catch (e) {
       debugPrint('⚠️ Error switching font size: $e');
     }
