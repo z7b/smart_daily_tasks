@@ -17,6 +17,7 @@ class JobSettingsView extends GetView<JobController> {
     final titleController = TextEditingController(text: profile.jobTitle);
     final companyController = TextEditingController(text: profile.companyName);
     final positionController = TextEditingController(text: profile.jobPosition);
+    final hoursController = TextEditingController(text: (profile.officialWorkHours ?? 8.0).toString());
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -29,10 +30,11 @@ class JobSettingsView extends GetView<JobController> {
         actions: [
           TextButton(
             onPressed: () {
-              controller.updateSettings(
+              controller.updateJobSettings(
                 title: titleController.text,
                 company: companyController.text,
                 position: positionController.text,
+                officialWorkHours: double.tryParse(hoursController.text),
               );
               Get.back();
               Get.snackbar('success'.tr, 'task_update_success'.tr, snackPosition: SnackPosition.BOTTOM);
@@ -67,6 +69,8 @@ class JobSettingsView extends GetView<JobController> {
               _buildWorkingDaysPicker(context),
               const Divider(),
               _buildGlobalShiftTimes(context),
+              const Divider(),
+              _buildTextField(hoursController, 'official_work_hours'.tr, CupertinoIcons.timer, isNumber: true),
             ]),
 
             const SizedBox(height: 32),
@@ -109,7 +113,7 @@ class JobSettingsView extends GetView<JobController> {
               Obx(() => SwitchListTile(
                 title: Text('shift_reminders'.tr),
                 value: controller.profile.value.remindersEnabled,
-                onChanged: (val) => controller.updateSettings(reminders: val),
+                onChanged: (val) => controller.updateJobSettings(reminders: val),
                 activeColor: AppTheme.primary,
               )),
             ]),
@@ -176,7 +180,7 @@ class JobSettingsView extends GetView<JobController> {
                 onSelected: (val) {
                   final days = List<int>.from(controller.profile.value.workingDays);
                   if (val) days.add(i); else days.remove(i);
-                  controller.updateSettings(workDays: days);
+                  controller.updateJobSettings(workDays: days);
                 },
                 selectedColor: AppTheme.primary,
                 labelStyle: TextStyle(color: isSelected ? Colors.white : null, fontSize: 12),
@@ -307,7 +311,7 @@ class JobSettingsView extends GetView<JobController> {
                       context: context, 
                       initialTime: TimeOfDay(hour: controller.profile.value.startMinutes ~/ 60, minute: controller.profile.value.startMinutes % 60)
                     );
-                    if (time != null) controller.updateSettings(startMin: time.hour * 60 + time.minute);
+                    if (time != null) controller.updateJobSettings(startMin: time.hour * 60 + time.minute);
                   },
                   child: Text(controller.formatMinutes(controller.profile.value.startMinutes), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 )),
@@ -326,7 +330,7 @@ class JobSettingsView extends GetView<JobController> {
                       context: context, 
                       initialTime: TimeOfDay(hour: controller.profile.value.endMinutes ~/ 60, minute: controller.profile.value.endMinutes % 60)
                     );
-                    if (time != null) controller.updateSettings(endMin: time.hour * 60 + time.minute);
+                    if (time != null) controller.updateJobSettings(endMin: time.hour * 60 + time.minute);
                   },
                   child: Text(controller.formatMinutes(controller.profile.value.endMinutes), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange)),
                 )),
@@ -357,7 +361,7 @@ class JobSettingsView extends GetView<JobController> {
                   TextButton(onPressed: () => Get.back(), child: Text('cancel'.tr)),
                   TextButton(
                     onPressed: () {
-                      controller.updateSettings(salDay: tempDay);
+                      controller.updateJobSettings(salDay: tempDay);
                       Get.back();
                     },
                     child: Text('confirm'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),

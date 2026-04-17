@@ -25,6 +25,7 @@ class WorkProfile {
   List<int> workingDays;
 
   bool remindersEnabled;
+  double? officialWorkHours; // Target hours for performance calculation
 
   WorkProfile({
     this.id = 0,
@@ -38,6 +39,7 @@ class WorkProfile {
     this.monthlySalary,
     this.workingDays = const [1, 2, 3, 4, 5], // Mon-Fri
     this.remindersEnabled = true,
+    this.officialWorkHours = 8.0,
   });
 
   WorkProfile copyWith({
@@ -52,6 +54,7 @@ class WorkProfile {
     double? monthlySalary,
     List<int>? workingDays,
     bool? remindersEnabled,
+    double? officialWorkHours,
   }) {
     return WorkProfile(
       id: id ?? this.id,
@@ -65,6 +68,7 @@ class WorkProfile {
       monthlySalary: monthlySalary ?? this.monthlySalary,
       workingDays: workingDays ?? this.workingDays,
       remindersEnabled: remindersEnabled ?? this.remindersEnabled,
+      officialWorkHours: officialWorkHours ?? this.officialWorkHours,
     );
   }
 }

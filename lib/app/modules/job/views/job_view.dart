@@ -44,13 +44,43 @@ class JobView extends GetView<JobController> {
                 ),
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-                  title: Text(
-                    'my_job'.tr,
-                    style: TextStyle(
-                      color: theme.textTheme.titleLarge?.color,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
+                  title: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'my_job'.tr,
+                        style: TextStyle(
+                          color: theme.textTheme.titleLarge?.color,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // ✅ Phase 8: Glassy Job Title Badge
+                      Flexible(
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.primary.withAlpha(40), width: 0.5),
+                          ),
+                          child: Text(
+                            (controller.profile.value.jobTitle ?? 'unnamed_job'.tr).tr,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20), // Padding from right edge
+                    ],
                   ),
                 ),
                 actions: [
@@ -61,6 +91,48 @@ class JobView extends GetView<JobController> {
                   ),
                   const SizedBox(width: 8),
                 ],
+              ),
+
+              // ── Job Profile Header ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withAlpha(20),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(CupertinoIcons.briefcase_fill, 
+                            color: AppTheme.primary, size: 22),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (controller.profile.value.jobTitle ?? 'unnamed_job'.tr).tr,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              controller.profile.value.companyName ?? 'no_company'.tr,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1, end: 0),
+                ),
               ),
 
               // ── Salary countdown card ──
@@ -78,10 +150,15 @@ class JobView extends GetView<JobController> {
                 child: _buildConsistencyScore(context),
               ),
 
-              // ── Analytics header + chart ──
+              // ── Period Selection ──
+              SliverToBoxAdapter(
+                child: _buildPeriodSelector(context),
+              ),
+
+              // ── Analytics header ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                   child: Row(
                     children: [
                       Container(
@@ -103,6 +180,11 @@ class JobView extends GetView<JobController> {
                     ],
                   ),
                 ),
+              ),
+
+              // ── Metric Overview Grid ──
+              SliverToBoxAdapter(
+                child: _buildMetricOverview(context),
               ),
 
               SliverPadding(
@@ -308,6 +390,19 @@ class JobView extends GetView<JobController> {
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w500),
                         ),
+                        if (today?.status == AttendanceStatus.present && today?.checkOutTime == null) ...[
+                          const SizedBox(height: 4),
+                          // ✅ Phase 8: Expected Exit Pulse
+                          Obx(() => Text(
+                            '${'expected_check_out'.tr}: ${controller.expectedCheckOut.value}',
+                            style: TextStyle(
+                              fontSize: 10, 
+                              color: AppTheme.primary, 
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(color: AppTheme.primary.withAlpha(50), blurRadius: 4)]
+                            ),
+                          )),
+                        ],
                       ],
                     ),
                   ),
@@ -336,7 +431,7 @@ class JobView extends GetView<JobController> {
                         ),
                         child: Text('check_out'.tr, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
-                    ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: const Duration(seconds: 1))
+                    ).animate().fadeIn()
                   else
                     const Icon(CupertinoIcons.checkmark_seal_fill, color: Color(0xFF34C759), size: 28),
                 ],
@@ -455,23 +550,196 @@ class JobView extends GetView<JobController> {
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          _buildStatBadge(
-            'performance_score'.tr,
-            Colors.grey,
+          const SizedBox(width: 12),
+          Flexible(
+            child: _buildStatBadge(
+              'performance_score'.tr,
+              Colors.grey,
+            ),
           ),
         ],
       ),
     );
   }
 
+  // ─── Period Selector ──────────────────────────────────────────
+  Widget _buildPeriodSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.dividerColor.withAlpha(12)),
+        ),
+        child: Row(
+          children: JobAnalyticsPeriod.values.map((period) {
+            final isSelected = controller.selectedPeriod.value == period;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => controller.setPeriod(period),
+                child: AnimatedContainer(
+                  duration: 250.ms,
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    period.name.tr,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? Colors.white : theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // ─── Metric Overview ──────────────────────────────────────────
+  Widget _buildMetricOverview(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // Slightly reduced padding for safety
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildMetricCard(
+                context,
+                'total_duty_days'.tr,
+                '${controller.totalMandatedDays.value}',
+                CupertinoIcons.calendar,
+                AppTheme.primary,
+              ),
+              const SizedBox(width: 10), // Reduced from 12
+              _buildMetricCard(
+                context,
+                'avg_check_in'.tr,
+                controller.avgCheckInTime.value,
+                CupertinoIcons.clock,
+                const Color(0xFF5AC8FA),
+                subtitle: _buildVarianceBadge(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildMetricCard(
+                context,
+                'total_work_hours'.tr,
+                _formatDuration(controller.totalWorkMinutes.value),
+                CupertinoIcons.timer,
+                const Color(0xFFAF52DE),
+              ),
+              const SizedBox(width: 10), // Reduced from 12
+              _buildMetricCard(
+                context,
+                'work_balance'.tr,
+                '${controller.workBalanceMinutes.value >= 0 ? '+' : ''}${controller.workBalanceMinutes.value ~/ 60}h ${controller.workBalanceMinutes.value % 60}m',
+                CupertinoIcons.graph_square_fill,
+                controller.workBalanceMinutes.value >= 0 ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+                subtitle: Text(
+                  '${'target_hours'.tr}: ${controller.profile.value.officialWorkHours}h',
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(BuildContext context, String label, String value, IconData icon, Color color, {Widget? subtitle}) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(minHeight: 85), // Ensure enough height for 2 lines
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: theme.dividerColor.withAlpha(12)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color.withAlpha(20), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(value, 
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: -0.5),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(label, 
+                      style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontSize: 9.5), 
+                      maxLines: 2, overflow: TextOverflow.visible),
+                  if (subtitle != null) subtitle,
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVarianceBadge(BuildContext context) {
+    final variance = controller.avgVarianceMinutes.value;
+    if (variance == 0) return const SizedBox.shrink();
+    
+    final isLate = variance > 0;
+    final color = isLate ? const Color(0xFFFF3B30) : const Color(0xFF34C759);
+    final label = isLate ? 'late'.tr : 'early'.tr;
+    
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(isLate ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_left, size: 10, color: color),
+          const SizedBox(width: 2),
+          Text(
+            '${variance.abs()}m $label',
+            style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(int totalMinutes) {
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    return '${hours}h ${minutes}m';
+  }
+
   // ─── Enhanced Analytics Section ───────────────────────────────
   Widget _buildEnhancedCharts(BuildContext context) {
     return Column(
       children: [
-        _buildPieDistribution(context),
+        _buildTrendChart(context).animate().fadeIn().slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
-        _buildWeeklyFrequencyChart(context),
+        _buildPieDistribution(context).animate().fadeIn().slideY(begin: 0.05, end: 0),
       ],
     );
   }
@@ -498,9 +766,15 @@ class JobView extends GetView<JobController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('attendance_distribution'.tr, 
-              style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold, color: Colors.grey)),
+          Row(
+            children: [
+              Expanded(
+                child: Text('attendance_distribution'.tr, 
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.bold, color: Colors.grey)),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           SizedBox(
             height: 180,
@@ -538,7 +812,14 @@ class JobView extends GetView<JobController> {
                           children: [
                             Container(width: 8, height: 8, decoration: BoxDecoration(color: entry.value, shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text(entry.key.name.tr, style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+                            Expanded(
+                              child: Text(
+                                entry.key.name.tr, 
+                                style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontSize: 9),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       );
@@ -553,69 +834,193 @@ class JobView extends GetView<JobController> {
     );
   }
 
-  Widget _buildWeeklyFrequencyChart(BuildContext context) {
+  Widget _buildTrendChart(BuildContext context) {
     final theme = Theme.of(context);
-    final stats = controller.weeklyChartData;
-    if (stats.isEmpty) return const SizedBox.shrink();
+    final period = controller.selectedPeriod.value;
+    final data = controller.aggregatedChartData;
+
+    if (data.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 200,
-      padding: const EdgeInsets.all(20),
+      height: 290, // ✅ Increased for better clearance
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20), // ✅ Optimized padding
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(28),
       ),
-      child: BarChart(
-        BarChartData(
-          gridData: const FlGridData(show: false),
-          alignment: BarChartAlignment.spaceAround,
-          titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  if (value >= 0 && value < stats.length) {
-                    final date = stats[value.toInt()].date;
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        DateFormat.E(Get.locale?.languageCode).format(date),
-                        style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('period_insights'.tr, 
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+                    maxLines: 1),
               ),
-            ),
+              const SizedBox(width: 4),
+              if (period == JobAnalyticsPeriod.yearly) ...[
+                _buildYearPicker(context),
+                const SizedBox(width: 4),
+              ],
+              _buildStatBadge(period.name.tr, AppTheme.primary),
+            ],
           ),
-          borderData: FlBorderData(show: false),
-          barGroups: List.generate(stats.length, (index) {
-            final log = stats[index];
-            final isPresent = log.status == AttendanceStatus.present;
-            final color = isPresent ? AppTheme.primary : const Color(0xFFFF3B30).withAlpha(100);
-            
-            return BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: isPresent ? 1 : 0.4,
-                  color: color,
-                  width: 14,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                  backDrawRodData: BackgroundBarChartRodData(
-                    show: true,
-                    toY: 1,
-                    color: theme.dividerColor.withAlpha(5),
+          const SizedBox(height: 24),
+          Expanded(
+            child: _buildAggregatedBarChart(context, data, period),
+          ),
+          const SizedBox(height: 12),
+          // ── Smart Insight Panel ──
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.dividerColor.withAlpha(5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(CupertinoIcons.lightbulb_fill, color: Color(0xFFFFCC00), size: 16),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    controller.performanceInsight.value,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color, 
+                        fontWeight: FontWeight.w500,
+                        fontSize: 10),
                   ),
                 ),
               ],
-            );
-          }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYearPicker(BuildContext context) {
+    final theme = Theme.of(context);
+    return PopupMenuButton<int>(
+      onSelected: (year) => controller.setYear(year),
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      itemBuilder: (context) {
+        final years = controller.availableYears.isNotEmpty 
+            ? controller.availableYears 
+            : [DateTime.now().year];
+        return years.map((year) {
+          final isSelected = year == controller.selectedYear.value;
+          return PopupMenuItem<int>(
+            value: year,
+            child: Row(
+              children: [
+                Text('$year', 
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? AppTheme.primary : null)),
+                if (isSelected) ...[
+                  const Spacer(),
+                  const Icon(CupertinoIcons.checkmark_alt, color: AppTheme.primary, size: 16),
+                ],
+              ],
+            ),
+          );
+        }).toList();
+      },
+      child: Container(
+        height: 26, // ✅ Fixed Height
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withAlpha(20),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.primary.withAlpha(40), width: 0.5),
         ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${controller.selectedYear.value}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold, fontSize: 10, color: AppTheme.primary),
+            ),
+            const SizedBox(width: 2),
+            Icon(CupertinoIcons.chevron_down, size: 8, color: AppTheme.primary.withAlpha(180)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAggregatedBarChart(BuildContext context, List<Map<String, dynamic>> data, JobAnalyticsPeriod period) {
+    final theme = Theme.of(context);
+    
+    // Adjust bar width based on density
+    double barWidth = 14;
+    if (period == JobAnalyticsPeriod.monthly) barWidth = 32;
+    if (period == JobAnalyticsPeriod.yearly) barWidth = 12;
+
+    return BarChart(
+      BarChartData(
+        gridData: const FlGridData(show: false),
+        alignment: BarChartAlignment.spaceAround,
+        titlesData: FlTitlesData(
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 42, // ✅ Increased for tilt clearance
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= data.length) return const SizedBox.shrink();
+                
+                final isYearly = period == JobAnalyticsPeriod.yearly;
+                return SideTitleWidget(
+                  space: 4,
+                  meta: meta,
+                  child: Transform.rotate(
+                    angle: isYearly ? -0.7 : 0, // ✅ Tilt for 12-month density
+                    child: Text(
+                      data[index]['label'],
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.grey, 
+                          fontWeight: FontWeight.bold, 
+                          fontSize: isYearly ? 8 : 9),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(data.length, (index) {
+          final val = data[index]['value'] as double;
+          final color = val > 0.7 
+              ? AppTheme.primary 
+              : (val > 0.4 ? const Color(0xFFFF9500) : const Color(0xFFFF3B30));
+          
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: val.clamp(0.05, 1.0), // Min visible height
+                color: color,
+                width: barWidth,
+                borderRadius: BorderRadius.circular(period == JobAnalyticsPeriod.monthly ? 8 : 4),
+                backDrawRodData: BackgroundBarChartRodData(
+                  show: true,
+                  toY: 1,
+                  color: theme.dividerColor.withAlpha(5),
+                ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -789,12 +1194,22 @@ class JobView extends GetView<JobController> {
   // ─── Stat badge ───────────────────────────────────────────────
   Widget _buildStatBadge(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      height: 26, // ✅ Identical Fixed Height
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
       decoration: BoxDecoration(
-          color: color.withAlpha(18), borderRadius: BorderRadius.circular(20)),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(40), width: 0.5),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 }

@@ -9,6 +9,8 @@ import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 import 'package:isar/isar.dart';
 
+enum JobAnalyticsPeriod { weekly, monthly, yearly }
+
 class JobController extends GetxController {
   final JobRepository _repository = Get.find<JobRepository>();
 
@@ -24,10 +26,27 @@ class JobController extends GetxController {
   final salaryProgress = 0.0.obs; // ✅ Phase 3: Track cross-month progress
   final attendanceRate = 0.0.obs;
   final consistencyRate = 0.0.obs; // 🚀 New Performance Metric
+  
+  final selectedPeriod = JobAnalyticsPeriod.monthly.obs;
+  final selectedYear = DateTime.now().year.obs;
+  final availableYears = <int>[].obs;
+  
+  final avgCheckInTime = ''.obs;
+  final avgVarianceMinutes = 0.obs;
+  final totalWorkMinutes = 0.obs;
+  final performanceInsight = ''.obs;
+  final totalActiveDays = 0.obs;
+  final totalMandatedDays = 0.obs; // ✅ Phase 8 Audit: Official target days from settings
+  
+  // ✅ Phase 8: Work Governance Metrics
+  final expectedCheckOut = ''.obs;
+  final workBalanceMinutes = 0.obs; // Surplus or deficit vs official hours
+  
   final isLoading = false.obs;
 
   // Weekly Chart Data (Sorted)
   final weeklyChartData = <AttendanceLog>[].obs;
+  final aggregatedChartData = <Map<String, dynamic>>[].obs;
 
   // Statistical Summaries
   final statsSummary = <AttendanceStatus, int>{}.obs;
@@ -45,6 +64,11 @@ class JobController extends GetxController {
 
       final now = DateTime.now();
       todayLog.value = await _repository.getLogForDate(now);
+
+      availableYears.assignAll(await _repository.getAvailableYears());
+      if (!availableYears.contains(selectedYear.value)) {
+        selectedYear.value = now.year;
+      }
 
       _calculateSalaryCountdown();
       await _loadAnalytics();
@@ -110,7 +134,7 @@ class JobController extends GetxController {
   Future<void> _loadAnalytics() async {
     final now = DateTime.now();
 
-    // Weekly (Ensure chronological order for charts)
+    // Weekly
     final weekStart = now.subtract(const Duration(days: 7));
     final weekLogs = await _repository.getLogsInRange(weekStart, now);
     weekLogs.sort((a, b) => a.date.compareTo(b.date));
@@ -122,57 +146,228 @@ class JobController extends GetxController {
     final monthLogs = await _repository.getLogsInRange(monthStart, now);
     monthlyStats.assignAll(monthLogs);
 
-    // Yearly (Safe leap year handling: e.g., Feb 29 -> Feb 28 in non-leap years)
-    final prevYear = now.year - 1;
-    final maxDayInPrevYear = DateTime(prevYear, now.month + 1, 0).day;
-    final safeDay = now.day > maxDayInPrevYear ? maxDayInPrevYear : now.day;
-    final yearStart = DateTime(prevYear, now.month, safeDay);
-    yearlyStats.assignAll(await _repository.getLogsInRange(yearStart, now));
+    // Yearly (Historical or Rolling)
+    if (selectedPeriod.value == JobAnalyticsPeriod.yearly) {
+      final yearStart = DateTime(selectedYear.value, 1, 1);
+      final yearEnd = DateTime(selectedYear.value, 12, 31);
+      yearlyStats.assignAll(await _repository.getLogsInRange(yearStart, yearEnd));
+    } else {
+      // Background rolling year load for global metrics
+      final yearStart = DateTime(now.year - 1, now.month, now.day);
+      yearlyStats.assignAll(await _repository.getLogsInRange(yearStart, now));
+    }
 
-    // Calculate Rate (Monthly Consistency Score)
-    if (monthlyStats.isNotEmpty || profile.value.workingDays.isNotEmpty) {
-      // ✅ Phase 3: Calculate proper expected working days
-      int expectedWorkingDays = 0;
-      for (
-        var d = monthStart;
-        d.isBefore(now.add(const Duration(days: 1)));
-        d = d.add(const Duration(days: 1))
-      ) {
-        final dayIndex = d.weekday == 7 ? 0 : d.weekday;
-        if (profile.value.workingDays.contains(dayIndex)) {
-          expectedWorkingDays++;
+    availableYears.assignAll(await _repository.getAvailableYears());
+    _calculatePeriodStats();
+  }
+
+  void setPeriod(JobAnalyticsPeriod period) {
+    selectedPeriod.value = period;
+    _loadAnalytics(); // Reload to handle potential range changes (Yearly Calendar vs Rolling)
+  }
+
+  void setYear(int year) {
+    selectedYear.value = year;
+    if (selectedPeriod.value == JobAnalyticsPeriod.yearly) {
+      _loadAnalytics();
+    }
+  }
+
+  void _calculatePeriodStats() {
+    final now = DateTime.now();
+    List<AttendanceLog> currentLogs = [];
+    DateTime periodStart;
+    DateTime periodEnd = now;
+
+    switch (selectedPeriod.value) {
+      case JobAnalyticsPeriod.weekly:
+        periodStart = now.subtract(const Duration(days: 7));
+        currentLogs = weeklyStats;
+        _aggregateWeeklyData(currentLogs);
+        break;
+      case JobAnalyticsPeriod.monthly:
+        periodStart = DateTime(now.year, now.month, 1);
+        currentLogs = monthlyStats;
+        _aggregateMonthlyByWeek(currentLogs, periodStart, now);
+        break;
+      case JobAnalyticsPeriod.yearly:
+        periodStart = DateTime(selectedYear.value, 1, 1);
+        periodEnd = selectedYear.value == now.year ? now : DateTime(selectedYear.value, 12, 31);
+        currentLogs = yearlyStats;
+        _aggregateYearlyData(currentLogs, selectedYear.value);
+        break;
+    }
+
+    // 1. Metric Summary
+    final summary = <AttendanceStatus, int>{};
+    for (var log in currentLogs) {
+      summary[log.status] = (summary[log.status] ?? 0) + 1;
+    }
+    statsSummary.assignAll(summary);
+    totalActiveDays.value = currentLogs.length;
+
+    // 2. Average Check-in Time
+    final checkInLogs = currentLogs.where((l) => l.checkInTime != null).toList();
+    if (checkInLogs.isNotEmpty) {
+      int totalMinutes = 0;
+      for (var log in checkInLogs) {
+        totalMinutes += log.checkInTime!.hour * 60 + log.checkInTime!.minute;
+      }
+      final avgMinutes = totalMinutes ~/ checkInLogs.length;
+      avgCheckInTime.value = formatMinutes(avgMinutes);
+    } else {
+      avgCheckInTime.value = '--:--';
+    }
+
+    // 3. Performance & Shift Variance logic
+    // ✅ Phase 8 Audit: Calculate expected working days for the entire period range
+    int expectedWorkingDays = 0;
+    for (var d = periodStart; d.isBefore(periodEnd.add(const Duration(days: 1))); d = d.add(const Duration(days: 1))) {
+      final dayIndex = d.weekday == 7 ? 0 : d.weekday;
+      if (profile.value.workingDays.contains(dayIndex)) {
+        expectedWorkingDays++;
+      }
+    }
+    
+    totalMandatedDays.value = expectedWorkingDays;
+
+    _calculateAdvancedMetrics(currentLogs, expectedWorkingDays);
+
+    // 4. Consistency Rate logic
+    _updateConsistencyMetrics(expectedWorkingDays, currentLogs);
+  }
+
+  void _aggregateWeeklyData(List<AttendanceLog> logs) {
+    final List<Map<String, dynamic>> results = [];
+    for (var log in logs) {
+      results.add({
+        'label': DateFormat.E(Get.locale?.languageCode).format(log.date),
+        'value': log.status == AttendanceStatus.present ? 1.0 : (log.status == AttendanceStatus.holiday ? 0.8 : 0.2),
+        'date': log.date,
+      });
+    }
+    aggregatedChartData.assignAll(results);
+  }
+
+  void _aggregateMonthlyByWeek(List<AttendanceLog> logs, DateTime start, DateTime end) {
+    final List<Map<String, dynamic>> results = [];
+    
+    // Bin by 7-day windows
+    for (int i = 0; i < 5; i++) {
+      final binStart = start.add(Duration(days: i * 7));
+      if (binStart.isAfter(end) && i > 0) break;
+      
+      final binEnd = binStart.add(const Duration(days: 6));
+      final binLogs = logs.where((l) => (l.date.isAfter(binStart) || l.date.isAtSameMomentAs(binStart)) && 
+                                        (l.date.isBefore(binEnd) || l.date.isAtSameMomentAs(binEnd))).toList();
+      
+      int presentCount = binLogs.where((l) => l.status == AttendanceStatus.present).length;
+      double rate = binLogs.isNotEmpty ? presentCount / binLogs.length : 0.0;
+
+      results.add({
+        'label': '${'week'.tr} ${i + 1}',
+        'value': rate,
+        'date': binStart,
+      });
+    }
+    aggregatedChartData.assignAll(results);
+  }
+
+  void _aggregateYearlyData(List<AttendanceLog> logs, int year) {
+    // Generate 12 months for the selected year
+    final List<Map<String, dynamic>> calendarResults = [];
+    
+    for (int month = 1; month <= 12; month++) {
+      final monthDate = DateTime(year, month, 1);
+      final monthLogs = logs.where((l) => l.date.month == month && l.date.year == year).toList();
+      
+      final presentCount = monthLogs.where((l) => l.status == AttendanceStatus.present).length;
+      final rate = monthLogs.isNotEmpty ? presentCount / monthLogs.length : 0.0;
+      
+      calendarResults.add({
+        'label': DateFormat.MMM(Get.locale?.languageCode).format(monthDate),
+        'value': rate,
+        'date': monthDate,
+      });
+    }
+    
+    aggregatedChartData.assignAll(calendarResults);
+  }
+
+  void _calculateAdvancedMetrics(List<AttendanceLog> logs, int periodExpectedDays) {
+    int totalVariance = 0;
+    int varianceCount = 0;
+    int totalDuration = 0;
+
+    for (var log in logs) {
+      if (log.status == AttendanceStatus.present && log.checkInTime != null) {
+        // Calculate Expected Start for that specific day
+        final dayIndex = log.date.weekday == 7 ? 0 : log.date.weekday;
+        final expectedStartMin = getStartMinutesForDay(dayIndex);
+        final actualStartMin = log.checkInTime!.hour * 60 + log.checkInTime!.minute;
+        
+        totalVariance += (actualStartMin - expectedStartMin);
+        varianceCount++;
+
+        if (log.checkOutTime != null) {
+          totalDuration += log.checkOutTime!.difference(log.checkInTime!).inMinutes;
         }
       }
+    }
 
-      final presentCount = monthlyStats
-          .where((l) => l.status == AttendanceStatus.present)
-          .length;
-      attendanceRate.value = expectedWorkingDays > 0
-          ? (presentCount / expectedWorkingDays).clamp(0.0, 1.0)
-          : 0.0;
+    avgVarianceMinutes.value = varianceCount > 0 ? (totalVariance ~/ varianceCount) : 0;
+    totalWorkMinutes.value = totalDuration;
 
-      // ✅ Phase 3: Consistency Rate should NOT count absence or non-active leaves as positive unless specified. We strict it to present and holidays (paid leave).
-      final consistentCount = monthlyStats
-          .where(
-            (l) =>
-                l.status == AttendanceStatus.present ||
-                l.status == AttendanceStatus.holiday,
-          )
-          .length;
-      consistencyRate.value = expectedWorkingDays > 0
-          ? (consistentCount / expectedWorkingDays).clamp(0.0, 1.0)
-          : 0.0;
+    // ✅ Phase 8 Audit: Strict Institutional Work Balance
+    // Benchmark against 'periodExpectedDays' to ensure absences count as deficits
+    final officialHours = profile.value.officialWorkHours ?? 8.0;
+    final totalMandatedMinutes = (officialHours * 60 * periodExpectedDays).toInt();
+    workBalanceMinutes.value = totalDuration - totalMandatedMinutes;
+
+    // ✅ Phase 8: Today's Predictive Exit
+    _calculateTodayPredictiveExit();
+
+    // 5. Generate Insight
+    _generateInsight(varianceCount);
+  }
+
+  void _calculateTodayPredictiveExit() {
+    if (todayLog.value != null && todayLog.value!.checkInTime != null) {
+      final checkIn = todayLog.value!.checkInTime!;
+      final officialMinutes = ((profile.value.officialWorkHours ?? 8.0) * 60).toInt();
+      final expectedExitTime = checkIn.add(Duration(minutes: officialMinutes));
+      
+      expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime);
+    } else {
+      expectedCheckOut.value = '--:--';
+    }
+  }
+
+  void _generateInsight(int varianceCount) {
+    if (attendanceRate.value > 0.9 && avgVarianceMinutes.value <= 5) {
+      performanceInsight.value = 'insight_good'.tr;
+    } else if (avgVarianceMinutes.value > 15) {
+      performanceInsight.value = 'insight_late'.tr;
+    } else if (avgVarianceMinutes.value < -5) {
+      performanceInsight.value = 'insight_early'.tr;
+    } else {
+      performanceInsight.value = 'insight_good'.tr;
+    }
+  }
+
+  void _updateConsistencyMetrics(int expectedWorkingDays, List<AttendanceLog> logs) {
+    if (expectedWorkingDays > 0) {
+      final presentCount = logs.where((l) => l.status == AttendanceStatus.present).length;
+      attendanceRate.value = (presentCount / expectedWorkingDays).clamp(0.0, 1.0);
+
+      final consistentCount = logs.where((l) => 
+        l.status == AttendanceStatus.present || l.status == AttendanceStatus.holiday
+      ).length;
+      consistencyRate.value = (consistentCount / expectedWorkingDays).clamp(0.0, 1.0);
     } else {
       attendanceRate.value = 0.0;
       consistencyRate.value = 0.0;
     }
-
-    // Comprehensive Summary
-    final summary = <AttendanceStatus, int>{};
-    for (var log in monthlyStats) {
-      summary[log.status] = (summary[log.status] ?? 0) + 1;
-    }
-    statsSummary.assignAll(summary);
   }
 
   Future<void> logAttendance(
@@ -242,7 +437,7 @@ class JobController extends GetxController {
     _loadAnalytics();
   }
 
-  Future<void> updateSettings({
+  Future<void> updateJobSettings({
     String? title,
     String? company,
     String? position,
@@ -252,6 +447,7 @@ class JobController extends GetxController {
     int? endMin,
     bool? reminders,
     String? customSchedulesJson,
+    double? officialWorkHours,
   }) async {
     final updated = profile.value.copyWith(
       jobTitle: title,
@@ -263,6 +459,7 @@ class JobController extends GetxController {
       endMinutes: endMin,
       remindersEnabled: reminders,
       customSchedulesJson: customSchedulesJson,
+      officialWorkHours: officialWorkHours,
     );
 
     try {
@@ -307,7 +504,7 @@ class JobController extends GetxController {
       };
     }
 
-    updateSettings(customSchedulesJson: jsonEncode(current));
+    updateJobSettings(customSchedulesJson: jsonEncode(current));
   }
 
   int getStartMinutesForDay(int dayIndex) {

@@ -88,4 +88,27 @@ class JobRepository {
     
     return stats;
   }
+
+  /// Discover all unique years with activity (High Performance)
+  Future<List<int>> getAvailableYears() async {
+    final now = DateTime.now();
+    final Set<int> years = {now.year}; // Default anchor
+    
+    try {
+      // Fetch earliest and latest log dates to find the year span
+      final earliest = await _isar.attendanceLogs.where().sortByDate().findFirst();
+      final latest = await _isar.attendanceLogs.where().sortByDateDesc().findFirst();
+      
+      if (earliest != null && latest != null) {
+        for (int y = earliest.date.year; y <= latest.date.year; y++) {
+          years.add(y);
+        }
+      }
+    } catch (e) {
+      talker.error('🔴 Year Discovery Failed: $e');
+    }
+    
+    final sortedYears = years.toList()..sort((a, b) => b.compareTo(a));
+    return sortedYears;
+  }
 }
