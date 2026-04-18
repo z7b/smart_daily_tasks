@@ -43,4 +43,15 @@ class StepLog {
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'steps': steps,
+      'goal': goal,
+      'isManual': isManual,
+      'lastSyncedAt': lastSyncedAt.toIso8601String(),
+    };
+  }
 }

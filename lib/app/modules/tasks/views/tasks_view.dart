@@ -105,7 +105,7 @@ class TasksView extends GetView<TaskController> {
                         child: Text(
                           DateFormat.yMMMMEEEEd(
                             Get.locale?.languageCode,
-                          ).format(DateTime.now()),
+                          ).format(DateTime.now()).f,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -397,8 +397,8 @@ class TasksView extends GetView<TaskController> {
                         children: [
                           Text(
                             task.scheduledEnd != null
-                                ? '${DateFormat.jm().format(task.scheduledAt)} → ${DateFormat.jm().format(task.scheduledEnd!)}'
-                                : DateFormat.jm().format(task.scheduledAt),
+                                ? '${DateFormat.jm().format(task.scheduledAt).f} → ${DateFormat.jm().format(task.scheduledEnd!).f}'
+                                : DateFormat.jm().format(task.scheduledAt).f,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -408,7 +408,7 @@ class TasksView extends GetView<TaskController> {
                           const SizedBox(height: 2),
                           Text(
                             DateFormat.yMMMMd(Get.locale?.languageCode)
-                                .format(task.scheduledAt),
+                                .format(task.scheduledAt).f,
                             style: TextStyle(
                               fontSize: 12,
                               color: theme.textTheme.bodyMedium?.color

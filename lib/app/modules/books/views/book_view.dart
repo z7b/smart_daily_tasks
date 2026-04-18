@@ -331,7 +331,7 @@ class BookView extends GetView<BookController> {
                     ),
                     child: Text(
                       DateFormat.MMMd(Get.locale?.languageCode)
-                          .format(book.lastReadAt!),
+                          .format(book.lastReadAt!).f,
                       style: const TextStyle(
                           fontSize: 9,
                           color: AppTheme.primary,
@@ -410,7 +410,7 @@ class BookView extends GetView<BookController> {
                         const SizedBox(width: 6),
                         Text(
                           DateFormat.yMMMd(Get.locale?.languageCode)
-                              .format(book.completedAt!),
+                              .format(book.completedAt!).f,
                           style: TextStyle(
                               fontSize: 11,
                               color: const Color(0xFF34C759).withAlpha(180)),

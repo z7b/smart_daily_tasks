@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 
 class QuickLogStrip extends StatelessWidget {
   final Function(DateTime) onDaySelected;
@@ -85,7 +86,7 @@ class QuickLogStrip extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    DateFormat('d').format(date),
+                    DateFormat('d').format(date).f,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

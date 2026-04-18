@@ -1213,7 +1213,7 @@ class JobView extends GetView<JobController> {
                     Text(
                       DateFormat.yMMMMd(
                         Get.locale?.languageCode,
-                      ).format(log.date),
+                      ).format(log.date).f,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
@@ -1237,7 +1237,7 @@ class JobView extends GetView<JobController> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    TimeOfDay.fromDateTime(log.checkInTime!).format(context),
+                    TimeOfDay.fromDateTime(log.checkInTime!).format(context).f,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1346,7 +1346,7 @@ class JobView extends GetView<JobController> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              DateFormat.yMMMMd(Get.locale?.languageCode).format(picked),
+              DateFormat.yMMMMd(Get.locale?.languageCode).format(picked).f,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primary,
@@ -1369,7 +1369,7 @@ class JobView extends GetView<JobController> {
                       'logged_for_day'.trParams({
                         'date': DateFormat.yMd(
                           Get.locale?.languageCode,
-                        ).format(picked),
+                        ).format(picked).f,
                       }),
                     );
                   },

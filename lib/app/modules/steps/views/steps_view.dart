@@ -411,7 +411,7 @@ class StepsView extends GetView<StepsController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat.yMMMMd(Get.locale?.languageCode).format(log.date),
+                      DateFormat.yMMMMd(Get.locale?.languageCode).format(log.date).f,
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     SizedBox(height: 4),

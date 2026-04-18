@@ -221,7 +221,7 @@ class JournalView extends GetView<JournalController> {
                   children: [
                     Expanded(
                       child: Text(
-                        DateFormat('EEEE, MMMM d', Get.locale?.languageCode).format(journal.date),
+                        DateFormat('EEEE, MMMM d', Get.locale?.languageCode).format(journal.date).f,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,

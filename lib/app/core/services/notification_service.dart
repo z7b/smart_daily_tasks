@@ -153,8 +153,8 @@ class NotificationService extends GetxService {
       await _waitForInit();
     }
 
-    // Convert to UTC-safe TZDateTime to prevent offset drifts
-    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime.toUtc(), tz.UTC);
+    // Convert to local timezone TZDateTime for correct scheduling
+    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
     // If time is in the past (with 5s safety buffer for performance overhead), don't schedule
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)))) {
@@ -245,6 +245,9 @@ class NotificationService extends GetxService {
       await Future.delayed(const Duration(milliseconds: 200));
       attempts++;
     }
+    if (!isInitialized.value) {
+      talker.error('⚠️ NotificationService failed to initialize after $attempts attempts');
+    }
   }
 
   Future<void> cancelNotification(int id) async {
@@ -261,8 +264,8 @@ class NotificationService extends GetxService {
   }) async {
     if (!isInitialized.value) await _waitForInit();
 
-    final now = tz.TZDateTime.now(tz.UTC);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.UTC, now.year, now.month, now.day, hour, minute);
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     
     int daysToAdd = (dayOfWeek - scheduledDate.weekday + 7) % 7;
     scheduledDate = scheduledDate.add(Duration(days: daysToAdd));

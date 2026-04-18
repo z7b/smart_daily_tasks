@@ -14,6 +14,12 @@ import '../../data/models/note_model.dart';
 import '../../data/models/journal_model.dart';
 import '../../data/models/bookmark_model.dart';
 import '../../data/models/calendar_event_model.dart';
+import '../../data/models/book_model.dart';
+import '../../data/models/medication_model.dart';
+import '../../data/models/step_log_model.dart';
+import '../../data/models/work_profile_model.dart';
+import '../../data/models/attendance_log_model.dart';
+import '../helpers/log_helper.dart';
 
 class BackupService {
   final Isar _isar = Get.find<Isar>();
@@ -25,15 +31,25 @@ class BackupService {
     final journals = await _isar.journals.where().findAll();
     final bookmarks = await _isar.bookmarks.where().findAll();
     final events = await _isar.calendarEvents.where().findAll();
+    final books = await _isar.books.where().findAll();
+    final medications = await _isar.medications.where().findAll();
+    final stepLogs = await _isar.stepLogs.where().findAll();
+    final workProfiles = await _isar.workProfiles.where().findAll();
+    final attendanceLogs = await _isar.attendanceLogs.where().findAll();
 
     final Map<String, dynamic> backupData = {
-      'version': 1,
-      'timestamp': DateTime.now().toIso8601String(),
+      'version': 2,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
       'tasks': tasks.map((e) => e.toJson()).toList(),
       'notes': notes.map((e) => e.toJson()).toList(),
       'journal': journals.map((e) => e.toJson()).toList(),
       'bookmarks': bookmarks.map((e) => e.toJson()).toList(),
       'events': events.map((e) => e.toJson()).toList(),
+      'books': books.map((e) => e.toJson()).toList(),
+      'medications': medications.map((e) => e.toJson()).toList(),
+      'stepLogs': stepLogs.map((e) => e.toJson()).toList(),
+      'workProfiles': workProfiles.map((e) => e.toJson()).toList(),
+      'attendanceLogs': attendanceLogs.map((e) => e.toJson()).toList(),
     };
 
     return jsonEncode(backupData);

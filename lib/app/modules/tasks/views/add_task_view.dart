@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../controllers/task_controller.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class AddTaskView extends GetView<TaskController> {
   const AddTaskView({super.key});
@@ -137,7 +138,7 @@ class AddTaskView extends GetView<TaskController> {
                     icon: CupertinoIcons.calendar,
                     iconColor: const Color(0xFFFF2D55),
                     trailing: Obx(() => Text(
-                      DateFormat.yMMMMd(locale).format(controller.selectedDate.value),
+                      DateFormat.yMMMMd(locale).format(controller.selectedDate.value).f,
                       style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color),
                     )),
                     onTap: () => _getDateFromUser(context),
@@ -149,7 +150,7 @@ class AddTaskView extends GetView<TaskController> {
                     icon: CupertinoIcons.time,
                     iconColor: const Color(0xFF007AFF),
                     trailing: Obx(() => Text(
-                      controller.startTime.value.format(context),
+                      controller.startTime.value.format(context).f,
                       style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color),
                     )),
                     onTap: () => _getTimeFromUser(isStartTime: true, context: context),
@@ -170,7 +171,7 @@ class AddTaskView extends GetView<TaskController> {
                       if (e.isBefore(s) || e.isAtSameMomentAs(s)) isInvalid = true;
 
                       return Text(
-                        end.format(context),
+                        end.format(context).f,
                         style: TextStyle(
                           fontSize: 14, 
                           color: isInvalid ? Colors.red : theme.textTheme.bodyMedium?.color,

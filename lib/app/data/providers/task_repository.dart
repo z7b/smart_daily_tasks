@@ -31,6 +31,7 @@ class TaskRepository {
     yield* _isar.tasks
         .where()
         .sortByCreatedAtDesc()
+        .limit(limit)
         .watch(fireImmediately: true);
   }
 
@@ -121,7 +122,9 @@ class TaskRepository {
           isDue = template.scheduledAt.weekday == now.weekday;
         }
         if (template.recurrence == TaskRecurrence.monthly) {
-          isDue = template.scheduledAt.day == now.day;
+          final lastDayOfMonth = DateTime(now.year, now.month + 1, 0).day;
+          final effectiveDay = template.scheduledAt.day.clamp(1, lastDayOfMonth);
+          isDue = effectiveDay == now.day;
         }
 
         if (!isDue) continue;

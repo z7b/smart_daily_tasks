@@ -7,6 +7,7 @@ import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
+import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 
@@ -36,6 +37,7 @@ class HomeController extends GetxController {
   StreamSubscription? _bookSub;
   StreamSubscription? _stepLogSub;
   StreamSubscription? _attendanceSub;
+  StreamSubscription? _medicationSub;
   Timer? _pulseTimer;
 
   // UI State
@@ -158,6 +160,7 @@ class HomeController extends GetxController {
     _bookSub?.cancel();
     _stepLogSub?.cancel();
     _attendanceSub?.cancel();
+    _medicationSub?.cancel();
     _pulseTimer?.cancel();
     super.onClose();
   }
@@ -192,7 +195,7 @@ class HomeController extends GetxController {
         .debounceTime(const Duration(milliseconds: 500))
         .listen((_) => _loadRealData());
 
-    _isar.medications.watchLazy()
+    _medicationSub = _isar.medications.watchLazy()
         .debounceTime(const Duration(milliseconds: 500))
         .listen((_) => _loadRealData());
 
@@ -404,7 +407,7 @@ class HomeController extends GetxController {
         
         if (nextDoseDateTime != null) {
           // ✅ Localize the time string properly (e.g. 10:30 ص instead of 10:30 AM)
-          nextMedicationTime.value = DateFormat.jm(locale).format(nextDoseDateTime);
+          nextMedicationTime.value = DateFormat.jm(locale).format(nextDoseDateTime).f;
           nextMedicationName.value = nextDoseName;
           
           final diff = nextDoseDateTime.difference(now);
@@ -419,16 +422,16 @@ class HomeController extends GetxController {
               } else if (diff.inDays < 7) {
                 nextMedicationTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
               } else {
-                nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(nextDoseDateTime);
+                nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(nextDoseDateTime).f;
               }
             } else {
               // Close Dose: Show hours/minutes
               final hours = diff.inHours;
               final minutes = (diff.inMinutes % 60).abs();
               if (hours > 0) {
-                nextMedicationTimeLeft.value = '$hours${'hours_abbr'.tr} $minutes${'minutes_abbr'.tr}';
+                nextMedicationTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
               } else {
-                nextMedicationTimeLeft.value = '$minutes${'minutes_abbr'.tr}';
+                nextMedicationTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
               }
             }
           }
@@ -467,10 +470,10 @@ class HomeController extends GetxController {
         
         if (predictiveTask != null) {
           nextTaskTitle.value = predictiveTask.title;
-          nextTaskTime.value = DateFormat.jm(locale).format(predictiveTask.scheduledAt);
-          nextTaskEndTime.value = predictiveTask.scheduledEnd != null ? DateFormat.jm(locale).format(predictiveTask.scheduledEnd!) : '';
+          nextTaskTime.value = DateFormat.jm(locale).format(predictiveTask.scheduledAt).f;
+          nextTaskEndTime.value = predictiveTask.scheduledEnd != null ? DateFormat.jm(locale).format(predictiveTask.scheduledEnd!).f : '';
           nextTaskPriority.value = predictiveTask.priority;
-          nextTaskFullDate.value = DateFormat('dd MMMM yyyy', locale).format(predictiveTask.scheduledAt) + ' • ' + nextTaskTime.value;
+          nextTaskFullDate.value = '${DateFormat('dd MMMM yyyy', locale).format(predictiveTask.scheduledAt).f} • ${nextTaskTime.value}';
           
           final diff = predictiveTask.scheduledAt.difference(now);
           if (diff.isNegative) {
@@ -483,15 +486,15 @@ class HomeController extends GetxController {
               } else if (diff.inDays < 7) {
                 nextTaskTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
               } else {
-                nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(predictiveTask.scheduledAt);
+                nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(predictiveTask.scheduledAt).f;
               }
             } else {
               final hours = diff.inHours;
               final minutes = (diff.inMinutes % 60).abs();
               if (hours > 0) {
-                nextTaskTimeLeft.value = '$hours${'hours_abbr'.tr} $minutes${'minutes_abbr'.tr}';
+                nextTaskTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
               } else {
-                nextTaskTimeLeft.value = '$minutes${'minutes_abbr'.tr}';
+                nextTaskTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
               }
             }
           }

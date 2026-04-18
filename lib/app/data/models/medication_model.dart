@@ -63,14 +63,17 @@ class Medication {
 
   int get totalDurationDays {
     if (endDate == null) return -1;
-    return endDate!.difference(startDate).inDays + 1;
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate!.year, endDate!.month, endDate!.day);
+    return end.difference(start).inDays + 1;
   }
 
   int get remainingDays {
     if (endDate == null) return -1;
-    final now = DateTime.now();
-    if (now.isAfter(endDate!)) return 0;
-    return endDate!.difference(now).inDays + 1;
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final end = DateTime(endDate!.year, endDate!.month, endDate!.day);
+    if (today.isAfter(end)) return 0;
+    return end.difference(today).inDays + 1;
   }
 
   // --- Life OS Intelligence ---

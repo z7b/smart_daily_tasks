@@ -783,7 +783,7 @@ class HomeView extends GetView<HomeController> {
 
                             // Precise Schedule
                             Text(
-                              '${DateFormat.EEEE(Get.locale?.languageCode).format(start!)} • ${TimeOfDay.fromDateTime(start).format(context)} - ${TimeOfDay.fromDateTime(end!).format(context)}',
+                              '${DateFormat.EEEE(Get.locale?.languageCode).format(start!).f} • ${TimeOfDay.fromDateTime(start).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey.withValues(alpha: 0.6),

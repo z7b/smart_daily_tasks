@@ -71,4 +71,21 @@ class WorkProfile {
       officialWorkHours: officialWorkHours ?? this.officialWorkHours,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'jobTitle': jobTitle,
+      'jobPosition': jobPosition,
+      'companyName': companyName,
+      'startMinutes': startMinutes,
+      'endMinutes': endMinutes,
+      'customSchedulesJson': customSchedulesJson,
+      'salaryDay': salaryDay,
+      'monthlySalary': monthlySalary,
+      'workingDays': workingDays,
+      'remindersEnabled': remindersEnabled,
+      'officialWorkHours': officialWorkHours,
+    };
+  }
 }

@@ -45,4 +45,15 @@ class AttendanceLog {
       note: note ?? this.note,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'status': status.index,
+      'checkInTime': checkInTime?.toIso8601String(),
+      'checkOutTime': checkOutTime?.toIso8601String(),
+      'note': note,
+    };
+  }
 }

@@ -297,7 +297,7 @@ class NotesView extends GetView<NotesController> {
                         // Date
                         Text(
                           DateFormat.MMMd(Get.locale?.languageCode)
-                              .format(noteDate),
+                              .format(noteDate).f,
                           style: TextStyle(
                             fontSize: 10,
                             color: theme.textTheme.bodySmall?.color
@@ -343,7 +343,7 @@ class NotesView extends GetView<NotesController> {
     if (days <= 3) return 'recent'.tr;
     if (days <= 14) return '${days.f}d';
     return DateFormat.MMMd(Get.locale?.languageCode)
-        .format(DateTime.now().subtract(Duration(days: days)));
+        .format(DateTime.now().subtract(Duration(days: days))).f;
   }
 
   // ─── Mini chip ────────────────────────────────────────────────

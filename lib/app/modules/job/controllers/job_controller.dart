@@ -6,6 +6,7 @@ import '../../../data/models/work_profile_model.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 import 'package:isar/isar.dart';
 
@@ -361,7 +362,7 @@ class JobController extends GetxController {
       
       final expectedExitTime = checkIn.add(Duration(minutes: spanMinutes));
       
-      expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime);
+      expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime).f;
     } else {
       expectedCheckOut.value = '--:--';
     }

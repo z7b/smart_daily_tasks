@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smart_daily_tasks/app/modules/tasks/controllers/task_controller.dart';
 
@@ -214,7 +215,7 @@ class TaskTile extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          DateFormat.yMMMMd(Get.locale?.languageCode ?? 'en').format(task.scheduledAt),
+                                          DateFormat.yMMMMd(Get.locale?.languageCode ?? 'en').format(task.scheduledAt).f,
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -223,7 +224,7 @@ class TaskTile extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          "${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledEnd!)}' : ''}",
+                                          "${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledAt).f}${task.scheduledEnd != null ? ' - ${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledEnd!).f}' : ''}",
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),

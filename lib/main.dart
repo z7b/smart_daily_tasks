@@ -87,7 +87,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       // ✅ Phase 4: Expert Isar Initialization (Singleton-Aware + Lock Recovery)
       Isar? isar = Isar.getInstance();
-      
+
       if (isar == null) {
         int retryCount = 0;
         while (retryCount <= 3) {
@@ -104,15 +104,20 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
               WorkProfileSchema,
               AttendanceLogSchema,
             ], directory: dir.path);
-            talker.info('📦 Isar successfully initialized (Attempt ${retryCount + 1})');
-            break; 
+            talker.info(
+              '📦 Isar successfully initialized (Attempt ${retryCount + 1})',
+            );
+            break;
           } catch (e) {
             retryCount++;
             final errorStr = e.toString();
-            
+
             // Handle Lock Error (MdbxError 11 / EAGAIN)
-            if (errorStr.contains('MdbxError (11)') || errorStr.contains('Try again')) {
-              talker.warning('🕒 Database locked by another instance. Retrying in 500ms... ($retryCount/4)');
+            if (errorStr.contains('MdbxError (11)') ||
+                errorStr.contains('Try again')) {
+              talker.warning(
+                '🕒 Database locked by another instance. Retrying in 500ms... ($retryCount/4)',
+              );
               await Future.delayed(const Duration(milliseconds: 500));
               continue;
             }
@@ -123,9 +128,12 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
               try {
                 final dbFile = File('${dir.path}/default.isar');
                 if (await dbFile.exists()) {
-                  final backupPath = '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
+                  final backupPath =
+                      '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
                   await dbFile.rename(backupPath);
-                  talker.warning('🚨 Potential corruption detected. Backup created at: $backupPath');
+                  talker.warning(
+                    '🚨 Potential corruption detected. Backup created at: $backupPath',
+                  );
                 }
               } catch (resErr) {
                 talker.error('❌ Recovery rename failed: $resErr');
@@ -162,7 +170,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       // ✅ Step 4: Initialize Features
       talker.info('🔔 Initializing Notifications...');
-      await Get.putAsync(() => Future.value(NotificationService()), permanent: true);
+      Get.put(NotificationService(), permanent: true);
 
       final appLockObserver = AppLockObserver();
       WidgetsBinding.instance.addObserver(appLockObserver);
@@ -214,89 +222,93 @@ class MainApp extends StatelessWidget {
     final themeService = Get.find<ThemeService>();
     final appLockService = Get.find<AppLockService>();
 
-    return Obx(() => GetMaterialApp(
-      title: 'Smart Daily Tasks',
-      debugShowCheckedModeBanner: false,
-      theme: themeService.currentTheme,
-      darkTheme: themeService.currentDarkTheme,
-      themeMode: themeService.theme,
-      initialRoute: AppPages.initial,
-      initialBinding: InitialBinding(),
-      getPages: AppPages.routes,
-      translations: Messages(),
-      locale: Locale(themeService.getLocale().languageCode),
-      fallbackLocale: const Locale('en'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en'), Locale('ar')],
-      builder: (context, child) {
-        return Stack(
-          children: [
-            child!,
-            Obx(() {
-              if (!appLockService.isOverlayVisible.value) {
-                return const SizedBox.shrink();
-              }
-              
-              return Positioned.fill(
-                child: GestureDetector(
-                  onTap: () => appLockService.authenticate(),
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        color: Colors.black.withAlpha(150),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(20),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withAlpha(40)),
-                              ),
-                              child: const Icon(
-                                Icons.security_rounded,
-                                color: Colors.white,
-                                size: 64,
-                              ),
+    return Obx(
+      () => GetMaterialApp(
+        title: 'Smart Daily Tasks',
+        debugShowCheckedModeBanner: false,
+        theme: themeService.currentTheme,
+        darkTheme: themeService.currentDarkTheme,
+        themeMode: themeService.theme,
+        initialRoute: AppPages.initial,
+        initialBinding: InitialBinding(),
+        getPages: AppPages.routes,
+        translations: Messages(),
+        locale: Locale(themeService.getLocale().languageCode),
+        fallbackLocale: const Locale('en'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('ar')],
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child!,
+              Obx(() {
+                if (!appLockService.isOverlayVisible.value) {
+                  return const SizedBox.shrink();
+                }
+
+                return Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => appLockService.authenticate(),
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          color: Colors.black.withAlpha(150),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(20),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withAlpha(40),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.security_rounded,
+                                    color: Colors.white,
+                                    size: 64,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'privacy_overlay_active'.tr,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'tap_to_unlock'.tr,
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha(120),
+                                    fontSize: 14,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 24),
-                            Text(
-                              'privacy_overlay_active'.tr,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'tap_to_unlock'.tr,
-                              style: TextStyle(
-                                color: Colors.white.withAlpha(120),
-                                fontSize: 14,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        );
-      },
-    ));
+                );
+              }),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
