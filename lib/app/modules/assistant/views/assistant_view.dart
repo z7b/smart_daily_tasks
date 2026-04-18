@@ -96,7 +96,7 @@ class AssistantView extends GetView<AssistantController> {
               ),
             ),
             child: Icon(Icons.auto_awesome, size: 48, color: AppTheme.primary),
-          ).animate().fadeIn(duration: 600.ms).scale(),
+          ).animate().fadeIn(duration: const Duration(milliseconds: 600)).scale(),
           const SizedBox(height: 24),
           Text(
             'assistant_greeting'.tr,
@@ -104,7 +104,7 @@ class AssistantView extends GetView<AssistantController> {
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
-          ).animate().fadeIn(delay: 200.ms),
+          ).animate().fadeIn(delay: const Duration(milliseconds: 200)),
           const SizedBox(height: 8),
           Text(
             'assistant_description'.tr,
@@ -112,7 +112,7 @@ class AssistantView extends GetView<AssistantController> {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
-          ).animate().fadeIn(delay: 300.ms),
+          ).animate().fadeIn(delay: const Duration(milliseconds: 300)),
         ],
       ),
     );
@@ -175,8 +175,8 @@ class AssistantView extends GetView<AssistantController> {
             ),
           ),
         )
-        .animate(delay: (index * 50).ms)
-        .fadeIn(duration: 300.ms)
+        .animate(delay: Duration(milliseconds: index * 50))
+        .fadeIn(duration: const Duration(milliseconds: 300))
         .slideY(begin: 0.1, end: 0);
   }
 
@@ -221,9 +221,9 @@ class AssistantView extends GetView<AssistantController> {
           ),
         )
         .animate(onPlay: (controller) => controller.repeat())
-        .fadeIn(delay: (index * 150).ms, duration: 300.ms)
+        .fadeIn(delay: Duration(milliseconds: index * 150), duration: const Duration(milliseconds: 300))
         .then()
-        .fadeOut(duration: 300.ms);
+        .fadeOut(duration: const Duration(milliseconds: 300));
   }
 
   Widget _buildQuickActions(TextEditingController messageController) {

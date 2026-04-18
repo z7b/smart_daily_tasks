@@ -85,39 +85,58 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       final dir = await getApplicationDocumentsDirectory();
 
-      // ✅ Step 1: Robust Isar Initialization with Retry & Recovery
-      Isar? isar;
-      int retryCount = 0;
-      while (retryCount <= 2) {
-        try {
-          isar = await Isar.open([
-            TaskSchema,
-            NoteSchema,
-            JournalSchema,
-            CalendarEventSchema,
-            BookmarkSchema,
-            BookSchema,
-            MedicationSchema,
-            StepLogSchema,
-            WorkProfileSchema,
-            AttendanceLogSchema,
-          ], directory: dir.path);
-          break; // Success
-        } catch (e) {
-          retryCount++;
-          talker.error('⚠️ Isar open failed (Attempt $retryCount/3): $e');
-          if (retryCount <= 2) {
-            final dbFile = File('${dir.path}/default.isar');
-            if (await dbFile.exists()) {
-              final backupPath =
-                  '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
-              await dbFile.rename(backupPath);
-              talker.warning('🚨 Corrupted DB backed up to: $backupPath');
+      // ✅ Phase 4: Expert Isar Initialization (Singleton-Aware + Lock Recovery)
+      Isar? isar = Isar.getInstance();
+      
+      if (isar == null) {
+        int retryCount = 0;
+        while (retryCount <= 3) {
+          try {
+            isar = await Isar.open([
+              TaskSchema,
+              NoteSchema,
+              JournalSchema,
+              CalendarEventSchema,
+              BookmarkSchema,
+              BookSchema,
+              MedicationSchema,
+              StepLogSchema,
+              WorkProfileSchema,
+              AttendanceLogSchema,
+            ], directory: dir.path);
+            talker.info('📦 Isar successfully initialized (Attempt ${retryCount + 1})');
+            break; 
+          } catch (e) {
+            retryCount++;
+            final errorStr = e.toString();
+            
+            // Handle Lock Error (MdbxError 11 / EAGAIN)
+            if (errorStr.contains('MdbxError (11)') || errorStr.contains('Try again')) {
+              talker.warning('🕒 Database locked by another instance. Retrying in 500ms... ($retryCount/4)');
+              await Future.delayed(const Duration(milliseconds: 500));
+              continue;
             }
-          } else {
-            rethrow;
+
+            // Handle Corruption or Migration errors (Attempt Recovery)
+            talker.error('⚠️ Critical Isar open failure: $e');
+            if (retryCount <= 2) {
+              try {
+                final dbFile = File('${dir.path}/default.isar');
+                if (await dbFile.exists()) {
+                  final backupPath = '${dir.path}/default_backup_${DateTime.now().millisecondsSinceEpoch}.isar';
+                  await dbFile.rename(backupPath);
+                  talker.warning('🚨 Potential corruption detected. Backup created at: $backupPath');
+                }
+              } catch (resErr) {
+                talker.error('❌ Recovery rename failed: $resErr');
+              }
+            } else {
+              rethrow;
+            }
           }
         }
+      } else {
+        talker.info('♻️ Reusing existing Isar singleton instance');
       }
 
       if (isar == null)

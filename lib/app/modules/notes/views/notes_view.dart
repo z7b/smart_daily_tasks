@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 
 import '../../../data/models/note_model.dart';
 import '../controllers/notes_controller.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class NotesView extends GetView<NotesController> {
   const NotesView({super.key});
@@ -94,14 +95,14 @@ class NotesView extends GetView<NotesController> {
                   child: Row(
                     children: [
                       _miniChip(
-                          icon: CupertinoIcons.doc_text,
-                          label: '$total',
+                           icon: CupertinoIcons.doc_text,
+                          label: total.f,
                           color: AppTheme.primary),
                       if (pinned > 0) ...[
                         const SizedBox(width: 8),
                         _miniChip(
                             icon: CupertinoIcons.pin_fill,
-                            label: '$pinned',
+                            label: pinned.f,
                             color: const Color(0xFFFF9500)),
                       ],
                     ],
@@ -138,7 +139,7 @@ class NotesView extends GetView<NotesController> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05),
+                    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.05),
                   ),
                 );
               }
@@ -331,8 +332,8 @@ class NotesView extends GetView<NotesController> {
         ),
       ),
     )
-        .animate(delay: (50 * index).ms)
-        .fadeIn(duration: 300.ms)
+        .animate(delay: Duration(milliseconds: 50 * index))
+        .fadeIn(duration: const Duration(milliseconds: 300))
         .scale(begin: const Offset(0.97, 0.97));
   }
 
@@ -340,7 +341,7 @@ class NotesView extends GetView<NotesController> {
   String _ageLabel(int days) {
     if (days == 0) return 'today'.tr;
     if (days <= 3) return 'recent'.tr;
-    if (days <= 14) return '${days}d';
+    if (days <= 14) return '${days.f}d';
     return DateFormat.MMMd(Get.locale?.languageCode)
         .format(DateTime.now().subtract(Duration(days: days)));
   }

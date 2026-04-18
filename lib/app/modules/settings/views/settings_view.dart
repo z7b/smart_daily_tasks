@@ -1,5 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -16,11 +18,11 @@ class SettingsView extends GetView<SettingsController> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       children: [
         // Section Header
-        _sectionHeader('settings'.tr),
+        _sectionHeader(context, 'settings'.tr),
         const SizedBox(height: 8),
 
         // ─── Appearance Group ─────────────────────────
-        _groupTitle('appearance'.tr),
+        _groupTitle(context, 'appearance'.tr),
         const SizedBox(height: 8),
         _buildGroupedContainer(
           context,
@@ -53,12 +55,14 @@ class SettingsView extends GetView<SettingsController> {
               onTap: () => controller.changeFontSize(),
               isAr: isAr,
             ),
+            _divider(context),
+            _buildNumberFormatTile(context),
           ],
         ),
         const SizedBox(height: 24),
 
         // ─── General Group ────────────────────────────
-        _groupTitle('general'.tr),
+        _groupTitle(context, 'general'.tr),
         const SizedBox(height: 8),
         _buildGroupedContainer(
           context,
@@ -100,7 +104,7 @@ class SettingsView extends GetView<SettingsController> {
         const SizedBox(height: 24),
 
         // ─── Security Group ───────────────────────────
-        _groupTitle('security'.tr),
+        _groupTitle(context, 'security'.tr),
         const SizedBox(height: 8),
         _buildGroupedContainer(
           context,
@@ -113,26 +117,6 @@ class SettingsView extends GetView<SettingsController> {
               value: controller.appLock,
               onChanged: (_) => controller.toggleAppLock(),
             ),
-            Obx(() {
-              if (controller.appLock.value) {
-                return Column(
-                  children: [
-                    if (controller.isBiometricAvailable.value) ...[
-                      _divider(context),
-                      _buildSwitchTile(
-                        context,
-                        title: 'biometric_login'.tr,
-                        icon: CupertinoIcons.viewfinder,
-                        iconBgColor: const Color(0xFF5856D6),
-                        value: controller.isBiometricEnabled,
-                        onChanged: (_) => controller.toggleBiometric(),
-                      ),
-                    ]
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            }),
             _divider(context),
             _buildSwitchTile(
               context,
@@ -143,20 +127,24 @@ class SettingsView extends GetView<SettingsController> {
               onChanged: (_) => controller.togglePreventScreenshots(),
             ),
             _divider(context),
-            _buildNavigationTile(
-              context,
-              title: 'notification_stability'.tr,
-              icon: CupertinoIcons.battery_100,
-              iconBgColor: const Color(0xFF32ADE6),
-              onTap: () => controller.requestBatteryOptimization(),
-              isAr: isAr,
-            ),
+            Obx(() {
+              final isStable = controller.notificationStatus.value == 'amazing';
+              return _buildNavigationTile(
+                context,
+                title: 'notification_stability'.tr,
+                icon: isStable ? CupertinoIcons.checkmark_shield_fill : CupertinoIcons.battery_100,
+                iconBgColor: isStable ? const Color(0xFF34C759) : const Color(0xFF32ADE6),
+                valueBuilder: () => controller.notificationStatus.value.tr,
+                onTap: () => controller.checkNotificationStability(),
+                isAr: isAr,
+              );
+            }),
           ],
         ),
         const SizedBox(height: 24),
 
         // ─── Data Group ───────────────────────────────
-        _groupTitle('data'.tr),
+        _groupTitle(context, 'data'.tr),
         const SizedBox(height: 8),
         _buildGroupedContainer(
           context,
@@ -186,22 +174,29 @@ class SettingsView extends GetView<SettingsController> {
     );
   }
 
-  Widget _sectionHeader(String title) {
+  Widget _sectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, letterSpacing: -1),
+        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: -1,
+            ),
       ),
     );
   }
 
-  Widget _groupTitle(String title) {
+  Widget _groupTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 16, right: 16),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade500, letterSpacing: 0.5),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+              letterSpacing: 0.5,
+            ),
       ),
     );
   }
@@ -221,7 +216,10 @@ class SettingsView extends GetView<SettingsController> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Container(width: 32, height: 32, decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.white, size: 18)),
-      title: Text(title, style: const TextStyle(fontSize: 16)),
+      title: Text(
+        title, 
+        style: Theme.of(context).textTheme.bodyLarge,
+      ),
       trailing: Obx(() => CupertinoSwitch(value: value.value, activeTrackColor: AppTheme.primary, onChanged: onChanged)),
     );
   }
@@ -232,15 +230,156 @@ class SettingsView extends GetView<SettingsController> {
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Container(width: 32, height: 32, decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.white, size: 18)),
-      title: Text(title, style: const TextStyle(fontSize: 16)),
+      title: Text(
+        title, 
+        style: theme.textTheme.bodyLarge,
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (value != null || valueBuilder != null)
-            Obx(() => Text(valueBuilder != null ? valueBuilder() : value!.value, style: TextStyle(fontSize: 15, color: theme.textTheme.bodyMedium?.color?.withAlpha(150)))),
+            Obx(() => Text(
+              valueBuilder != null ? valueBuilder() : value!.value, 
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withAlpha(150),
+              ),
+            )),
           const SizedBox(width: 4),
           Icon(isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right, size: 16, color: theme.textTheme.bodyMedium?.color?.withAlpha(80)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNumberFormatTile(BuildContext context) {
+    final theme = Theme.of(context);
+    final isAr = Get.locale?.languageCode == 'ar';
+    
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 32, 
+        height: 32, 
+        decoration: BoxDecoration(
+          color: const Color(0xFF5856D6), 
+          borderRadius: BorderRadius.circular(8)
+        ), 
+        child: const Icon(CupertinoIcons.number, color: Colors.white, size: 18)
+      ),
+      title: Text(
+        'number_format'.tr, 
+        style: theme.textTheme.bodyLarge,
+      ),
+      trailing: _buildGlassNumberSelector(context),
+    );
+  }
+
+  Widget _buildGlassNumberSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Obx(() {
+      final useArabic = controller.useArabicNumbers.value;
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 36,
+            width: 100,
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? Colors.white.withValues(alpha: 0.08) 
+                  : Colors.black.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.1),
+                width: 0.5,
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Animated Highlight Capsule
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOutBack,
+                  alignment: useArabic ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 48,
+                    height: 32,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Labels & Tap Logic
+                Row(
+                  children: [
+                    _segmentItem(
+                      label: '123',
+                      isSelected: !useArabic,
+                      onTap: () {
+                        if (useArabic) {
+                          HapticFeedback.mediumImpact();
+                          controller.toggleNumberFormat();
+                        }
+                      },
+                      theme: theme,
+                    ),
+                    _segmentItem(
+                      label: '١٢٣',
+                      isSelected: useArabic,
+                      onTap: () {
+                        if (!useArabic) {
+                          HapticFeedback.mediumImpact();
+                          controller.toggleNumberFormat();
+                        }
+                      },
+                      theme: theme,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _segmentItem({
+    required String label, 
+    required bool isSelected, 
+    required VoidCallback onTap,
+    required ThemeData theme,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: isSelected 
+                  ? Colors.white 
+                  : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+            ),
+            child: Text(label),
+          ),
+        ),
       ),
     );
   }

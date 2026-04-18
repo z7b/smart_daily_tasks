@@ -9,6 +9,7 @@ import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../../../data/models/task_model.dart';
 import '../controllers/task_controller.dart';
 import 'widgets/task_tile.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class TasksView extends GetView<TaskController> {
   const TasksView({super.key});
@@ -118,14 +119,14 @@ class TasksView extends GetView<TaskController> {
                       if (total > 0) ...[
                         _buildMiniChip(
                           icon: CupertinoIcons.flame_fill,
-                          label: '$active',
+                          label: active.f,
                           color: const Color(0xFFFF9500),
                           theme: theme,
                         ),
                         const SizedBox(width: 6),
                         _buildMiniChip(
                           icon: CupertinoIcons.checkmark_alt,
-                          label: '$completed/$total',
+                          label: '${completed.f}/${total.f}',
                           color: const Color(0xFF34C759),
                           theme: theme,
                         ),
@@ -177,7 +178,7 @@ class TasksView extends GetView<TaskController> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05),
+                    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.05),
                   ),
                 );
               }
@@ -203,7 +204,7 @@ class TasksView extends GetView<TaskController> {
                       onDelete: () => controller.deleteTask(task),
                     )
                         .animate(key: ValueKey('anim_${task.id}'))
-                        .fadeIn(duration: 300.ms)
+                        .fadeIn(duration: const Duration(milliseconds: 300))
                         .slideX(begin: 0.06),
                   );
                 }, childCount: tasks.length),

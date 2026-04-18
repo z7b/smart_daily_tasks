@@ -335,95 +335,164 @@ class HomeController extends GetxController {
         DateTime? nextDoseDateTime;
         String nextDoseName = '';
         String nextDoseTimeStr = '';
-        final now = DateTime.now();
-
-
-        final NORMAL_VIEW_DATE = DateTime(viewDate.year, viewDate.month, viewDate.day);
-        final IS_VIEWING_FUTURE = NORMAL_VIEW_DATE.isAfter(DateTime(now.year, now.month, now.day));
+        final locale = Get.locale?.languageCode ?? 'en';
+        final todayStart = DateTime(now.year, now.month, now.day);
         
         for (var med in allMeds) {
           final medStartN = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
           final medEndN = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
           
-          if (!NORMAL_VIEW_DATE.isBefore(medStartN) && 
-             (medEndN == null || !NORMAL_VIEW_DATE.isAfter(medEndN))) {
-            
-            for (var timeStr in med.reminderTimes) {
+          // Logic Audit: Find the earliest valid day for this medication that is either Today or in the Future
+          DateTime? candidateDate;
+          String? candidateTimeStr;
+
+          // 1. Check Today
+          if (!todayStart.isBefore(medStartN) && (medEndN == null || !todayStart.isAfter(medEndN))) {
+            final sortedTimes = List<String>.from(med.reminderTimes);
+            sortedTimes.sort((a, b) {
+              final tA = _parseRobustTime(a) ?? DateTime(1970, 1, 1, 0, 0);
+              final tB = _parseRobustTime(b) ?? DateTime(1970, 1, 1, 0, 0);
+              if (tA.hour != tB.hour) return tA.hour.compareTo(tB.hour);
+              return tA.minute.compareTo(tB.minute);
+            });
+
+            final todayIntakeCount = med.todayDoseCount;
+            for (int i = 0; i < sortedTimes.length; i++) {
+              if (i < todayIntakeCount) continue;
+              final timeStr = sortedTimes[i];
               final time = _parseRobustTime(timeStr);
               if (time == null) continue;
+              final scheduledDate = DateTime(todayStart.year, todayStart.month, todayStart.day, time.hour, time.minute);
+              if (scheduledDate.isBefore(now)) continue;
+              
+              candidateDate = scheduledDate;
+              candidateTimeStr = timeStr;
+              break; 
+            }
+          }
 
-              var scheduledDate = DateTime(viewDate.year, viewDate.month, viewDate.day, time.hour, time.minute);
-              
-              // Skip past doses only if viewing "Today"
-              if (isToday && scheduledDate.isBefore(now)) {
-                continue;
-              }
-              
-              // Find the closest upcoming dose
-              if (nextDoseDateTime == null || scheduledDate.isBefore(nextDoseDateTime)) {
-                nextDoseDateTime = scheduledDate;
-                nextDoseName = med.name;
-                nextDoseTimeStr = timeStr;
-              }
+          // 2. If no dose today, look for the first future dose
+          if (candidateDate == null && med.reminderTimes.isNotEmpty) {
+            final firstTimeActionable = List<String>.from(med.reminderTimes);
+            firstTimeActionable.sort((a, b) {
+              final tA = _parseRobustTime(a) ?? DateTime(1970, 1, 1, 0, 0);
+              final tB = _parseRobustTime(b) ?? DateTime(1970, 1, 1, 0, 0);
+              if (tA.hour != tB.hour) return tA.hour.compareTo(tB.hour);
+              return tA.minute.compareTo(tB.minute);
+            });
+            final bestTime = _parseRobustTime(firstTimeActionable.first)!;
+
+            // Target day is the later of (startDate) and (Tomorrow)
+            DateTime tomorrow = todayStart.add(const Duration(days: 1));
+            DateTime targetDay = medStartN.isAfter(tomorrow) ? medStartN : tomorrow;
+
+            if (medEndN == null || !targetDay.isAfter(medEndN)) {
+              candidateDate = DateTime(targetDay.year, targetDay.month, targetDay.day, bestTime.hour, bestTime.minute);
+              candidateTimeStr = firstTimeActionable.first;
+            }
+          }
+
+          // Update Global Best
+          if (candidateDate != null) {
+            if (nextDoseDateTime == null || candidateDate.isBefore(nextDoseDateTime)) {
+              nextDoseDateTime = candidateDate;
+              nextDoseName = med.name;
+              nextDoseTimeStr = candidateTimeStr!;
             }
           }
         }
         
         if (nextDoseDateTime != null) {
-          nextMedicationTime.value = nextDoseTimeStr;
+          // ✅ Localize the time string properly (e.g. 10:30 ص instead of 10:30 AM)
+          nextMedicationTime.value = DateFormat.jm(locale).format(nextDoseDateTime);
           nextMedicationName.value = nextDoseName;
           
           final diff = nextDoseDateTime.difference(now);
           
           if (diff.isNegative) {
-            // Dose is in the past (should not happen due to skip logic, but guard)
             nextMedicationTimeLeft.value = 'dose_missed'.tr;
           } else {
-            final hours = diff.inHours;
-            final minutes = (diff.inMinutes % 60).abs();
-            
-            if (hours > 0) {
-              nextMedicationTimeLeft.value = '${hours}h ${minutes}m';
+            if (diff.inDays >= 1) {
+              // Distant Dose: Show Date or relative days
+              if (diff.inDays == 1) {
+                nextMedicationTimeLeft.value = 'tomorrow'.tr;
+              } else if (diff.inDays < 7) {
+                nextMedicationTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+              } else {
+                nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(nextDoseDateTime);
+              }
             } else {
-              nextMedicationTimeLeft.value = '${minutes}m';
+              // Close Dose: Show hours/minutes
+              final hours = diff.inHours;
+              final minutes = (diff.inMinutes % 60).abs();
+              if (hours > 0) {
+                nextMedicationTimeLeft.value = '$hours${'hours_abbr'.tr} $minutes${'minutes_abbr'.tr}';
+              } else {
+                nextMedicationTimeLeft.value = '$minutes${'minutes_abbr'.tr}';
+              }
             }
           }
         }
       }
 
-      // --- Doctoral Logic: Task Next Item Tracking ---
+      // --- Doctoral Logic: Task Next Item Tracking (Unlimited Predictive Engine) ---
       nextTaskTitle.value = '';
       nextTaskTime.value = '';
       nextTaskTimeLeft.value = '';
 
       if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
-        final now = DateTime.now();
-        final upcomingTasks = dayTasks
-            .where((t) => t.status == TaskStatus.active)
+        final locale = Get.locale?.languageCode ?? 'en';
+        Task? predictiveTask;
+
+        // 1. Stage 1: Try finding the next actionable task for TODAY
+        final upcomingToday = dayTasks
+            .where((t) => t.status == TaskStatus.active && t.scheduledAt.isAfter(now))
             .toList();
         
-        if (upcomingTasks.isNotEmpty) {
-          upcomingTasks.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-          final nextTask = upcomingTasks.first;
+        if (upcomingToday.isNotEmpty) {
+          upcomingToday.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+          predictiveTask = upcomingToday.first;
+        }
+
+        // 2. Stage 2: If no tasks left today, find the absolute next global task
+        if (predictiveTask == null) {
+          final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          predictiveTask = await _isar.tasks
+              .filter()
+              .statusEqualTo(TaskStatus.active)
+              .scheduledAtGreaterThan(endOfToday)
+              .sortByScheduledAt()
+              .findFirst();
+        }
+        
+        if (predictiveTask != null) {
+          nextTaskTitle.value = predictiveTask.title;
+          nextTaskTime.value = DateFormat.jm(locale).format(predictiveTask.scheduledAt);
+          nextTaskEndTime.value = predictiveTask.scheduledEnd != null ? DateFormat.jm(locale).format(predictiveTask.scheduledEnd!) : '';
+          nextTaskPriority.value = predictiveTask.priority;
+          nextTaskFullDate.value = DateFormat('dd MMMM yyyy', locale).format(predictiveTask.scheduledAt) + ' • ' + nextTaskTime.value;
           
-          nextTaskTitle.value = nextTask.title;
-          nextTaskTime.value = DateFormat.jm().format(nextTask.scheduledAt);
-          nextTaskEndTime.value = nextTask.scheduledEnd != null ? DateFormat.jm().format(nextTask.scheduledEnd!) : '';
-          nextTaskPriority.value = nextTask.priority;
-          nextTaskFullDate.value = DateFormat('dd MMMM yyyy').format(nextTask.scheduledAt) + ' • ' + nextTaskTime.value;
-          
-          final diff = nextTask.scheduledAt.difference(now);
+          final diff = predictiveTask.scheduledAt.difference(now);
           if (diff.isNegative) {
-            // ✅ Fix: Show 'overdue' instead of misleading negative "remaining" time
             nextTaskTimeLeft.value = 'overdue'.tr;
           } else {
-            final hours = diff.inHours;
-            final minutes = diff.inMinutes % 60;
-            
-            if (hours > 0) {
-               nextTaskTimeLeft.value = '${hours}h ${minutes}m';
+            if (diff.inDays >= 1) {
+              // Special Formatting for distant tasks
+              if (diff.inDays == 1) {
+                nextTaskTimeLeft.value = 'tomorrow'.tr;
+              } else if (diff.inDays < 7) {
+                nextTaskTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+              } else {
+                nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(predictiveTask.scheduledAt);
+              }
             } else {
-               nextTaskTimeLeft.value = '${minutes}m';
+              final hours = diff.inHours;
+              final minutes = (diff.inMinutes % 60).abs();
+              if (hours > 0) {
+                nextTaskTimeLeft.value = '$hours${'hours_abbr'.tr} $minutes${'minutes_abbr'.tr}';
+              } else {
+                nextTaskTimeLeft.value = '$minutes${'minutes_abbr'.tr}';
+              }
             }
           }
         }

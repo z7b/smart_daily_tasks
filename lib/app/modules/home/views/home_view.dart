@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 
 import 'package:smart_daily_tasks/app/modules/settings/views/settings_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/controllers/home_controller.dart';
@@ -12,6 +14,8 @@ import 'package:smart_daily_tasks/app/modules/home/widgets/floating_navigation_b
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
+import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dart';
+import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -88,6 +92,13 @@ class HomeView extends GetView<HomeController> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: _buildNextShiftHomeCard(context),
+          ),
+        ),
+
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: _buildStepsHomeCard(context),
           ),
         ),
@@ -106,8 +117,6 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
-
-
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -124,14 +133,14 @@ class HomeView extends GetView<HomeController> {
               crossAxisCount: 2,
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 1.2, // ✅ Phase 4: More defensive ratio for large fonts
+              childAspectRatio:
+                  1.2, // ✅ Phase 4: More defensive ratio for large fonts
               children: [
-
                 Obx(
                   () => _buildBentoItem(
                     context,
                     'notes'.tr,
-                    '${controller.noteCount.value} ${'entries'.tr}',
+                    '${controller.noteCount.value.f} ${'entries'.tr}',
                     Icons.edit_note,
                     const Color(0xFFFF9500),
                     Routes.NOTES,
@@ -141,7 +150,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'journal'.tr,
-                    '${controller.journalCount.value} ${'logs'.tr}',
+                    '${controller.journalCount.value.f} ${'logs'.tr}',
                     Icons.book,
                     const Color(0xFF34C759),
                     Routes.JOURNAL,
@@ -151,7 +160,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'bookmarks'.tr,
-                    '${controller.bookmarkCount.value} ${'saved'.tr}',
+                    '${controller.bookmarkCount.value.f} ${'saved'.tr}',
                     Icons.bookmark,
                     const Color(0xFFFF3B30),
                     Routes.BOOKMARKS,
@@ -161,7 +170,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'my_library'.tr,
-                    '${controller.bookCount.value} ${'books'.tr}',
+                    '${controller.bookCount.value.f} ${'books'.tr}',
                     Icons.menu_book,
                     const Color(0xFF5E5CE6),
                     Routes.BOOKS,
@@ -171,7 +180,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'calendar'.tr,
-                    '${controller.calendarEventCount.value} ${'events'.tr}',
+                    '${controller.calendarEventCount.value.f} ${'events'.tr}',
                     Icons.calendar_month,
                     const Color(0xFFBF5AF2),
                     Routes.CALENDAR,
@@ -182,7 +191,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'my_steps'.tr,
-                    '${controller.stepsCount.value} ${'steps'.tr}',
+                    '${controller.stepsCount.value.f} ${'steps'.tr}',
                     Icons.directions_walk,
                     Colors.tealAccent,
                     Routes.STEPS,
@@ -192,7 +201,7 @@ class HomeView extends GetView<HomeController> {
                   () => _buildBentoItem(
                     context,
                     'my_job'.tr,
-                    '${controller.daysUntilSalary.value} ${'days_left'.tr}',
+                    '${controller.daysUntilSalary.value.f} ${'days_left'.tr}',
                     Icons.work_outline,
                     const Color(0xFF5E5CE6),
                     Routes.JOB,
@@ -270,66 +279,122 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildReadingCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(32),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Obx(() {
+      final hasBook = controller.currentBookTitle.value.isNotEmpty;
+      if (!hasBook && controller.bookCount.value == 0) return const SizedBox();
+
+      return GestureDetector(
+        onTap: () => Get.toNamed(Routes.BOOKS),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: const Color(0xFF5E5CE6).withAlpha(20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.menu_book_rounded,
-                color: const Color(0xFF5E5CE6).withValues(alpha: 0.8),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'my_library'.tr,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const Spacer(),
-              Obx(
-                () => Text(
-                  '${(controller.currentBookProgress.value.clamp(0.0, 1.0) * 100).toInt()}%',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.menu_book_rounded,
                     color: Color(0xFF5E5CE6),
+                    size: 20,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'my_library'.tr,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (hasBook)
+                    Text(
+                      '${(controller.currentBookProgress.value.clamp(0.0, 1.0) * 100).toInt().f}%',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E5CE6),
+                      ),
+                    ),
+                ],
               ),
+              const SizedBox(height: 16),
+              if (hasBook) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.currentBookTitle.value,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'reading_goal_msg'.tr,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF5E5CE6).withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'read_verb'.tr,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5E5CE6),
+                            ),
+                          ),
+                        )
+                        .animate(onPlay: (c) => c.repeat())
+                        .shimmer(duration: const Duration(seconds: 2)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                LinearProgressIndicator(
+                  value: controller.currentBookProgress.value.clamp(0.0, 1.0),
+                  backgroundColor: const Color(0xFF5E5CE6).withAlpha(20),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF5E5CE6),
+                  ),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ] else ...[
+                // Just a placeholder if they have books but no active reading
+                const Text(
+                  'No active book currently reading',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
-          Obx(
-            () => Text(
-              controller.currentBookTitle.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Obx(
-            () => LinearProgressIndicator(
-              value: controller.currentBookProgress.value.clamp(0.0, 1.0),
-              backgroundColor: const Color(0xFF5E5CE6).withValues(alpha: 0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF5E5CE6),
-              ),
-              minHeight: 6,
-            ),
-          ),
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 
   Widget _buildBentoItem(
@@ -379,9 +444,9 @@ class HomeView extends GetView<HomeController> {
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: Colors.grey),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -442,7 +507,7 @@ class HomeView extends GetView<HomeController> {
     return Obx(() {
       final days = controller.daysUntilSalary.value;
       final now = DateTime.now();
-      
+
       // ✅ Concept M2/C1 Fix: Stability over time. Show Progress in current month cycle.
       final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
       final elapsedDays = now.day; // Progress through current calendar month
@@ -484,7 +549,7 @@ class HomeView extends GetView<HomeController> {
                   ),
                   const Spacer(),
                   Text(
-                    '$days ${'days_left'.tr}',
+                    '${days.f} ${'days_left'.tr}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -510,7 +575,7 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildStepsHomeCard(BuildContext context) {
     final healthService = Get.find<HealthService>();
-    
+
     return Obx(() {
       final isAuthorized = healthService.isAuthorized.value;
       final isConnecting = healthService.isConnecting.value;
@@ -545,7 +610,7 @@ class HomeView extends GetView<HomeController> {
                   const Spacer(),
                   if (isAuthorized)
                     Text(
-                      '${controller.stepsCount.value} / ${controller.stepsGoal.value}',
+                      '${controller.stepsCount.value.f} / ${controller.stepsGoal.value.f}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -559,15 +624,32 @@ class HomeView extends GetView<HomeController> {
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: isConnecting ? null : () => controller.connectHealth(),
+                    onPressed: isConnecting
+                        ? null
+                        : () => controller.connectHealth(),
                     style: TextButton.styleFrom(
                       backgroundColor: Colors.tealAccent.withAlpha(20),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: isConnecting 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.tealAccent))
-                      : Text('connect_fit'.tr, style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
+                    child: isConnecting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.tealAccent,
+                            ),
+                          )
+                        : Text(
+                            'connect_fit'.tr,
+                            style: const TextStyle(
+                              color: Colors.tealAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 )
               else
@@ -586,6 +668,187 @@ class HomeView extends GetView<HomeController> {
       );
     });
   }
+
+  Widget _buildNextShiftHomeCard(BuildContext context) {
+    if (!Get.isRegistered<JobController>()) return const SizedBox();
+    final jobCtrl = Get.find<JobController>();
+    return Obx(() {
+      try {
+        final shiftDetails = jobCtrl.getNextShiftDetails();
+        if (shiftDetails == null && jobCtrl.totalMandatedDays.value == 0) return const SizedBox();
+
+        final isActive = shiftDetails?['isActive'] as bool? ?? false;
+        final start = shiftDetails?['start'] as DateTime?;
+        final end = shiftDetails?['end'] as DateTime?;
+        final now = DateTime.now();
+
+        String timeLeftStr = '';
+        if (shiftDetails != null) {
+          if (isActive) {
+            final left = end!.difference(now);
+            timeLeftStr = left.inHours > 0
+                ? '${left.inHours}h ${left.inMinutes % 60}m'
+                : '${left.inMinutes}m';
+          } else {
+            final wait = start!.difference(now);
+            timeLeftStr = wait.inDays > 0
+                ? '${wait.inDays}d ${wait.inHours % 24}h'
+                : (wait.inHours > 0
+                    ? '${wait.inHours}h ${wait.inMinutes % 60}m'
+                    : '${wait.inMinutes}m');
+          }
+        }
+
+        final color = const Color(0xFF5E5CE6); // Job Theme (Deep Purple)
+
+        // Attendance Stats for Header
+        final presentCount =
+            jobCtrl.statsSummary[AttendanceStatus.present] ?? 0;
+        final totalDays = jobCtrl.totalMandatedDays.value;
+
+        return GestureDetector(
+          onTap: () => Get.toNamed(Routes.JOB),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: color.withAlpha(20)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ===== Header: Icon, Label, and Counter =====
+                Row(
+                  children: [
+                    Icon(CupertinoIcons.briefcase_fill, color: color, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'my_job'.tr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (totalDays > 0)
+                      Text(
+                        '${presentCount.f} / ${totalDays.f}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ===== Body: Work Identity & Shift Details =====
+                if (shiftDetails != null) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Company & Position
+                            Text(
+                              '${jobCtrl.profile.value.companyName ?? 'no_company'.tr} • ${jobCtrl.profile.value.jobPosition ?? 'job_position'.tr}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+
+                            // Dynamic Countdown Title
+                            Text(
+                              isActive
+                                  ? '${'ends'.tr}: $timeLeftStr'
+                                  : '${'starts'.tr}: $timeLeftStr',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isActive ? Colors.green : null,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+
+                            // Precise Schedule
+                            Text(
+                              '${DateFormat.EEEE(Get.locale?.languageCode).format(start!)} • ${TimeOfDay.fromDateTime(start).format(context)} - ${TimeOfDay.fromDateTime(end!).format(context)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Time Box Overlay
+                      Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (isActive ? Colors.green : color)
+                                  .withAlpha(20),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isActive ? 'active_shift'.tr : 'upcoming_shift'.tr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isActive ? Colors.green : color,
+                              ),
+                            ),
+                          )
+                          .animate(onPlay: (c) => c.repeat())
+                          .shimmer(duration: const Duration(seconds: 2)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  // No upcoming shift placeholder
+                  const Text(
+                    'No active or upcoming shifts scheduled.',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ===== Footer: Attendance Progress Bar =====
+                LinearProgressIndicator(
+                  value: jobCtrl.attendanceRate.value > 0
+                      ? jobCtrl.attendanceRate.value.clamp(0.0, 1.0)
+                      : 1.0,
+                  backgroundColor: color.withAlpha(20),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ],
+            ),
+          ),
+        );
+      } catch (_) {
+        return const SizedBox();
+      }
+    });
+  }
+
 
   Widget _buildMedicationHomeCard(BuildContext context) {
     return Obx(
@@ -630,72 +893,94 @@ class HomeView extends GetView<HomeController> {
               ),
               const SizedBox(height: 16),
 
-              // ===== تفاصيل العلاج القادم =====
+              // ===== تفاصيل العلاج القادم (Redesigned with Professional Glassmorphism) =====
               if (controller.nextMedicationTime.value.isNotEmpty) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // النص: الاسم والوقت المتبقي
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            controller.nextMedicationName.value,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          if (controller.nextMedicationTimeLeft.value.isNotEmpty)
-                            Text(
-                              '${'remaining'.tr}: ${controller.nextMedicationTimeLeft.value}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      width: 1,
                     ),
-
-                    // الوقت: مع Shimmer Animation
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withAlpha(20),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        controller.nextMedicationTime.value,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // النص: الاسم والوقت المتبقي
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                              Text(
+                                controller.nextMedicationName.value,
+                                style: const TextStyle(
+                                  fontSize: 17, // Increased from 16
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            const SizedBox(height: 4),
+                            if (controller.nextMedicationTimeLeft.value.isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(CupertinoIcons.timer, size: 12, color: Colors.grey.withValues(alpha: 0.7)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      '${'remaining'.tr}: ${controller.nextMedicationTimeLeft.value}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.withValues(alpha: 0.8),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
                         ),
                       ),
-                    )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
-                  ],
+
+                      // الوقت: محاط بكبسولة زجاجية احترافية
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.redAccent.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                            )
+                          ],
+                        ),
+                        child: Text(
+                          controller.nextMedicationTime.value,
+                          style: const TextStyle(
+                            fontSize: 15, // Increased from 13
+                            fontWeight: FontWeight.w900,
+                            color: Colors.redAccent,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ).animate(onPlay: (c) => c.repeat()).shimmer(duration: const Duration(seconds: 2)),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
               ],
 
               // ===== شريط التقدم =====
               LinearProgressIndicator(
                 value: controller.medExpectedDoses.value > 0
                     ? (controller.medTakenDoses.value /
-                          controller.medExpectedDoses.value)
-                        .clamp(0.0, 1.0)
+                              controller.medExpectedDoses.value)
+                          .clamp(0.0, 1.0)
                     : 1.0,
                 backgroundColor: Colors.redAccent.withAlpha(20),
                 valueColor: const AlwaysStoppedAnimation<Color>(
@@ -746,19 +1031,25 @@ class HomeView extends GetView<HomeController> {
                   ),
                   const Spacer(),
                   // ✅ Safety Guard: Prevent "0/0" when all tasks cancelled
-                  Builder(builder: (_) {
-                    final activeTasks = controller.taskCount.value - controller.cancelledTasksCount.value;
-                    return Text(
-                      activeTasks > 0
-                        ? '${controller.completedTasksCount.value} / $activeTasks'
-                        : controller.taskCount.value > 0 ? '- / -' : '0',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: accentColor,
-                      ),
-                    );
-                  }),
+                  Builder(
+                    builder: (_) {
+                      final activeTasks =
+                          controller.taskCount.value -
+                          controller.cancelledTasksCount.value;
+                      return Text(
+                        activeTasks > 0
+                            ? '${controller.completedTasksCount.value} / $activeTasks'
+                            : controller.taskCount.value > 0
+                            ? '- / -'
+                            : '0',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: accentColor,
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -776,20 +1067,23 @@ class HomeView extends GetView<HomeController> {
                           // الأولوية (نقطة ملونة) + الاسم
                           Row(
                             children: [
-                              Obx(() => Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: controller.nextTaskPriority.value ==
-                                      TaskPriority.high
-                                      ? Colors.redAccent
-                                      : controller.nextTaskPriority.value ==
-                                          TaskPriority.medium
-                                          ? accentColor
-                                          : Colors.greenAccent,
-                                  shape: BoxShape.circle,
+                              Obx(
+                                () => Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        controller.nextTaskPriority.value ==
+                                            TaskPriority.high
+                                        ? Colors.redAccent
+                                        : controller.nextTaskPriority.value ==
+                                              TaskPriority.medium
+                                        ? accentColor
+                                        : Colors.greenAccent,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              )),
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -836,25 +1130,25 @@ class HomeView extends GetView<HomeController> {
 
                     // الوقت: مع Shimmer Animation
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: accentColor.withAlpha(20),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        controller.nextTaskEndTime.value.isNotEmpty
-                            ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
-                            : controller.nextTaskTime.value,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: accentColor,
-                        ),
-                      ),
-                    )
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            controller.nextTaskEndTime.value.isNotEmpty
+                                ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
+                                : controller.nextTaskTime.value,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
+                          ),
+                        )
                         .animate(onPlay: (c) => c.repeat())
                         .shimmer(duration: const Duration(seconds: 2)),
                   ],
@@ -866,9 +1160,9 @@ class HomeView extends GetView<HomeController> {
               LinearProgressIndicator(
                 value: controller.taskCount.value > 0
                     ? ((controller.taskCount.value -
-                          controller.tasksLeftCount.value) /
-                        controller.taskCount.value)
-                        .clamp(0.0, 1.0)
+                                  controller.tasksLeftCount.value) /
+                              controller.taskCount.value)
+                          .clamp(0.0, 1.0)
                     : 1.0,
                 backgroundColor: accentColor.withAlpha(20),
                 valueColor: const AlwaysStoppedAnimation<Color>(accentColor),
@@ -884,111 +1178,129 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildWelcomeCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF007AFF),
-            const Color(0xFF5E5CE6),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF007AFF).withAlpha(60),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'dashboard_head'.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Obx(() => Text(
-                    'unified_status'.trParams({
-                      'percent': (controller.progressPercentage.value * 100).toInt().toString()
-                    }),
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(180),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )),
-                ],
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [const Color(0xFF007AFF), const Color(0xFF5E5CE6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF007AFF).withAlpha(60),
+                blurRadius: 30,
+                offset: const Offset(0, 15),
               ),
-              const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
             ],
           ),
-          const SizedBox(height: 32),
-          
-          // Unified Master Progress Bar
-          Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 12,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(30),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'dashboard_head'.tr,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Obx(
+                          () => Text(
+                            'unified_status'.trParams({
+                              'percent':
+                                  (controller.progressPercentage.value * 100)
+                                      .toInt()
+                                      .toString(),
+                            }),
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(180),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+                ],
               ),
-              Obx(() => AnimatedContainer(
-                duration: const Duration(seconds: 1),
-                curve: Curves.easeOutCubic,
-                height: 12,
-                width: MediaQuery.of(context).size.width * 
-                       (controller.progressPercentage.value.clamp(0.0, 1.0)),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white.withAlpha(100),
-                      blurRadius: 10,
-                      spreadRadius: 2,
+              const SizedBox(height: 32),
+
+              // Unified Master Progress Bar
+              LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  children: [
+                    Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(30),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    Obx(
+                      () => AnimatedContainer(
+                        duration: const Duration(seconds: 1),
+                        curve: Curves.easeOutCubic,
+                        height: 12,
+                        width:
+                            constraints.maxWidth *
+                            (controller.progressPercentage.value.clamp(0.0, 1.0)),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withAlpha(100),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              )),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Subtle Pillar Status Row (Minimalist Balance)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: _buildMiniPillar('mind'.tr, controller.mindProgress)),
+                  Expanded(child: Center(child: _buildMiniPillar('body'.tr, controller.bodyProgress))),
+                  Expanded(child: Align(alignment: Alignment.centerRight, child: _buildMiniPillar('spirit'.tr, controller.spiritProgress))),
+                ],
+              ),
             ],
           ),
-          
-          const SizedBox(height: 20),
-          
-          // Subtle Pillar Status Row (Minimalist Balance)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMiniPillar('mind'.tr, controller.mindProgress),
-              _buildMiniPillar('body'.tr, controller.bodyProgress),
-              _buildMiniPillar('spirit'.tr, controller.spiritProgress),
-            ],
-          ),
-        ],
-      ),
-    ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)).slideY(begin: 0.05, end: 0);
+        )
+        .animate()
+        .fadeIn()
+        .scale(begin: const Offset(0.95, 0.95))
+        .slideY(begin: 0.05, end: 0);
   }
 
   Widget _buildMiniPillar(String label, RxDouble progress) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 6,
@@ -999,14 +1311,20 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
         const SizedBox(width: 6),
-        Obx(() => Text(
-          '$label: ${(progress.value * 100).toInt()}%',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
+        Flexible(
+          child: Obx(
+            () => Text(
+              '$label: ${(progress.value * 100).toInt()}%',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        )),
+        ),
       ],
     );
   }

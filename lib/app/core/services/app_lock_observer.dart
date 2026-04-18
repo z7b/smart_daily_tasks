@@ -27,18 +27,20 @@ class AppLockObserver extends WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.inactive:
         // 🛡️ Privacy Blur Trigger (Transition/App Switcher)
-        if (service.isAppLockEnabled.value) {
+        if (service.isAppLockEnabled.value && !service.isProtectionPaused.value) {
           service.showPrivacyOverlay();
+          debugPrint('🟡 App Inactive - Protection Active');
+        } else {
+          debugPrint('🟢 App Inactive - Protection Paused (Handshake Mode)');
         }
-        debugPrint('🟡 App Inactive - Protection Active');
         break;
 
       case AppLifecycleState.paused:
         _isInBackground = true;
-        if (service.isAppLockEnabled.value) {
+        if (service.isAppLockEnabled.value && !service.isProtectionPaused.value) {
           service.showPrivacyOverlay();
+          debugPrint('🔒 App Paused - Locked');
         }
-        debugPrint('🔒 App Paused - Locked');
         break;
 
       case AppLifecycleState.resumed:

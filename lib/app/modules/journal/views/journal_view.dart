@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/journal_model.dart';
 import '../controllers/journal_controller.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class JournalView extends GetView<JournalController> {
   const JournalView({super.key});
@@ -149,7 +150,7 @@ class JournalView extends GetView<JournalController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Obx(() => Text(
-                '${controller.calculateStreak()} ${'days_streak'.tr}',
+                '${NumberFormat.decimalPattern(Get.locale?.languageCode).format(controller.calculateStreak()).f} ${'days_streak'.tr}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -165,7 +166,7 @@ class JournalView extends GetView<JournalController> {
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
+    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.1, end: 0);
   }
 
   Widget _buildJournalCard(BuildContext context, Journal journal, int index) {
@@ -220,7 +221,7 @@ class JournalView extends GetView<JournalController> {
                   children: [
                     Expanded(
                       child: Text(
-                        DateFormat('EEEE, MMMM d').format(journal.date),
+                        DateFormat('EEEE, MMMM d', Get.locale?.languageCode).format(journal.date),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -255,7 +256,7 @@ class JournalView extends GetView<JournalController> {
               ],
             ),
           ),
-        ).animate(delay: (50 * index).ms).fadeIn().slideX(begin: 0.1),
+        ).animate(delay: Duration(milliseconds: 50 * index)).fadeIn().slideX(begin: 0.1),
       ),
     );
   }

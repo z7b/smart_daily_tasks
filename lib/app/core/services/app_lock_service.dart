@@ -13,6 +13,7 @@ class AppLockService extends GetxService {
   RxBool isBiometricAvailable = false.obs;
   RxBool isBiometricEnabled = false.obs;
   RxBool isOverlayVisible = false.obs; // 🚀 Controls the Blur Overlay UI
+  RxBool isProtectionPaused = false.obs; // 🛡️ Temporary bypass for system dialogs (e.g. Health Connect)
 
   Future<AppLockService> init() async {
     try {
@@ -45,9 +46,9 @@ class AppLockService extends GetxService {
       // This will prompt for Fingerprint/FaceID or System PIN/Pattern automatically
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'authenticate_to_unlock_app'.tr,
-        options: AuthenticationOptions(
+        options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: isBiometricEnabled.value, // 💡 Fallback controlled by user setting
+          biometricOnly: false, // 🛡️ Expert Fix: System handles biometric with automatic fallback
           useErrorDialogs: true,
         ),
       );

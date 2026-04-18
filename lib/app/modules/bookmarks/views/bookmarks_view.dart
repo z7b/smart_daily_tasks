@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/bookmark_model.dart';
 import '../controllers/bookmarks_controller.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class BookmarksView extends GetView<BookmarksController> {
   const BookmarksView({super.key});
@@ -84,13 +85,13 @@ class BookmarksView extends GetView<BookmarksController> {
                     children: [
                       _miniChip(
                           icon: CupertinoIcons.bookmark_fill,
-                          label: '$total',
+                          label: total.f,
                           color: AppTheme.primary),
                       if (cats > 0) ...[
                         const SizedBox(width: 8),
                         _miniChip(
                             icon: CupertinoIcons.folder,
-                            label: '$cats',
+                            label: cats.f,
                             color: const Color(0xFFAF52DE)),
                       ],
                     ],
@@ -174,7 +175,7 @@ class BookmarksView extends GetView<BookmarksController> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05),
+                    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.05),
                   ),
                 );
               }
@@ -395,7 +396,7 @@ class BookmarksView extends GetView<BookmarksController> {
               ),
             ],
           ),
-        ).animate(delay: (50 * index).ms).fadeIn(duration: 300.ms).slideX(begin: 0.06),
+        ).animate(delay: Duration(milliseconds: 50 * index)).fadeIn(duration: const Duration(milliseconds: 300)).slideX(begin: 0.06),
       ),
     );
   }

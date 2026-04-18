@@ -10,6 +10,7 @@ import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../controllers/book_controller.dart';
 import '../../../data/models/book_model.dart';
 import '../../../data/models/journal_model.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class BookView extends GetView<BookController> {
   const BookView({super.key});
@@ -83,18 +84,18 @@ class BookView extends GetView<BookController> {
                     children: [
                       _miniChip(
                           icon: CupertinoIcons.book,
-                          label: '$reading',
+                          label: reading.f,
                           color: AppTheme.primary),
                       const SizedBox(width: 8),
                       _miniChip(
                           icon: CupertinoIcons.checkmark_seal_fill,
-                          label: '$completed',
+                          label: completed.f,
                           color: const Color(0xFF34C759)),
                       if (favorites > 0) ...[
                         const SizedBox(width: 8),
                         _miniChip(
                             icon: CupertinoIcons.heart_fill,
-                            label: '$favorites',
+                            label: favorites.f,
                             color: const Color(0xFFFF2D55)),
                       ],
                     ],
@@ -132,7 +133,7 @@ class BookView extends GetView<BookController> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05),
+                    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.05),
                   ),
                 );
               }
@@ -253,7 +254,7 @@ class BookView extends GetView<BookController> {
                     // Page count
                     if (book.totalPages > 0) ...[
                       Text(
-                        '${book.currentPage} / ${book.totalPages} ${'pages'.tr}',
+                        '${book.currentPage.f} / ${book.totalPages.f} ${'pages'.tr}',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -304,7 +305,7 @@ class BookView extends GetView<BookController> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${(book.progress * 100).toInt()}%',
+                            '${(book.progress * 100).toInt().f}%',
                             style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -342,7 +343,7 @@ class BookView extends GetView<BookController> {
           ),
         ),
       ),
-    ).animate(delay: (60 * index).ms).fadeIn(duration: 300.ms).scale(
+    ).animate(delay: Duration(milliseconds: 60 * index)).fadeIn(duration: const Duration(milliseconds: 300)).scale(
         begin: const Offset(0.96, 0.96));
   }
 
@@ -436,8 +437,8 @@ class BookView extends GetView<BookController> {
                     children: [
                       Text(
                         'pages_read'.trParams({
-                          'current': book.currentPage.toString(),
-                          'total': book.totalPages.toString()
+                          'current': book.currentPage.f,
+                          'total': book.totalPages.f
                         }),
                         style: const TextStyle(
                             color: AppTheme.primary,

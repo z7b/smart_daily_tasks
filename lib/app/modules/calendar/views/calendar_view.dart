@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/helpers/bottom_sheet_helper.dart';
@@ -15,6 +16,7 @@ import '../controllers/calendar_controller.dart';
 import '../../settings/controllers/settings_controller.dart';
 import '../../tasks/controllers/task_controller.dart';
 import '../../medication/controllers/medication_controller.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class CalendarView extends GetView<CalendarController> {
   const CalendarView({super.key});
@@ -80,9 +82,20 @@ class CalendarView extends GetView<CalendarController> {
     final theme = Theme.of(context);
     return Obx(() {
       final settings = Get.find<SettingsController>();
-      StartingDayOfWeek startDay = settings.firstDayOfWeek.value == 'monday' 
-          ? StartingDayOfWeek.monday 
-          : StartingDayOfWeek.sunday;
+      // ✅ Expert Fix: Explicitly mapping all supported days to StartingDayOfWeek
+      StartingDayOfWeek startDay;
+      switch (settings.firstDayOfWeek.value) {
+        case 'monday':
+          startDay = StartingDayOfWeek.monday;
+          break;
+        case 'saturday':
+          startDay = StartingDayOfWeek.saturday;
+          break;
+        case 'sunday':
+        default:
+          startDay = StartingDayOfWeek.sunday;
+          break;
+      }
 
       return Container(
         decoration: BoxDecoration(
@@ -106,6 +119,61 @@ class CalendarView extends GetView<CalendarController> {
           onDaySelected: controller.onDaySelected,
           onFormatChanged: controller.onFormatChanged,
           eventLoader: controller.getEventsForDay,
+          locale: Get.locale?.languageCode,
+          calendarBuilders: CalendarBuilders(
+            defaultBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Text(
+                  NumberFormat.decimalPattern(Get.locale?.languageCode).format(day.day).f,
+                  style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                ),
+              );
+            },
+            outsideBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Text(
+                  NumberFormat.decimalPattern(Get.locale?.languageCode).format(day.day).f,
+                  style: TextStyle(color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.3)),
+                ),
+              );
+            },
+            todayBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Container(
+                  width: 35,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      NumberFormat.decimalPattern(Get.locale?.languageCode).format(day.day).f,
+                      style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              );
+            },
+            selectedBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Container(
+                  width: 35,
+                  height: 35,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      NumberFormat.decimalPattern(Get.locale?.languageCode).format(day.day).f,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           headerStyle: HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
@@ -287,7 +355,7 @@ class CalendarView extends GetView<CalendarController> {
           ],
         ),
       ),
-    ).animate().fadeIn(delay: (index * 50).ms).slideY(begin: 0.1);
+    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideY(begin: 0.1);
   }
 
   Widget _buildTaskCard(Task task, int index, BuildContext context) {
@@ -316,7 +384,7 @@ class CalendarView extends GetView<CalendarController> {
         subtitle: Text('task'.tr, style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
         trailing: const Icon(CupertinoIcons.chevron_right, size: 14),
       ),
-    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
+    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideX(begin: 0.1);
   }
 
   Widget _buildMedicationCard(Medication med, int index, BuildContext context) {
@@ -344,18 +412,16 @@ class CalendarView extends GetView<CalendarController> {
           valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
         ),
       ),
-    ).animate().fadeIn(delay: (index * 50).ms).scale();
+    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).scale();
   }
 
   String _formatTimeRange(CalendarEvent event) {
-    if (event.startTime == null) return 'All Day';
-    final st = event.startTime!;
-    final startStr = '${st.hour}:${st.minute.toString().padLeft(2, '0')}';
+    if (event.startTime == null) return 'all_day'.tr;
+    final locale = Get.locale?.languageCode;
+    final startStr = DateFormat.jm(locale).format(event.startTime!);
     
-    if (event.endTime == null) return startStr;
-    final et = event.endTime!;
-    final endStr = '${et.hour}:${et.minute.toString().padLeft(2, '0')}';
-    return '$startStr - $endStr';
+    if (event.endTime == null) return startStr.f;
+    return '${startStr.f} - ${DateFormat.jm(locale).format(event.endTime!).f}';
   }
 
   void _showAddEventSheet(BuildContext context) {
@@ -471,7 +537,7 @@ class CalendarView extends GetView<CalendarController> {
                       leading: const Icon(CupertinoIcons.time, color: AppTheme.primary),
                       title: Text('start_time'.tr),
                       trailing: Text(
-                        startTime?.format(context) ?? 'None',
+                        startTime?.format(context) ?? 'none'.tr,
                         style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
                       ),
                       onTap: () async {
@@ -484,7 +550,7 @@ class CalendarView extends GetView<CalendarController> {
                       leading: const Icon(CupertinoIcons.time_solid, color: AppTheme.primary),
                       title: Text('end_time'.tr),
                       trailing: Text(
-                        endTime?.format(context) ?? 'None',
+                        endTime?.format(context) ?? 'none'.tr,
                         style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
                       ),
                       onTap: () async {
@@ -506,7 +572,7 @@ class CalendarView extends GetView<CalendarController> {
                         ? null
                         : () {
                             if (controller.titleController.text.trim().isEmpty) {
-                              setState(() => errorMessage = 'Please enter a title');
+                              setState(() => errorMessage = 'title_required'.tr);
                               return;
                             }
                             controller.addCalendarEvent(

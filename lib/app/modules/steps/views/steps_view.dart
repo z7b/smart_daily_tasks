@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../controllers/steps_controller.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class StepsView extends GetView<StepsController> {
   const StepsView({super.key});
@@ -173,11 +174,11 @@ class StepsView extends GetView<StepsController> {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    NumberFormat('#,###').format(controller.stepsToday.value),
+                    NumberFormat('#,###').format(controller.stepsToday.value).f,
                     style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, letterSpacing: -1),
                   ),
                   Text(
-                    '${'step_goal'.tr}: ${NumberFormat('#,###').format(controller.dailyGoal.value)}',
+                    '${'step_goal'.tr}: ${NumberFormat('#,###').format(controller.dailyGoal.value).f}',
                     style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -193,7 +194,7 @@ class StepsView extends GetView<StepsController> {
                   context,
                   CupertinoIcons.checkmark_seal_fill,
                   'goal_reached'.tr,
-                  '${(progress * 100).toInt()}%',
+                  '${(progress * 100).toInt().f}%',
                   Colors.green,
                 ),
               ),
@@ -204,8 +205,8 @@ class StepsView extends GetView<StepsController> {
                   CupertinoIcons.arrow_right_circle_fill,
                   'remaining'.tr,
                   controller.stepsToday.value >= controller.dailyGoal.value 
-                      ? '+${controller.stepsToday.value - controller.dailyGoal.value}' 
-                      : '${controller.dailyGoal.value - controller.stepsToday.value}',
+                      ? '+${(controller.stepsToday.value - controller.dailyGoal.value).f}' 
+                      : (controller.dailyGoal.value - controller.stepsToday.value).f,
                   AppTheme.primary,
                 ),
               ),
@@ -415,7 +416,7 @@ class StepsView extends GetView<StepsController> {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      '${NumberFormat('#,###').format(log.steps)} ${'steps_today'.tr}',
+                      '${NumberFormat('#,###').format(log.steps).f} ${'steps_today'.tr}',
                       style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13),
                     ),
                   ],
@@ -425,7 +426,7 @@ class StepsView extends GetView<StepsController> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${(log.progress.clamp(0.0, 1.0) * 100).toInt()}%',
+                    '${(log.progress.clamp(0.0, 1.0) * 100).toInt().f}%',
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,

@@ -139,95 +139,122 @@ class TaskTile extends StatelessWidget {
                       ),
                     ),
 
-                    // Task Core Body
+                    // Task Core Body (Redesigned for Professional Life OS)
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    task.title,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: (isCompleted || isCancelled)
-                                          ? theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)
-                                          : theme.textTheme.titleLarge?.color,
-                                      decoration: (isCompleted || isCancelled) ? TextDecoration.lineThrough : null,
-                                      letterSpacing: -0.3,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        task.title,
+                                        style: TextStyle(
+                                          fontSize: 18, // Slightly larger for prominence
+                                          fontWeight: FontWeight.bold,
+                                          color: (isCompleted || isCancelled)
+                                              ? theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)
+                                              : theme.textTheme.titleLarge?.color,
+                                          decoration: (isCompleted || isCancelled) ? TextDecoration.lineThrough : null,
+                                          letterSpacing: -0.4,
+                                        ),
+                                      ),
+                                      if (task.note?.isNotEmpty ?? false) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          task.note!,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontStyle: FontStyle.italic,
+                                            color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                if (task.recurrence == TaskRecurrence.daily)
-                                  Icon(CupertinoIcons.repeat, size: 14, color: theme.dividerColor).animate().rotate(duration: const Duration(seconds: 1)),
-                                if (task.isNotificationEnabled)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Icon(CupertinoIcons.bell_fill, size: 12, color: color.withValues(alpha: 0.5)),
-                                  ),
                                 const SizedBox(width: 8),
                                 _buildPriorityBadge(task.priority),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 16), // Increased spacing for vertical expansion
                             
-                            // Context Strip
-                            Row(
-                              children: [
-                                Icon(CupertinoIcons.clock_fill, size: 13, color: color.withValues(alpha: 0.6)),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    "${DateFormat('dd/MM/yyyy').format(task.scheduledAt)} • ${TimeOfDay.fromDateTime(task.scheduledAt).format(context)}${task.scheduledEnd != null ? ' - ${TimeOfDay.fromDateTime(task.scheduledEnd!).format(context)}' : ''}",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                // The "Intelligence" Part: Time Left (Reactive)
-                                Obx(() {
-                                  // Access currentTime to trigger rebuild on tick
-                                  Get.find<TaskController>().currentTime.value;
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.05),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      task.timeLeft.tr, // .tr added for localization
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: color.withValues(alpha: 0.8),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                            if (task.note?.isNotEmpty ?? false) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                task.note!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                            // Glass-Morphic Context Strip (Unified Life OS Design)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.1),
+                                  width: 1,
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(CupertinoIcons.calendar_today, size: 14, color: color),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          DateFormat.yMMMMd(Get.locale?.languageCode ?? 'en').format(task.scheduledAt),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.textTheme.bodyLarge?.color,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${DateFormat.jm(Get.locale?.languageCode ?? 'en').format(task.scheduledEnd!)}' : ''}",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  // Live Time Left Intelligence
+                                  Obx(() {
+                                    Get.find<TaskController>().currentTime.value;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        task.timeLeft.tr,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          color: color,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -250,23 +277,23 @@ class TaskTile extends StatelessWidget {
     switch (priority) {
       case TaskPriority.high:
         color = const Color(0xFFFF3B30); // iOS Red
-        label = 'High!!';
+        label = 'high_priority'.tr;
         break;
       case TaskPriority.medium:
         color = const Color(0xFFFF9500); // iOS Orange
-        label = 'Medium';
+        label = 'medium_priority'.tr;
         break;
       case TaskPriority.low:
         color = const Color(0xFF34C759); // iOS Green
-        label = 'Low';
+        label = 'low_priority'.tr;
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
@@ -275,6 +302,7 @@ class TaskTile extends StatelessWidget {
           color: color,
           fontSize: 10,
           fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
       ),
     );

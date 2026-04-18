@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:isar/isar.dart';
 import '../../core/helpers/log_helper.dart';
 import '../models/step_log_model.dart';
+import '../../core/services/app_lock_service.dart';
 import 'dart:async';
 
 class HealthService extends GetxService {
@@ -31,9 +32,9 @@ class HealthService extends GetxService {
 
   Future<HealthService> init() async {
     try {
-      // ✅ Step 1: Configure Health
+      // ✅ Step 1: Configure Health (Health Connect is now the exclusive Android provider in v13+)
       await health.configure();
-      talker.info('🏥 Health Service Configured for Life OS (Unified)');
+      talker.info('🏥 Health Service Configured for Life OS (Health Connect Verified)');
       
       // ✅ Step 2: Check permissions
       await checkAuthorization();
@@ -73,6 +74,12 @@ class HealthService extends GetxService {
     isConnecting.value = true;
 
     try {
+      // ✅ Security Audit: Pause App Lock protection during system-level handshake
+      // This prevents the "App Inactive" blur from covering the permissions dialog
+      if (Get.isRegistered<AppLockService>()) {
+        Get.find<AppLockService>().isProtectionPaused.value = true;
+      }
+
       // 1. Android Activity Recognition (Native Sensor Handshake)
       talker.info('🛡️ Requesting Activity Recognition (Trust Handshake)...');
       if (await Permission.activityRecognition.request().isDenied) {
@@ -108,6 +115,10 @@ class HealthService extends GetxService {
       talker.handle(e, stack, '🔴 Fatal Master Handshake Failure');
       return false;
     } finally {
+      // ✅ Restore security protection
+      if (Get.isRegistered<AppLockService>()) {
+        Get.find<AppLockService>().isProtectionPaused.value = false;
+      }
       isConnecting.value = false;
       Future.delayed(const Duration(seconds: 3), () => isHandshaking.value = false);
     }

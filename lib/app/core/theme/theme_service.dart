@@ -9,17 +9,19 @@ class ThemeService extends GetxService {
   final _fontSizeKey = 'fontSize';
   final _fontTypeKey = 'fontType';
   final _localeKey = 'locale';
+  final _numberFormatKey = 'useArabicNumbers';
 
   // Reactive state so UI can observe
   final isDarkModeRx = true.obs;
   final fontTypeRx = 'Rubik'.obs;
   final fontSizeRx = 'medium'.obs;
+  final useArabicNumbersRx = false.obs;
 
   bool get isDarkMode => _loadThemeFromBox();
   String get fontType => _box.read(_fontTypeKey) ?? 'Rubik';
   String get fontSize => _box.read(_fontSizeKey) ?? 'medium';
 
-  ThemeMode get theme => _loadThemeFromBox() ? ThemeMode.dark : ThemeMode.light;
+  ThemeMode get theme => isDarkModeRx.value ? ThemeMode.dark : ThemeMode.light;
 
   bool _loadThemeFromBox() {
     try {
@@ -61,6 +63,27 @@ class ThemeService extends GetxService {
     } catch (e) {
       debugPrint('⚠️ Error switching font size: $e');
     }
+  }
+
+  void switchNumberFormat(bool useArabic) {
+    try {
+      _box.write(_numberFormatKey, useArabic);
+      useArabicNumbersRx.value = useArabic;
+      debugPrint('🔢 Number format changed: ${useArabic ? "Arabic" : "English"}');
+      Get.forceAppUpdate(); // ✅ Force immediate global refresh
+    } catch (e) {
+      debugPrint('⚠️ Error switching number format: $e');
+    }
+  }
+
+  String replaceDigits(String input) {
+    if (!useArabicNumbersRx.value) return input;
+    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    for (int i = 0; i < english.length; i++) {
+      input = input.replaceAll(english[i], arabic[i]);
+    }
+    return input;
   }
 
   // ✅ Reactive Theme Getters for Root Rebuild
@@ -119,6 +142,7 @@ class ThemeService extends GetxService {
       isDarkModeRx.value = _loadThemeFromBox();
       fontTypeRx.value = _box.read(_fontTypeKey) ?? 'Rubik';
       fontSizeRx.value = _box.read(_fontSizeKey) ?? 'medium';
+      useArabicNumbersRx.value = _box.read(_numberFormatKey) ?? false;
     } catch (e) {
       debugPrint('⚠️ ThemeService init error: $e');
     }

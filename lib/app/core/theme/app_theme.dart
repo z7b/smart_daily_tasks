@@ -16,14 +16,16 @@ class AppTheme {
   static const Color textPrimaryDark = Color(0xFFFFFFFF);
   static const Color textSecondaryDark = Color(0xFFEBEBF5);
 
-  static double _fontSizeScale(String sizeKey) {
+  static double fontSizeScale(String sizeKey) {
     switch (sizeKey.toLowerCase()) {
-      case 'small': return 0.88;
+      case 'small': return 0.85;  // 📏 Expert Scaling for high visibility
       case 'medium': return 1.0;
-      case 'large': return 1.15; // Balanced scaling
+      case 'large': return 1.25;  // 🚀 Balanced "Wowed" scaling
       default: return 1.0;
     }
   }
+
+  static double _fontSizeScale(String sizeKey) => fontSizeScale(sizeKey);
 
   static TextTheme _resolveBaseTextTheme(String fontName) {
     // Ensuring Arabic fonts have proper height for visibility

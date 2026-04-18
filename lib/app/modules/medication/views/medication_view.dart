@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../controllers/medication_controller.dart';
 import '../../../data/models/medication_model.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class MedicationView extends GetView<MedicationController> {
   const MedicationView({super.key});
@@ -85,17 +86,19 @@ class MedicationView extends GetView<MedicationController> {
                     children: [
                       _miniChip(
                         icon: CupertinoIcons.capsule,
-                        label: '$active ${'active'.tr}',
+                        label: '${active.f} ${'active'.tr}',
                         color: AppTheme.primary,
                       ),
                       const SizedBox(width: 8),
-                      _miniChip(
-                        icon: CupertinoIcons.checkmark_circle,
-                        label:
-                            '${(totalCompliance * 100).toInt()}% ${'today_status'.tr}',
-                        color: totalCompliance >= 1.0
-                            ? const Color(0xFF34C759)
-                            : const Color(0xFFFF9500),
+                      Flexible(
+                        child: _miniChip(
+                          icon: CupertinoIcons.checkmark_circle,
+                          label:
+                              '${(totalCompliance * 100).toInt().f}% ${'med_today_status'.tr}',
+                          color: totalCompliance >= 1.0
+                              ? const Color(0xFF34C759)
+                              : const Color(0xFFFF9500),
+                        ),
                       ),
                     ],
                   ),
@@ -173,124 +176,121 @@ class MedicationView extends GetView<MedicationController> {
       direction: DismissDirection.endToStart,
       onDismissed: (_) => controller.deleteMedication(med),
       background: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 20),
         padding: const EdgeInsets.only(right: 24),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
           color: const Color(0xFFFF3B30).withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
         child: const Icon(CupertinoIcons.trash, color: Colors.white),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
           color: isDark
               ? theme.cardColor.withValues(alpha: 0.7)
               : Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(32),
           border: Border.all(
-            color: complianceColor.withValues(alpha: compliance > 0 ? 0.12 : 0.04),
+            color: complianceColor.withValues(alpha: compliance > 0 ? 0.15 : 0.05),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(isDark ? 20 : 6),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withAlpha(isDark ? 25 : 8),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(32),
           child: Column(
             children: [
               // Compliance progress bar at top
               if (compliance > 0 && compliance < 1.0)
                 LinearProgressIndicator(
                   value: compliance,
-                  minHeight: 3,
+                  minHeight: 4,
                   backgroundColor: Colors.transparent,
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(complianceColor.withValues(alpha: 0.5)),
+                      AlwaysStoppedAnimation<Color>(complianceColor.withValues(alpha: 0.6)),
                 ),
 
               Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(22),
                 child: Column(
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Type icon
+                        // Type icon with soft glow
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
+                            color: AppTheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                spreadRadius: -2,
+                              )
+                            ],
                           ),
                           child: Icon(
                             _typeIcons[med.type] ?? CupertinoIcons.capsule,
                             color: AppTheme.primary,
-                            size: 22,
+                            size: 26,
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 16),
 
-                        // Name + meta
+                        // Name + meta info
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text(
+                                med.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 19,
+                                  letterSpacing: -0.5,
+                                  color: theme.textTheme.titleLarge?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      med.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 17,
-                                        color: theme.textTheme.titleLarge?.color,
-                                      ),
-                                    ),
-                                  ),
-                                  if (!med.isActive)
-                                    _statusBadge('paused'.tr, Colors.orange)
-                                  else if (med.endDate != null && med.remainingDays < 0)
-                                    _statusBadge('expired'.tr, Colors.redAccent),
+                                  _miniInfoBadge(_getTypeText(med.type), theme.textTheme.bodySmall?.color),
+                                  const SizedBox(width: 8),
+                                  _miniInfoBadge(_getInstructionText(med.instruction), theme.textTheme.bodySmall?.color),
                                 ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${_getTypeText(med.type)} • ${_getInstructionText(med.instruction)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.textTheme.bodySmall?.color,
-                                ),
                               ),
                             ],
                           ),
                         ),
 
-                        // Compliance ring
+                        // Compliance Ring (Premium Style)
                         SizedBox(
-                          width: 44,
-                          height: 44,
+                          width: 48,
+                          height: 48,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               CircularProgressIndicator(
                                 value: compliance,
-                                strokeWidth: 3.5,
-                                backgroundColor:
-                                    theme.dividerColor.withValues(alpha: 0.1),
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    complianceColor),
+                                strokeWidth: 4,
+                                backgroundColor: theme.dividerColor.withValues(alpha: 0.08),
+                                valueColor: AlwaysStoppedAnimation<Color>(complianceColor),
                               ),
                               Text(
-                                '${(compliance * 100).toInt()}%',
+                                '${(compliance * 100).toInt().f}%',
                                 style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
                                     color: complianceColor),
                               ),
                             ],
@@ -299,102 +299,160 @@ class MedicationView extends GetView<MedicationController> {
                       ],
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 20),
 
-                    // Action row
-                    Row(
-                      children: [
-                        // Reminder times
-                        if (med.reminderTimes.isNotEmpty)
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(CupertinoIcons.alarm,
-                                    size: 13,
-                                    color: theme.textTheme.bodySmall?.color),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    med.reminderTimes.join(' • '),
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: theme.textTheme.bodySmall?.color),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                    // Dosage & Actions Section (Structured Glass Box)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.08),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              // Reminders Capsule
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(CupertinoIcons.alarm_fill, size: 14, color: AppTheme.primary),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          med.reminderTimes.join(' • '),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: theme.textTheme.bodyMedium?.color,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-
-                        // Edit button
-                        GestureDetector(
-                          onTap: () =>
-                              _showAddMedicationSheet(context, med: med),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(CupertinoIcons.pencil,
-                                size: 15, color: AppTheme.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Take dose button
-                        GestureDetector(
-                          onTap: compliance >= 1.0
-                              ? null
-                              : () => controller.recordIntake(med),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: compliance >= 1.0
-                                  ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                                  : AppTheme.primary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              compliance >= 1.0 ? '✓' : 'take_dose'.tr,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: compliance >= 1.0
-                                    ? const Color(0xFF34C759)
-                                    : Colors.white,
                               ),
-                            ),
+                              const SizedBox(width: 10),
+
+                              // Take Dose Button (Dynamic Status)
+                              GestureDetector(
+                                onTap: compliance >= 1.0 ? null : () => controller.recordIntake(med),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 400),
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: compliance >= 1.0 
+                                        ? const Color(0xFF34C759).withValues(alpha: 0.15)
+                                        : AppTheme.primary,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: compliance >= 1.0 ? [] : [
+                                      BoxShadow(
+                                        color: AppTheme.primary.withValues(alpha: 0.25),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (compliance >= 1.0)
+                                        const Icon(CupertinoIcons.check_mark, size: 14, color: Color(0xFF34C759)),
+                                      if (compliance >= 1.0) const SizedBox(width: 6),
+                                      Text(
+                                        compliance >= 1.0 ? 'done'.tr : 'take'.tr,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w900,
+                                          color: compliance >= 1.0 ? const Color(0xFF34C759) : Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          
+                          // Secondary Info (Dose Count / Status)
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${'doses_remaining'.tr}: ${(med.reminderTimes.length - med.todayDoseCount).f}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              // Edit button (Clean Minimalist)
+                              GestureDetector(
+                                onTap: () => _showAddMedicationSheet(context, med: med),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(CupertinoIcons.pencil, size: 12, color: AppTheme.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'edit'.tr,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
 
-                    // Remaining days
+                    // Status: Remaining Days (Professional Bottom Badge)
                     if (med.endDate != null && med.remainingDays >= 0) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.orange.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(CupertinoIcons.timer,
-                                size: 13, color: Colors.orange),
-                            const SizedBox(width: 5),
+                            const Icon(CupertinoIcons.hourglass_bottomhalf_fill, size: 14, color: Colors.orange),
+                            const SizedBox(width: 8),
                             Text(
-                              '${'remaining'.tr}: ${med.remainingDays} ${'days'.tr}',
+                              '${'remaining'.tr}: ${med.remainingDays.f} ${'days'.tr}',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 12,
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ],
                         ),
@@ -407,7 +465,7 @@ class MedicationView extends GetView<MedicationController> {
           ),
         ),
       ),
-    ).animate(delay: (80 * index).ms).fadeIn(duration: 350.ms).slideX(begin: 0.06);
+    ).animate(delay: Duration(milliseconds: 80 * index)).fadeIn(duration: const Duration(milliseconds: 400)).scale(begin: const Offset(0.95, 0.95));
   }
 
   Widget _miniChip(
@@ -425,11 +483,15 @@ class MedicationView extends GetView<MedicationController> {
         children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: color)),
+          Flexible(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ),
         ],
       ),
     );
@@ -580,7 +642,7 @@ class MedicationView extends GetView<MedicationController> {
                               items: ([3, 5, 7, 10, 14, 30, durationDays.value].toSet().toList()..sort())
                                   .map((e) => DropdownMenuItem(
                                       value: e,
-                                      child: Text('$e ${'days'.tr}')))
+                                      child: Text('${e.f} ${'days'.tr}')))
                                   .toList(),
                               onChanged: (val) =>
                                   durationDays.value = val ?? 7,
@@ -636,7 +698,7 @@ class MedicationView extends GetView<MedicationController> {
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
-                                                Text('$e ${'times'.tr}')))
+                                                Text('${e.f} ${'times'.tr}')))
                                         .toList(),
                                     onChanged: (val) {
                                       frequencyCount.value = val ?? 1;
@@ -661,7 +723,7 @@ class MedicationView extends GetView<MedicationController> {
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
-                                                Text('$e ${'hours'.tr}')))
+                                                Text('${e.f} ${'hours'.tr}')))
                                         .toList(),
                                     onChanged: (val) {
                                       intervalHours.value = val ?? 8;
@@ -679,7 +741,7 @@ class MedicationView extends GetView<MedicationController> {
                               contentPadding: EdgeInsets.zero,
                               title: Text('first_dose_time'.tr),
                               trailing: Text(
-                                  firstDoseTime.value.format(context),
+                                  firstDoseTime.value.format(context).f,
                                   style: const TextStyle(
                                       color: AppTheme.primary,
                                       fontWeight: FontWeight.bold)),
@@ -807,6 +869,24 @@ class MedicationView extends GetView<MedicationController> {
           fontSize: 10,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _miniInfoBadge(String label, Color? color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color?.withValues(alpha: 0.08) ?? Colors.grey.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color?.withValues(alpha: 0.8) ?? Colors.grey,
         ),
       ),
     );

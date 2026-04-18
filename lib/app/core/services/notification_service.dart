@@ -112,14 +112,33 @@ class NotificationService extends GetxService {
   }
 
   /// ✅ Android 16 Stability: Ensure app survives aggressive background quotas
-  Future<void> requestBatteryExemption() async {
+  /// ✅ Android Stability: Ensure app survives aggressive background quotas
+  /// Returns true if exempted or if not on Android
+  Future<bool> requestBatteryExemption() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       final status = await Permission.ignoreBatteryOptimizations.status;
       if (status.isDenied) {
-        talker.info('🔋 Requesting Battery Optimization Exemption for Android 16 stability...');
-        await Permission.ignoreBatteryOptimizations.request();
+        talker.info('🔋 Requesting Battery Optimization Exemption...');
+        final result = await Permission.ignoreBatteryOptimizations.request();
+        return result.isGranted;
       }
+      return status.isGranted;
     }
+    return true;
+  }
+
+  /// ✅ Exact Alarm Check (Android 12+)
+  Future<bool> checkExactAlarmPermission() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final status = await Permission.scheduleExactAlarm.status;
+      if (status.isDenied) {
+        talker.info('🕒 Requesting Exact Alarm Permission...');
+        await Permission.scheduleExactAlarm.request();
+        return (await Permission.scheduleExactAlarm.status).isGranted;
+      }
+      return status.isGranted;
+    }
+    return true;
   }
 
   Future<void> scheduleNotification({
@@ -180,6 +199,44 @@ class NotificationService extends GetxService {
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Notification scheduling failed');
     }
+  }
+
+  /// ✅ Diagnostic Signal: Fires an immediate test notification to prove system stability
+  Future<void> sendTestNotification() async {
+    if (!isInitialized.value) await _waitForInit();
+    
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        999, // Diagnostic ID
+        'Life OS: Diagnostic Signal',
+        'System is stable and signal delivery is audible. 🚀',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'daily_tasks_channel',
+            'System Diagnostics',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+            showWhen: true,
+          ),
+        ),
+      );
+      talker.info('🔔 Diagnostic Signal Fired Successfully');
+    } catch (e, stack) {
+      talker.handle(e, stack, '❌ Diagnostic Signal Failed');
+    }
+  }
+
+  /// ✅ Real-time Stability Status
+  Future<bool> isSystemStable() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    
+    final notifStatus = await Permission.notification.isGranted;
+    final batteryStatus = await Permission.ignoreBatteryOptimizations.isGranted;
+    final alarmStatus = await Permission.scheduleExactAlarm.isGranted;
+    
+    return notifStatus && batteryStatus && alarmStatus;
   }
 
   Future<void> _waitForInit() async {

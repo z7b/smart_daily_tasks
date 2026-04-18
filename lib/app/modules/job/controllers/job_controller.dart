@@ -135,7 +135,7 @@ class JobController extends GetxController {
     final now = DateTime.now();
 
     // Weekly
-    final weekStart = now.subtract(const Duration(days: 7));
+    final weekStart = now.subtract(const Duration(days: 6));
     final weekLogs = await _repository.getLogsInRange(weekStart, now);
     weekLogs.sort((a, b) => a.date.compareTo(b.date));
     weeklyStats.assignAll(weekLogs);
@@ -181,7 +181,7 @@ class JobController extends GetxController {
 
     switch (selectedPeriod.value) {
       case JobAnalyticsPeriod.weekly:
-        periodStart = now.subtract(const Duration(days: 7));
+        periodStart = now.subtract(const Duration(days: 6));
         currentLogs = weeklyStats;
         _aggregateWeeklyData(currentLogs);
         break;
@@ -220,18 +220,30 @@ class JobController extends GetxController {
     }
 
     // 3. Performance & Shift Variance logic
-    // ✅ Phase 8 Audit: Calculate expected working days for the entire period range
+    // ✅ Phase 10 Audit: Calculate expected working days and EXACT expected minutes
     int expectedWorkingDays = 0;
-    for (var d = periodStart; d.isBefore(periodEnd.add(const Duration(days: 1))); d = d.add(const Duration(days: 1))) {
+    int expectedPeriodMinutes = 0;
+    
+    DateTime pStart = DateTime(periodStart.year, periodStart.month, periodStart.day);
+    DateTime pEnd = DateTime(periodEnd.year, periodEnd.month, periodEnd.day);
+
+    for (var d = pStart; d.isBefore(pEnd.add(const Duration(days: 1))); d = d.add(const Duration(days: 1))) {
       final dayIndex = d.weekday == 7 ? 0 : d.weekday;
-      if (profile.value.workingDays.contains(dayIndex)) {
+      if (profile.value.workingDays.contains(dayIndex) && !isDayHoliday(dayIndex)) {
         expectedWorkingDays++;
+        
+        final shifts = getShiftsForDay(dayIndex);
+        for (var s in shifts) {
+          final start = s['start'] as int;
+          final end = s['end'] as int;
+          expectedPeriodMinutes += end >= start ? (end - start) : ((24 * 60 - start) + end);
+        }
       }
     }
     
     totalMandatedDays.value = expectedWorkingDays;
 
-    _calculateAdvancedMetrics(currentLogs, expectedWorkingDays);
+    _calculateAdvancedMetrics(currentLogs, expectedWorkingDays, expectedPeriodMinutes);
 
     // 4. Consistency Rate logic
     _updateConsistencyMetrics(expectedWorkingDays, currentLogs);
@@ -294,7 +306,7 @@ class JobController extends GetxController {
     aggregatedChartData.assignAll(calendarResults);
   }
 
-  void _calculateAdvancedMetrics(List<AttendanceLog> logs, int periodExpectedDays) {
+  void _calculateAdvancedMetrics(List<AttendanceLog> logs, int periodExpectedDays, int expectedPeriodMinutes) {
     int totalVariance = 0;
     int varianceCount = 0;
     int totalDuration = 0;
@@ -311,6 +323,11 @@ class JobController extends GetxController {
 
         if (log.checkOutTime != null) {
           totalDuration += log.checkOutTime!.difference(log.checkInTime!).inMinutes;
+        } else {
+          final now = DateTime.now();
+          if (log.date.year == now.year && log.date.month == now.month && log.date.day == now.day) {
+            totalDuration += now.difference(log.checkInTime!).inMinutes;
+          }
         }
       }
     }
@@ -318,11 +335,9 @@ class JobController extends GetxController {
     avgVarianceMinutes.value = varianceCount > 0 ? (totalVariance ~/ varianceCount) : 0;
     totalWorkMinutes.value = totalDuration;
 
-    // ✅ Phase 8 Audit: Strict Institutional Work Balance
-    // Benchmark against 'periodExpectedDays' to ensure absences count as deficits
-    final officialHours = profile.value.officialWorkHours ?? 8.0;
-    final totalMandatedMinutes = (officialHours * 60 * periodExpectedDays).toInt();
-    workBalanceMinutes.value = totalDuration - totalMandatedMinutes;
+    // ✅ Phase 10 Audit: Strict Dynamic Work Balance
+    // Benchmark against dynamically accumulated 'expectedPeriodMinutes' to ensure math logic respecs custom UI limits
+    workBalanceMinutes.value = totalDuration - expectedPeriodMinutes;
 
     // ✅ Phase 8: Today's Predictive Exit
     _calculateTodayPredictiveExit();
@@ -334,8 +349,17 @@ class JobController extends GetxController {
   void _calculateTodayPredictiveExit() {
     if (todayLog.value != null && todayLog.value!.checkInTime != null) {
       final checkIn = todayLog.value!.checkInTime!;
-      final officialMinutes = ((profile.value.officialWorkHours ?? 8.0) * 60).toInt();
-      final expectedExitTime = checkIn.add(Duration(minutes: officialMinutes));
+      final dayIndex = checkIn.weekday == 7 ? 0 : checkIn.weekday;
+      
+      final shifts = getShiftsForDay(dayIndex);
+      int spanMinutes = 8 * 60; // fallback
+      if (shifts.isNotEmpty) {
+        final firstStart = shifts.first['start'] as int;
+        final lastEnd = shifts.last['end'] as int;
+        spanMinutes = lastEnd >= firstStart ? (lastEnd - firstStart) : ((24 * 60 - firstStart) + lastEnd);
+      }
+      
+      final expectedExitTime = checkIn.add(Duration(minutes: spanMinutes));
       
       expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime);
     } else {
@@ -479,48 +503,119 @@ class JobController extends GetxController {
   }
 
   // Support for custom daily schedules
-  Map<int, dynamic> getCustomSchedules() {
+  Map<String, dynamic> getCustomSchedules() {
     if (profile.value.customSchedulesJson == null) return {};
     try {
       return jsonDecode(profile.value.customSchedulesJson!)
-          as Map<int, dynamic>;
+          as Map<String, dynamic>;
     } catch (_) {
       return {};
     }
   }
 
-  void setCustomSchedule(int dayIndex, int? start, int? end) {
+  bool isDayHoliday(int dayIndex) {
+    final scheds = getCustomSchedules();
+    if (scheds.containsKey(dayIndex.toString())) {
+      return scheds[dayIndex.toString()]['isHoliday'] ?? false;
+    }
+    return false;
+  }
+
+  List<Map<String, dynamic>> getShiftsForDay(int dayIndex) {
+    final scheds = getCustomSchedules();
+    if (scheds.containsKey(dayIndex.toString())) {
+      final dayData = scheds[dayIndex.toString()];
+      if (dayData['shifts'] != null) {
+        return List<Map<String, dynamic>>.from(dayData['shifts']);
+      }
+      if (dayData['start'] != null && dayData['end'] != null) {
+        return [{'start': dayData['start'], 'end': dayData['end']}];
+      }
+    }
+    return [{'start': profile.value.startMinutes, 'end': profile.value.endMinutes}];
+  }
+
+  void setCustomShifts(int dayIndex, List<Map<String, dynamic>>? shifts, {bool? isHoliday}) {
     final Map<String, dynamic> current =
         profile.value.customSchedulesJson != null
         ? jsonDecode(profile.value.customSchedulesJson!)
         : {};
 
-    if (start == null && end == null) {
+    if (shifts == null && isHoliday == null) {
       current.remove(dayIndex.toString());
     } else {
+      final existingHoliday = isDayHoliday(dayIndex);
+      final finalShifts = shifts ?? getShiftsForDay(dayIndex);
+      
       current[dayIndex.toString()] = {
-        'start': start ?? profile.value.startMinutes,
-        'end': end ?? profile.value.endMinutes,
+        'start': finalShifts.isNotEmpty ? finalShifts.first['start'] : profile.value.startMinutes,
+        'end': finalShifts.isNotEmpty ? finalShifts.last['end'] : profile.value.endMinutes,
+        'shifts': finalShifts,
+        'isHoliday': isHoliday ?? existingHoliday,
       };
     }
 
     updateJobSettings(customSchedulesJson: jsonEncode(current));
   }
 
-  int getStartMinutesForDay(int dayIndex) {
-    final scheds = getCustomSchedules();
-    if (scheds.containsKey(dayIndex.toString())) {
-      return scheds[dayIndex.toString()]['start'];
+  // Backwards compatibility for UI and variance algorithms
+  void setCustomSchedule(int dayIndex, int? start, int? end, {bool? isHoliday}) {
+    if (start == null && end == null) {
+      setCustomShifts(dayIndex, null, isHoliday: isHoliday);
+    } else {
+      setCustomShifts(dayIndex, [{'start': start ?? profile.value.startMinutes, 'end': end ?? profile.value.endMinutes}], isHoliday: isHoliday);
     }
+  }
+
+  int getStartMinutesForDay(int dayIndex) {
+    final shifts = getShiftsForDay(dayIndex);
+    if (shifts.isNotEmpty) return (shifts.first['start'] as num).toInt();
     return profile.value.startMinutes;
   }
 
   int getEndMinutesForDay(int dayIndex) {
-    final scheds = getCustomSchedules();
-    if (scheds.containsKey(dayIndex.toString())) {
-      return scheds[dayIndex.toString()]['end'];
-    }
+    final shifts = getShiftsForDay(dayIndex);
+    if (shifts.isNotEmpty) return (shifts.last['end'] as num).toInt();
     return profile.value.endMinutes;
+  }
+
+  /// ✅ Phase 11: Future Shift Predictive Engine
+  /// Scans the upcoming 7 calendar days to pinpoint the exact time of the next active shift.
+  Map<String, dynamic>? getNextShiftDetails() {
+    try {
+      final now = DateTime.now();
+      for (int i = 0; i < 7; i++) {
+        final d = now.add(Duration(days: i));
+        final dayIndex = d.weekday == 7 ? 0 : d.weekday;
+        
+        if (!profile.value.workingDays.contains(dayIndex) || isDayHoliday(dayIndex)) {
+          continue;
+        }
+
+        final shifts = getShiftsForDay(dayIndex);
+        if (shifts.isEmpty) continue;
+
+        for (var s in shifts) {
+          final startMin = (s['start'] as num?)?.toInt() ?? profile.value.startMinutes;
+          final endMin = (s['end'] as num?)?.toInt() ?? profile.value.endMinutes;
+          
+          final shiftStart = DateTime(d.year, d.month, d.day, startMin ~/ 60, startMin % 60);
+          final shiftEnd = DateTime(d.year, d.month, d.day, endMin ~/ 60, endMin % 60);
+
+          if (now.isBefore(shiftEnd)) {
+             return {
+               'date': d,
+               'start': shiftStart,
+               'end': shiftEnd,
+               'isActive': now.isAfter(shiftStart) && now.isBefore(shiftEnd)
+             };
+          }
+        }
+      }
+    } catch (e, stack) {
+      talker.handle(e, stack, '🟠 Predictive Shift Engine Error');
+    }
+    return null; 
   }
 
   Future<void> _scheduleShiftReminders(WorkProfile p) async {
@@ -529,6 +624,7 @@ class JobController extends GetxController {
     final service = Get.find<NotificationService>();
 
     for (var day in p.workingDays) {
+      if (isDayHoliday(day)) continue; // 🛡️ Skip notifications for holidays
       // ✅ Read distinct start minutes for this specific day using custom schedules logic
       final startMinGlobal = getStartMinutesForDay(day);
 
