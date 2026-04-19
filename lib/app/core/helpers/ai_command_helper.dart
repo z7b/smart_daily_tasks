@@ -18,19 +18,21 @@ class AiCommandHelper {
   }
 
   /// 📅 Temporal Expert: Parses date offsets from text.
+  /// Preserves current time-of-day context for intuitive scheduling.
   static DateTime parseDate(String text) {
     final normalized = normalizeArabic(text);
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
 
     if (normalized.contains('بكره') || normalized.contains('tomorrow') || normalized.contains('غدا')) {
-      return today.add(const Duration(days: 1));
+      // 🛡️ Preserve current time context: "tomorrow" means same time tomorrow
+      return DateTime(now.year, now.month, now.day + 1, now.hour, now.minute);
     }
     if (normalized.contains('بعد بكره') || normalized.contains('بعد غد')) {
-      return today.add(const Duration(days: 2));
+      return DateTime(now.year, now.month, now.day + 2, now.hour, now.minute);
     }
     
-    return today; // Default to today
+    // Default: today at current time
+    return DateTime(now.year, now.month, now.day, now.hour, now.minute);
   }
 
   /// ⚡ Priority Expert: Maps keywords to TaskPriority.

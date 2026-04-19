@@ -40,9 +40,14 @@ class TaskRepository {
     return await _isar.tasks.get(id);
   }
 
-  /// Get all tasks (Future)
+  /// Get all tasks (Future) with error handling
   Future<List<Task>> getAllTasks() async {
-    return await _isar.tasks.where().findAll();
+    try {
+      return await _isar.tasks.where().findAll();
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Failed to load tasks from database');
+      return [];
+    }
   }
 
   /// Update an existing task with success result
@@ -61,11 +66,17 @@ class TaskRepository {
     }
   }
 
-  // Delete
+  // Delete with error handling
   Future<void> deleteTask(Id id) async {
-    await _isar.writeTxn(() async {
-      await _isar.tasks.delete(id);
-    });
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.tasks.delete(id);
+      });
+    } on IsarError catch (e) {
+      talker.error('🔴 Isar Database Error (Delete): $e');
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Delete Task)');
+    }
   }
 
   /// Mark a task as cancelled

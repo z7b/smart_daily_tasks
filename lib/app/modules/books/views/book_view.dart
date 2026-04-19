@@ -578,76 +578,148 @@ class BookView extends GetView<BookController> {
 
   // ─── Update progress bottom sheet ────────────────────────────
   void _showUpdateProgressSheet(BuildContext context, Book book) {
-    final currentCtrl =
-        TextEditingController(text: book.currentPage.toString());
+    final currentCtrl = TextEditingController(text: book.currentPage.toString());
     final totalCtrl = TextEditingController(text: book.totalPages.toString());
     final theme = Theme.of(context);
 
     BottomSheetHelper.showSafeBottomSheet(
-      builder: (context, setState) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                    color: theme.dividerColor.withAlpha(60),
-                    borderRadius: BorderRadius.circular(10)),
+      builder: (context, setState) {
+        // Validation logic
+        bool isInvalid() {
+          final curr = int.tryParse(currentCtrl.text) ?? 0;
+          final total = int.tryParse(totalCtrl.text) ?? book.totalPages;
+          return curr > total || curr < 0 || total <= 0;
+        }
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          // 🛡️ Notice: We rely entirely on BottomSheetHelper for viewInsets.
+          // No more double-padding layout loops causing ANRs!
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                      color: theme.dividerColor.withAlpha(50),
+                      borderRadius: BorderRadius.circular(10)),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text('update'.tr,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: currentCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'current_page'.tr,
-                prefixIcon: const Icon(CupertinoIcons.book),
+              const SizedBox(height: 24),
+
+              // Title Header
+              Row(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(10),
+                     decoration: BoxDecoration(
+                       color: AppTheme.primary.withAlpha(20),
+                       shape: BoxShape.circle,
+                     ),
+                     child: const Icon(CupertinoIcons.book_solid, color: AppTheme.primary, size: 24),
+                   ),
+                   const SizedBox(width: 14),
+                   Text('update_progress'.tr ?? 'Update Progress',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: totalCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'total_pages'.tr,
-                prefixIcon: const Icon(CupertinoIcons.book_fill),
+              const SizedBox(height: 30),
+
+              // Input Fields
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('current_page'.tr, 
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withAlpha(150))),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: currentCtrl,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: theme.cardColor,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.primary, width: 2)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 34),
+                    child: Text('/', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300)),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('total_pages'.tr, 
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withAlpha(150))),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: totalCtrl,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: theme.cardColor,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.primary, width: 2)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: Obx(() {
-                 final curr = int.tryParse(currentCtrl.text) ?? 0;
-                 final total = int.tryParse(totalCtrl.text) ?? book.totalPages;
-                 bool isInvalid = curr > total || curr < 0 || total <= 0;
-                 return CupertinoButton(
-                    color: isInvalid ? Colors.redAccent.withAlpha(200) : AppTheme.primary,
-                    borderRadius: BorderRadius.circular(16),
-                    onPressed: isInvalid ? null : () {
-                      controller.updateProgress(book, curr, total);
-                      Get.back();
-                    },
-                    child: Text(isInvalid ? 'invalid'.tr : 'save'.tr,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                  );
-              }),
-            ),
-          ],
-        ),
-      ),
+              
+              if (isInvalid()) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: Text('invalid_progress_data'.tr, 
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w500)),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                child: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  color: isInvalid() ? Colors.redAccent.withAlpha(200) : AppTheme.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  onPressed: isInvalid() ? null : () {
+                    FocusScope.of(context).unfocus(); // Dismiss keyboard safely
+                    final curr = int.tryParse(currentCtrl.text) ?? 0;
+                    final total = int.tryParse(totalCtrl.text) ?? book.totalPages;
+                    controller.updateProgress(book, curr, total);
+                    Get.back();
+                  },
+                  child: Text(isInvalid() ? 'invalid'.tr : 'save'.tr,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:isar/isar.dart';
 import 'dart:async';
 
@@ -8,8 +7,6 @@ import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../core/helpers/log_helper.dart';
-import 'package:intl/intl.dart';
-import '../../../core/extensions/date_time_extensions.dart';
 import '../../../core/extensions/string_extensions.dart';
 
 class TaskController extends GetxController {
@@ -246,7 +243,7 @@ class TaskController extends GetxController {
     });
   }
 
-  void deleteTask(Task task) async {
+  Future<void> deleteTask(Task task) async {
     try {
       final notifyService = Get.find<NotificationService>();
       final deterministicId = notifyService.getDeterministicId(
@@ -263,7 +260,13 @@ class TaskController extends GetxController {
     }
   }
 
-  void markTaskCompleted(Task task) async {
+  // 🛡️ Debounce guard: prevents rapid double-tap from creating duplicate recurrences
+  bool _isCompletionProcessing = false;
+
+  Future<void> markTaskCompleted(Task task) async {
+    if (_isCompletionProcessing) return;
+    _isCompletionProcessing = true;
+
     try {
       // Logic: Allow completing tasks at any time, even future ones, for maximum flexibility.
       // Strict restrictions removed per user request.
@@ -337,10 +340,12 @@ class TaskController extends GetxController {
       }
     } catch (e) {
       talker.handle(e, null, 'Error updating task');
+    } finally {
+      _isCompletionProcessing = false;
     }
   }
 
-  void cancelTask(Task task) async {
+  Future<void> cancelTask(Task task) async {
     try {
       final updatedTask = task.copyWith(
         status: TaskStatus.cancelled,

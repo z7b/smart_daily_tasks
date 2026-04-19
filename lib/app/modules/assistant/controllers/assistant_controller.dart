@@ -60,8 +60,20 @@ class AssistantController extends GetxController {
     messages.add(Message(text: '$greeting\n${'assistant_welcome'.tr}', isUser: false));
   }
 
+  // 🛡️ Debounce: Prevent duplicate commands from rapid taps
+  DateTime? _lastActionTime;
+
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+
+    // 🛡️ 2-second cooldown to prevent duplicate task creation
+    final now = DateTime.now();
+    if (_lastActionTime != null &&
+        now.difference(_lastActionTime!) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastActionTime = now;
+
     messages.add(Message(text: text, isUser: true));
     isTyping.value = true;
     

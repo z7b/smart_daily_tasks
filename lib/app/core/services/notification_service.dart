@@ -168,8 +168,9 @@ class NotificationService extends GetxService {
       await _waitForInit();
     }
 
-    // Convert to local timezone TZDateTime for correct scheduling
-    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+    // 🛡️ Timezone Safety: Convert to UTC first to prevent double-offset
+    // This ensures correct scheduling regardless of whether scheduledTime is UTC or local
+    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime.toUtc(), tz.local);
 
     // If time is in the past (with 5s safety buffer for performance overhead), don't schedule
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)))) {
@@ -267,6 +268,40 @@ class NotificationService extends GetxService {
 
   Future<void> cancelNotification(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
+  }
+
+  /// 🛡️ Reschedule all active notifications (called on app resume / timezone change)
+  /// This cancels all pending notifications and reschedules from scratch.
+  Future<void> rescheduleAllNotifications(List<Map<String, dynamic>> taskSchedules) async {
+    if (!isInitialized.value) await _waitForInit();
+    
+    try {
+      // Cancel all existing notifications first
+      await flutterLocalNotificationsPlugin.cancelAll();
+      talker.info('🔄 Cancelled all pending notifications for reschedule');
+      
+      int scheduled = 0;
+      for (final schedule in taskSchedules) {
+        final id = schedule['id'] as int;
+        final title = schedule['title'] as String;
+        final body = schedule['body'] as String;
+        final time = schedule['scheduledTime'] as DateTime;
+        
+        if (time.isAfter(DateTime.now())) {
+          await scheduleNotification(
+            id: id,
+            title: title,
+            body: body,
+            scheduledTime: time,
+          );
+          scheduled++;
+        }
+      }
+      
+      talker.info('✅ Rescheduled $scheduled notifications after timezone/resume check');
+    } catch (e, stack) {
+      talker.handle(e, stack, '❌ Failed to reschedule notifications');
+    }
   }
 
   Future<void> scheduleWeeklyNotification({

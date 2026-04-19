@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:isar/isar.dart';
-import 'dart:io';
 import '../../../data/models/book_model.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
@@ -15,12 +15,33 @@ class BookController extends GetxController {
   final books = <Book>[].obs;
   final isLoading = false.obs;
 
+  StreamSubscription? _watcherSubscription;
+
   @override
   void onInit() {
     super.onInit();
     talker.info('📚 BookController initialized');
-    _loadBooks();
-    _isar.books.watchLazy().listen((_) => _loadBooks());
+    
+    // 🛡️ ANR Fix: Defer initial load to after the first frame is rendered
+    // This prevents state mutation during the widget tree's first build cycle.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBooks();
+    });
+    
+    // 🛡️ ANR Fix: Debounce the Isar watcher to prevent rapid-fire rebuilds
+    _watcherSubscription = _isar.books.watchLazy()
+        .transform(StreamTransformer.fromHandlers(
+          handleData: (_, sink) {
+            Future.delayed(const Duration(milliseconds: 300), () => sink.add(null));
+          },
+        ))
+        .listen((_) => _loadBooks());
+  }
+
+  @override
+  void onClose() {
+    _watcherSubscription?.cancel();
+    super.onClose();
   }
 
   Future<void> _loadBooks() async {

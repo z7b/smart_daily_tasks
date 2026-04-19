@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:isar/isar.dart';
-import '../../../core/theme/app_theme.dart';
+
 import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../controllers/medication_controller.dart';
 import '../../../data/models/medication_model.dart';
@@ -11,6 +11,9 @@ import '../../../core/helpers/number_extension.dart';
 
 class MedicationView extends GetView<MedicationController> {
   const MedicationView({super.key});
+
+  // ─── Theme Color ──────────────────────────────────────────────
+  static const Color _themeColor = Color(0xFFFF3B30); // Medical Red
 
   // ─── Icon map per type ────────────────────────────────────────
   static const _typeIcons = {
@@ -44,7 +47,7 @@ class MedicationView extends GetView<MedicationController> {
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back_ios_new_rounded,
-                    color: AppTheme.primary, size: 22),
+                    color: _themeColor, size: 22),
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
@@ -61,7 +64,7 @@ class MedicationView extends GetView<MedicationController> {
               actions: [
                 IconButton(
                   icon: const Icon(CupertinoIcons.add_circled_solid,
-                      color: AppTheme.primary, size: 28),
+                      color: _themeColor, size: 28),
                   onPressed: () => _showAddMedicationSheet(context),
                 ),
                 const SizedBox(width: 8),
@@ -87,7 +90,7 @@ class MedicationView extends GetView<MedicationController> {
                       _miniChip(
                         icon: CupertinoIcons.capsule,
                         label: '${active.f} ${'active'.tr}',
-                        color: AppTheme.primary,
+                        color: _themeColor,
                       ),
                       const SizedBox(width: 8),
                       Flexible(
@@ -169,7 +172,7 @@ class MedicationView extends GetView<MedicationController> {
     final isDark = theme.brightness == Brightness.dark;
     final compliance = med.todayCompliance;
     final complianceColor =
-        compliance >= 1.0 ? const Color(0xFF34C759) : AppTheme.primary;
+        compliance >= 1.0 ? const Color(0xFF34C759) : _themeColor;
 
     return Dismissible(
       key: Key('med_${med.id}'),
@@ -229,11 +232,11 @@ class MedicationView extends GetView<MedicationController> {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.12),
+                            color: _themeColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.05),
+                                color: _themeColor.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 spreadRadius: -2,
                               )
@@ -241,7 +244,7 @@ class MedicationView extends GetView<MedicationController> {
                           ),
                           child: Icon(
                             _typeIcons[med.type] ?? CupertinoIcons.capsule,
-                            color: AppTheme.primary,
+                            color: _themeColor,
                             size: 26,
                           ),
                         ),
@@ -326,11 +329,11 @@ class MedicationView extends GetView<MedicationController> {
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(CupertinoIcons.alarm_fill, size: 14, color: AppTheme.primary),
+                                      Icon(CupertinoIcons.alarm_fill, size: 14, color: _themeColor),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          med.reminderTimes.join(' • '),
+                                          med.reminderTimes.map((t) => t.replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f).join(' • '),
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
@@ -355,11 +358,11 @@ class MedicationView extends GetView<MedicationController> {
                                   decoration: BoxDecoration(
                                     color: compliance >= 1.0 
                                         ? const Color(0xFF34C759).withValues(alpha: 0.15)
-                                        : AppTheme.primary,
+                                        : _themeColor,
                                     borderRadius: BorderRadius.circular(14),
                                     boxShadow: compliance >= 1.0 ? [] : [
                                       BoxShadow(
-                                        color: AppTheme.primary.withValues(alpha: 0.25),
+                                        color: _themeColor.withValues(alpha: 0.25),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       )
@@ -405,19 +408,19 @@ class MedicationView extends GetView<MedicationController> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.08),
+                                    color: _themeColor.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(CupertinoIcons.pencil, size: 12, color: AppTheme.primary),
+                                      Icon(CupertinoIcons.pencil, size: 12, color: _themeColor),
                                       const SizedBox(width: 4),
                                       Text(
                                         'edit'.tr,
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.primary,
+                                          color: _themeColor,
                                         ),
                                       ),
                                     ],
@@ -741,9 +744,9 @@ class MedicationView extends GetView<MedicationController> {
                               contentPadding: EdgeInsets.zero,
                               title: Text('first_dose_time'.tr),
                               trailing: Text(
-                                  firstDoseTime.value.format(context).f,
+                                  firstDoseTime.value.format(context).replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f,
                                   style: const TextStyle(
-                                      color: AppTheme.primary,
+                                      color: _themeColor,
                                       fontWeight: FontWeight.bold)),
                               onTap: () async {
                                 final time = await showTimePicker(
@@ -774,7 +777,7 @@ class MedicationView extends GetView<MedicationController> {
                           contentPadding: EdgeInsets.zero,
                           title: Text('enable_notifications'.tr),
                           subtitle: Text('will_alert_at'.trParams(
-                              {'times': reminderTimes.join(', ')})),
+                              {'times': reminderTimes.map((t) => t.replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f).join(', ')})),
                           value: notificationsEnabled.value,
                           onChanged: (val) =>
                               notificationsEnabled.value = val,
@@ -792,7 +795,7 @@ class MedicationView extends GetView<MedicationController> {
               child: SizedBox(
                 width: double.infinity,
                 child: CupertinoButton(
-                  color: AppTheme.primary,
+                  color: _themeColor,
                   borderRadius: BorderRadius.circular(16),
                   onPressed: () {
                     final name = nameController.text.trim();

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/medication_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
+import '../../../core/helpers/number_extension.dart';
 
 class MedicationController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -211,8 +212,7 @@ class MedicationController extends GetxController {
     await _isar.writeTxn(() async {
       await _isar.medications.put(updatedMed);
     });
-    
-    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now)}));
+    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now).replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f}));
   }
 
   Future<void> toggleActive(Medication med) async {
