@@ -71,7 +71,7 @@ class CalendarView extends GetView<CalendarController> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               sliver: _buildEventsList(context),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 60)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),

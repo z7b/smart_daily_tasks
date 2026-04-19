@@ -165,7 +165,7 @@ class NotesView extends GetView<NotesController> {
               );
             }),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),

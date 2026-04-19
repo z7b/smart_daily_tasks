@@ -190,7 +190,7 @@ class JobView extends GetView<JobController> {
                 }, childCount: controller.monthlyStats.length),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           );
         }),

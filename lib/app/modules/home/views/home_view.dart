@@ -692,10 +692,10 @@ class HomeView extends GetView<HomeController> {
           } else {
             final wait = start!.difference(now);
             timeLeftStr = wait.inDays > 0
-                ? '${wait.inDays}d ${wait.inHours % 24}h'
+                ? '${wait.inDays.f}${'d'.tr} ${(wait.inHours % 24).f}${'h'.tr}'
                 : (wait.inHours > 0
-                    ? '${wait.inHours}h ${wait.inMinutes % 60}m'
-                    : '${wait.inMinutes}m');
+                    ? '${wait.inHours.f}${'h'.tr} ${(wait.inMinutes % 60).f}${'m'.tr}'
+                    : '${wait.inMinutes.f}${'m'.tr}');
           }
         }
 

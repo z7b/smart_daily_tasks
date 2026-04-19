@@ -45,7 +45,7 @@ class AppLockService extends GetxService {
       // 🛡️ Use Native System Authentication (Device Lock / Biometrics)
       // This will prompt for Fingerprint/FaceID or System PIN/Pattern automatically
       final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'authenticate_to_unlock_app'.tr,
+        localizedReason: 'scan_fingerprint_to_unlock'.tr,
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: false, // 🛡️ Expert Fix: System handles biometric with automatic fallback

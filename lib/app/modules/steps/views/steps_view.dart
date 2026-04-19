@@ -104,7 +104,7 @@ class StepsView extends GetView<StepsController> {
                 ),
               ),
 
-              SliverToBoxAdapter(child: SizedBox(height: 100)),
+              SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
         );

@@ -74,6 +74,7 @@ dependencies:
   crypto: ^3.0.7
   talker_flutter: ^4.8.4
   rxdart: ^0.27.7
+  local_auth_android: ^1.0.56
 
 dev_dependencies:
   flutter_test:

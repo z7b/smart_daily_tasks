@@ -81,7 +81,10 @@ class NotificationService extends GetxService {
           >()
           ?.createNotificationChannel(shiftChannel);
           
-      await requestFullPermissions(); // ✅ Request permissions explicitly
+      // ✅ Defer permissions explicitly to prevent racing with Health Service during boot
+      Future.delayed(const Duration(seconds: 5), () {
+        requestFullPermissions();
+      });
       
       isInitialized.value = true;
       talker.info('✅ Notifications Ready (GetX Service)');
@@ -90,39 +93,46 @@ class NotificationService extends GetxService {
     }
   }
 
-  /// ✅ Pro Governance: Advanced Permission Request Logic for Android 13/14/15/16
   Future<void> requestFullPermissions() async {
-    // 1. Post Notifications (Android 13+)
-    if (await Permission.notification.isDenied) {
-      final status = await Permission.notification.request();
-      talker.info('📢 Notification Permission Status: $status');
-    }
-    
-    // 2. Exact Alarms (Android 12+)
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final status = await Permission.scheduleExactAlarm.status;
-      if (status.isDenied) {
-        talker.warning('🕒 Exact Alarm Permission is Denied. Reminders might be delayed.');
-        await Permission.scheduleExactAlarm.request();
+    try {
+      // 1. Post Notifications (Android 13+)
+      if (await Permission.notification.isDenied) {
+        final status = await Permission.notification.request();
+        talker.info('📢 Notification Permission Status: $status');
       }
-    }
+      
+      // 2. Exact Alarms (Android 12+)
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.scheduleExactAlarm.status;
+        if (status.isDenied) {
+          talker.warning('🕒 Exact Alarm Permission is Denied. Reminders might be delayed.');
+          await Permission.scheduleExactAlarm.request();
+        }
+      }
 
-    // 3. Android 16 Stability: Request Battery Optimization Exemption
-    await requestBatteryExemption();
+      // 3. Android 16 Stability: Request Battery Optimization Exemption
+      await requestBatteryExemption();
+    } catch (e) {
+      talker.warning('⚠️ Gracefully suppressed permission race condition: $e');
+    }
   }
 
   /// ✅ Android 16 Stability: Ensure app survives aggressive background quotas
-  /// ✅ Android Stability: Ensure app survives aggressive background quotas
   /// Returns true if exempted or if not on Android
   Future<bool> requestBatteryExemption() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final status = await Permission.ignoreBatteryOptimizations.status;
-      if (status.isDenied) {
-        talker.info('🔋 Requesting Battery Optimization Exemption...');
-        final result = await Permission.ignoreBatteryOptimizations.request();
-        return result.isGranted;
+      try {
+        final status = await Permission.ignoreBatteryOptimizations.status;
+        if (status.isDenied) {
+          talker.info('🔋 Requesting Battery Optimization Exemption...');
+          final result = await Permission.ignoreBatteryOptimizations.request();
+          return result.isGranted;
+        }
+        return status.isGranted;
+      } catch (e) {
+        talker.warning('⚠️ Suppressed battery exemption permission error: $e');
+        return false;
       }
-      return status.isGranted;
     }
     return true;
   }
@@ -130,13 +140,18 @@ class NotificationService extends GetxService {
   /// ✅ Exact Alarm Check (Android 12+)
   Future<bool> checkExactAlarmPermission() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final status = await Permission.scheduleExactAlarm.status;
-      if (status.isDenied) {
-        talker.info('🕒 Requesting Exact Alarm Permission...');
-        await Permission.scheduleExactAlarm.request();
-        return (await Permission.scheduleExactAlarm.status).isGranted;
+      try {
+        final status = await Permission.scheduleExactAlarm.status;
+        if (status.isDenied) {
+          talker.info('🕒 Requesting Exact Alarm Permission...');
+          await Permission.scheduleExactAlarm.request();
+          return (await Permission.scheduleExactAlarm.status).isGranted;
+        }
+        return status.isGranted;
+      } catch (e) {
+        talker.warning('⚠️ Suppressed exact alarm permission error: $e');
+        return false;
       }
-      return status.isGranted;
     }
     return true;
   }

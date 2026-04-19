@@ -32,84 +32,89 @@ class SpacesView extends GetView<HomeController> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: SingleChildScrollView(
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.95, // ✅ Adjusted for better text fit
+            child: Column(
               children: [
-                _buildSpaceCard(
-                  context,
-                  title: 'tasks'.tr, // ✅ Fixed: Showing "المهام"
-                  colors: const [Color(0xFF007AFF), Color(0xFF5E5CE6)],
-                  fallbackIcon: Icons.task_alt_rounded,
-                  onTap: () => Get.toNamed(Routes.TASKS),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.95, // ✅ Adjusted for better text fit
+                  children: [
+                    _buildSpaceCard(
+                      context,
+                      title: 'tasks'.tr, // ✅ Fixed: Showing "المهام"
+                      colors: const [Color(0xFF007AFF), Color(0xFF5E5CE6)],
+                      fallbackIcon: Icons.task_alt_rounded,
+                      onTap: () => Get.toNamed(Routes.TASKS),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'notes'.tr, // ✅ Fixed: Showing "الملاحظات"
+                      colors: const [Color(0xFFFF9500), Color(0xFFFF2D55)],
+                      fallbackIcon: Icons.edit_note_rounded,
+                      onTap: () => Get.toNamed(Routes.NOTES),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'my_library'.tr,
+                      colors: const [Color(0xFF5E5CE6), Color(0xFFBF5AF2)],
+                      fallbackIcon: Icons.menu_book_rounded,
+                      onTap: () => Get.toNamed(Routes.BOOKS),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'my_medications'.tr,
+                      colors: const [Color(0xFFFF2D55), Color(0xFFFF375F)],
+                      fallbackIcon: Icons.medical_services_rounded,
+                      onTap: () => Get.toNamed(Routes.MEDICATION),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'bookmarks'.tr,
+                      colors: const [Color(0xFFFF3B30), Color(0xFFFF9500)],
+                      fallbackIcon: Icons.bookmark_rounded,
+                      onTap: () => Get.toNamed(Routes.BOOKMARKS),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'journal'.tr,
+                      colors: const [Color(0xFF34C759), Color(0xFF30B0C7)],
+                      fallbackIcon: Icons.book_rounded,
+                      onTap: () => Get.toNamed(Routes.JOURNAL),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'assistant'.tr,
+                      colors: const [Color(0xFF8E8E93), Color(0xFF636366)],
+                      fallbackIcon: Icons.auto_awesome_rounded,
+                      onTap: () => Get.toNamed(Routes.ASSISTANT),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'calendar'.tr,
+                      colors: const [Color(0xFFBF5AF2), Color(0xFFFF2D55)],
+                      fallbackIcon: Icons.calendar_month_rounded,
+                      onTap: () => Get.toNamed(Routes.CALENDAR),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'my_steps'.tr,
+                      colors: const [Color(0xFF34C759), Color(0xFF00C7BE)],
+                      fallbackIcon: Icons.directions_walk_rounded,
+                      onTap: () => Get.toNamed(Routes.STEPS),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'my_job'.tr,
+                      colors: const [Color(0xFF5E5CE6), Color(0xFFBF5AF2)],
+                      fallbackIcon: Icons.business_center_rounded,
+                      onTap: () => Get.toNamed(Routes.JOB),
+                    ),
+                  ],
                 ),
-                _buildSpaceCard(
-                  context,
-                  title: 'notes'.tr, // ✅ Fixed: Showing "الملاحظات"
-                  colors: const [Color(0xFFFF9500), Color(0xFFFF2D55)],
-                  fallbackIcon: Icons.edit_note_rounded,
-                  onTap: () => Get.toNamed(Routes.NOTES),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'my_library'.tr,
-                  colors: const [Color(0xFF5E5CE6), Color(0xFFBF5AF2)],
-                  fallbackIcon: Icons.menu_book_rounded,
-                  onTap: () => Get.toNamed(Routes.BOOKS),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'my_medications'.tr,
-                  colors: const [Color(0xFFFF2D55), Color(0xFFFF375F)],
-                  fallbackIcon: Icons.medical_services_rounded,
-                  onTap: () => Get.toNamed(Routes.MEDICATION),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'bookmarks'.tr,
-                  colors: const [Color(0xFFFF3B30), Color(0xFFFF9500)],
-                  fallbackIcon: Icons.bookmark_rounded,
-                  onTap: () => Get.toNamed(Routes.BOOKMARKS),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'journal'.tr,
-                  colors: const [Color(0xFF34C759), Color(0xFF30B0C7)],
-                  fallbackIcon: Icons.book_rounded,
-                  onTap: () => Get.toNamed(Routes.JOURNAL),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'assistant'.tr,
-                  colors: const [Color(0xFF8E8E93), Color(0xFF636366)],
-                  fallbackIcon: Icons.auto_awesome_rounded,
-                  onTap: () => Get.toNamed(Routes.ASSISTANT),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'calendar'.tr,
-                  colors: const [Color(0xFFBF5AF2), Color(0xFFFF2D55)],
-                  fallbackIcon: Icons.calendar_month_rounded,
-                  onTap: () => Get.toNamed(Routes.CALENDAR),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'my_steps'.tr,
-                  colors: const [Color(0xFF34C759), Color(0xFF00C7BE)],
-                  fallbackIcon: Icons.directions_walk_rounded,
-                  onTap: () => Get.toNamed(Routes.STEPS),
-                ),
-                _buildSpaceCard(
-                  context,
-                  title: 'my_job'.tr,
-                  colors: const [Color(0xFF5E5CE6), Color(0xFFBF5AF2)],
-                  fallbackIcon: Icons.business_center_rounded,
-                  onTap: () => Get.toNamed(Routes.JOB),
-                ),
+                const SizedBox(height: 120),
               ],
             ),
           ),

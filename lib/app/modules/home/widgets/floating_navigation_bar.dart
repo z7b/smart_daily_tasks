@@ -11,9 +11,14 @@ class FloatingNavigationBar extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24, left: 32, right: 32),
-      child: ClipRRect(
+    return SafeArea(
+      bottom: true,
+      top: false,
+      left: false,
+      right: false,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24, left: 32, right: 32),
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -49,6 +54,7 @@ class FloatingNavigationBar extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 

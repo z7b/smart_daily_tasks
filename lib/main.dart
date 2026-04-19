@@ -23,6 +23,7 @@ import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
 import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
 import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
 import 'package:smart_daily_tasks/app/data/models/book_model.dart';
 import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
@@ -242,70 +243,179 @@ class MainApp extends StatelessWidget {
         ],
         supportedLocales: const [Locale('en'), Locale('ar')],
         builder: (context, child) {
-          return Stack(
-            children: [
-              child!,
-              Obx(() {
-                if (!appLockService.isOverlayVisible.value) {
-                  return const SizedBox.shrink();
-                }
+          final isDark = themeService.isDarkModeRx.value;
+          final bgColor = isDark ? const Color(0xFF050505) : const Color(0xFFE5E5E5);
+          
+          return Container(
+            color: bgColor,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 550),
+                child: ClipRect( // Ensures overlay doesn't bleed outside the 550px constraint
+                  child: Stack(
+                    children: [
+                      child!,
+                      Obx(() {
+                        if (!appLockService.isOverlayVisible.value) {
+                          return const SizedBox.shrink();
+                        }
 
-                return Positioned.fill(
-                  child: GestureDetector(
-                    onTap: () => appLockService.authenticate(),
-                    child: ClipRect(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Container(
-                          color: Colors.black.withAlpha(150),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                        return Positioned.fill(
+                          child: GestureDetector(
+                            onTap: () => appLockService.authenticate(),
+                            child: Stack(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(20),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white.withAlpha(40),
+                                // 🌈 Layer 1: Mesh Gradient Blobs (Animated)
+                                Positioned.fill(
+                                  child: Container(color: Colors.black),
+                                ),
+                                Positioned(
+                                  top: -100,
+                                  right: -100,
+                                  child: Container(
+                                    width: 300,
+                                    height: 300,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF5E5CE6).withAlpha(100),
+                                      shape: BoxShape.circle,
                                     ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.security_rounded,
-                                    color: Colors.white,
-                                    size: 64,
+                                  ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                   .move(duration: const Duration(seconds: 5), begin: const Offset(-20, -20), end: const Offset(20, 20))
+                                   .blur(begin: const Offset(80, 80), end: const Offset(100, 100)),
+                                ),
+                                Positioned(
+                                  bottom: -50,
+                                  left: -50,
+                                  child: Container(
+                                    width: 250,
+                                    height: 250,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF007AFF).withAlpha(100),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                   .move(duration: const Duration(seconds: 7), begin: const Offset(10, 10), end: const Offset(-10, -10))
+                                   .blur(begin: const Offset(80, 80), end: const Offset(100, 100)),
+                                ),
+
+                                // 🪟 Layer 2: Global Frosted Glass Effect
+                                BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                                  child: Container(
+                                    color: Colors.black.withAlpha(80),
                                   ),
                                 ),
-                                const SizedBox(height: 24),
-                                Text(
-                                  'privacy_overlay_active'.tr,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'tap_to_unlock'.tr,
-                                  style: TextStyle(
-                                    color: Colors.white.withAlpha(120),
-                                    fontSize: 14,
-                                    decoration: TextDecoration.none,
-                                  ),
+
+                                // 🛡️ Layer 3: Central Professional Lock Card
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(15),
+                                      borderRadius: BorderRadius.circular(40),
+                                      border: Border.all(
+                                        color: Colors.white.withAlpha(30),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Pulsing Security Icon
+                                        Container(
+                                          padding: const EdgeInsets.all(24),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withAlpha(20),
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.white.withAlpha(10),
+                                                blurRadius: 20,
+                                                spreadRadius: 5,
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            appLockService.isBiometricEnabled.value 
+                                              ? Icons.fingerprint_rounded 
+                                              : Icons.lock_outline_rounded,
+                                            color: Colors.white,
+                                            size: 56,
+                                          ),
+                                        ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                         .scale(duration: const Duration(seconds: 2), begin: const Offset(1, 1), end: const Offset(1.1, 1.1))
+                                         .shimmer(duration: const Duration(seconds: 3), delay: const Duration(seconds: 1)),
+                                        
+                                        const SizedBox(height: 32),
+                                        
+                                        // Header Text
+                                        Text(
+                                          'identity_verification'.tr,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            decoration: TextDecoration.none,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        
+                                        const SizedBox(height: 12),
+                                        
+                                        // Description Text
+                                        Text(
+                                          'security_locked_desc'.tr,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white.withAlpha(160),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            decoration: TextDecoration.none,
+                                            height: 1.5,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 48),
+
+                                        // Action Hint
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.security_rounded, color: Colors.blue, size: 18),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'tap_to_unlock'.tr,
+                                                style: const TextStyle(
+                                                  color: Colors.blue,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  decoration: TextDecoration.none,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ).animate().fadeIn(duration: const Duration(milliseconds: 400)).scale(begin: const Offset(0.9, 0.9)),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                    ),
+                        );
+                      }),
+                    ],
                   ),
-                );
-              }),
-            ],
+                ),
+              ),
+            ),
           );
         },
       ),

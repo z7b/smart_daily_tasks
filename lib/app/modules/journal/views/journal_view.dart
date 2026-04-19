@@ -116,7 +116,7 @@ class JournalView extends GetView<JournalController> {
               );
             }),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),

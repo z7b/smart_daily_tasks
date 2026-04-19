@@ -195,7 +195,7 @@ class BookmarksView extends GetView<BookmarksController> {
               );
             }),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),

@@ -26,10 +26,13 @@ class BottomSheetHelper {
           builder: (sbCtx, setState) {
             final isDark = Theme.of(bottomCtx).brightness == Brightness.dark;
 
-            // 5. الانضغاط الديناميكي مع الكيبورد
+            // 5. الانضغاط الديناميكي مع الكيبورد والمساحة الآمنة السفلية
+            final bottomPadding = MediaQuery.of(bottomCtx).padding.bottom;
+            final keyboardInset = MediaQuery.of(bottomCtx).viewInsets.bottom;
+
             return AnimatedPadding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(bottomCtx).viewInsets.bottom,
+                bottom: keyboardInset > 0 ? keyboardInset : bottomPadding,
               ),
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
