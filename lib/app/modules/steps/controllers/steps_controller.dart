@@ -17,12 +17,48 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   final _storage = GetStorage();
   NotificationService get _notificationService => Get.find<NotificationService>();
 
-  final stepsToday = 0.obs;
-  final caloriesToday = 0.0.obs;
-  final distanceToday = 0.0.obs;
-  final activeTimeToday = 0.obs; // In minutes
+  // ✅ Rule 3: Single Source of Truth (No competing local state)
+  final todayLog = Rxn<StepLog>();
+  
+  int get stepsToday => todayLog.value?.steps ?? 0;
+  double get caloriesToday => todayLog.value?.calories ?? 0.0;
+  double get distanceToday => (todayLog.value?.distance ?? 0.0) / 1000.0; // ✅ Fix: Meters to Km
+  int get activeTimeToday => ((todayLog.value?.steps ?? 0) / 100).round();
+
+  // ✅ Principal Architecture: Dynamic Aggregation SSOT
+  // This ensures that the grid stats below the chart reflect the selected period.
+  
+  List<StepLog> get currentPeriodLogs {
+    final filter = selectedTimeFilter.value;
+    if (filter == 'yearly') return yearlyLogs.where((l) => l.date.year == selectedYear.value).toList();
+    if (filter == 'monthly') return monthlyLogs;
+    return weeklyLogs;
+  }
+
+  int get stepsForPeriod {
+    if (selectedTimeFilter.value == 'daily') return stepsToday;
+    return currentPeriodLogs.fold<int>(0, (sum, log) => sum + log.steps);
+  }
+
+  double get distanceKmForPeriod {
+    if (selectedTimeFilter.value == 'daily') return distanceToday;
+    final totalMeters = currentPeriodLogs.fold<double>(0.0, (sum, log) => sum + log.distance);
+    return totalMeters / 1000.0; // ✅ Fix: Convert to KM
+  }
+
+  double get caloriesForPeriod {
+    if (selectedTimeFilter.value == 'daily') return caloriesToday;
+    return currentPeriodLogs.fold<double>(0.0, (sum, log) => sum + log.calories);
+  }
+
+  int get activeTimeForPeriod {
+    // We estimate active time based on steps for consistent metrics
+    return (stepsForPeriod / 100).round();
+  }
+  
   final dailyGoal = 10000.obs;
   final isLoading = false.obs;
+  StreamSubscription? _stepLogSub;
   
   // Bind UI reactivity to centralized HealthService
   RxnBool get isHealthAuthorized => _healthService.isAuthorized;
@@ -90,6 +126,25 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     // Load notified achievements
     final notified = _storage.read<List>('notified_achievements') ?? [];
     _notifiedAchievements = notified.cast<String>().toSet();
+    
+    // ✅ Sprint 1: SSOT - Bind directly to repository stream
+    _listenToTodayStepLog();
+
+    // ✅ Architecture Fix: Ensure yearly data updates when user changes the year
+    ever(selectedYear, (_) => _loadHistoricalStats());
+  }
+
+  void _listenToTodayStepLog() {
+    _stepLogSub?.cancel();
+    final today = DateTime.now();
+    _stepLogSub = _repository.watchStepLog(today).listen((log) {
+      // Direct binding! The UI will react to `todayLog.value` changing
+      todayLog.value = log;
+      
+      _evaluateAchievements();
+      _check80PercentGoal();
+      _checkGoalCompletion();
+    });
   }
 
   DateTime get installDate {
@@ -207,6 +262,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
 
   @override
   void onClose() {
+    _stepLogSub?.cancel();
     _pollTimer?.cancel();
     dailyGoalController.dispose();
     heightCtrl.dispose();
@@ -265,14 +321,16 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         if (!hasDeepSynced) {
           talker.info('🌊 Initial Handshake: Performing 365-Day Deep Sync Pulse...');
           isDeepSyncing.value = true;
+          // ✅ Sprint 1 Concurrency Fix: Sync today FIRST, wait for it, then run deep sync safely
+          await _healthService.fetchAndPersistSteps();
+          
           _healthService.performDeepSync(365).then((_) {
              _storage.write('health_deep_sync_done_v2', true);
              isDeepSyncing.value = false;
              _loadHistoricalStats();
           });
-          stepsToday.value = await _healthService.fetchAndPersistSteps();
         } else {
-          stepsToday.value = await _healthService.fetchAndPersistSteps();
+          await _healthService.fetchAndPersistSteps();
         }
         
         // Update hourly distribution from real sensors
@@ -280,33 +338,21 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         hourlySteps.assignAll(hSteps);
       } else {
         // ✅ Streak Fix: Ensure today's log ALWAYS exists in Isar.
-        // Previously, non-Health users had NO log created → streak was always 0.
         final todayLog = await _repository.getStepLog(today);
-        stepsToday.value = todayLog?.steps ?? 0;
         if (todayLog == null) {
-          // Create a minimal log so the streak engine has data to work with
           await _repository.updateStepsLocally(today, 0, isManual: true);
         }
       }
 
-      // ✅ Batch all metric updates together to avoid stale UI flash
-      final todayLog = await _repository.getStepLog(today);
-      _recalculateTodayMetrics(todayLog);
-      final effectiveSteps = todayLog?.steps ?? stepsToday.value;
-      activeTimeToday.value = (effectiveSteps / 100).round();
-
+      // Load historical data for charts
       await _loadHistoricalStats();
       totalStepsAllTime.value = await _repository.getTotalStepsForAllTime();
       lastSyncTime.value = DateTime.now();
       
-      _evaluateAchievements();
-      _check80PercentGoal();
-      _checkGoalCompletion();
-      
       // Schedule smart reminders based on current progress
       _notificationService.scheduleSmartStepsReminders(
         goal: dailyGoal.value,
-        currentSteps: stepsToday.value,
+        currentSteps: stepsToday,
       );
       
     } catch (e, stack) {
@@ -405,7 +451,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   int get getDailyAverage {
     final filter = selectedTimeFilter.value;
     final logs = filter == 'yearly' ? yearlyLogs.where((l) => l.date.year == selectedYear.value).toList() : (filter == 'monthly' ? monthlyLogs : weeklyLogs);
-    if (logs.isEmpty) return stepsToday.value;
+    if (logs.isEmpty) return stepsToday;
     final total = logs.fold<int>(0, (p, e) => p + e.steps);
     return (total / logs.length).round();
   }
@@ -440,7 +486,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       };
     } else {
       final logs = weeklyLogs;
-      if (logs.isEmpty) return {'title': 'best_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
+      if (logs.isEmpty) return {'title': 'best_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday};
       StepLog best = logs.first;
       for (var l in logs) {
         if (l.steps > best.steps) best = l;
@@ -484,7 +530,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       };
     } else {
       final logs = weeklyLogs;
-      if (logs.isEmpty) return {'title': 'worst_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
+      if (logs.isEmpty) return {'title': 'worst_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday};
       StepLog worst = logs.first;
       for (var l in logs) {
         if (l.steps < worst.steps) worst = l;
@@ -506,9 +552,13 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     final monthStart = DateTime(now.year, now.month, 1);
     monthlyLogs.assignAll(await _repository.getLogsInRange(monthStart, now));
 
-    // For yearly, fetch from install date to get all available years
-    final startBoundary = DateTime(installDate.year, installDate.month, installDate.day);
-    yearlyLogs.assignAll(await _repository.getLogsInRange(startBoundary, now));
+    // ✅ Architecture Fix: Yearly data should cover the FULL selected year, 
+    // independent of install date, to ensure aggregation sums are correct.
+    final targetYear = selectedYear.value;
+    final yearStart = DateTime(targetYear, 1, 1);
+    final yearEnd = DateTime(targetYear, 12, 31, 23, 59, 59);
+    
+    yearlyLogs.assignAll(await _repository.getLogsInRange(yearStart, yearEnd));
 
     // Calculate Week over Week Comparison
     final lastWeekStart = now.subtract(const Duration(days: 14));
@@ -550,11 +600,11 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     
     // Check today first using live data (most accurate)
     final todayKey = '${cursor.year}-${cursor.month}-${cursor.day}';
-    final todayLog = logMap[todayKey];
-    final int todaySteps = stepsToday.value;
-    final int todayGoal = todayLog?.goal ?? dailyGoal.value;
+    final currentLog = logMap[todayKey];
+    final int todayStepsCount = stepsToday;
+    final int todayGoal = currentLog?.goal ?? dailyGoal.value;
     
-    if (todaySteps >= todayGoal && todayGoal > 0) {
+    if (todayStepsCount >= todayGoal && todayGoal > 0) {
       streak = 1;
       cursor = cursor.subtract(const Duration(days: 1));
     } else {
@@ -576,7 +626,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     }
     
     currentStreak.value = streak;
-    talker.info('🔥 Streak calculated: $streak days (today: $todaySteps/$todayGoal)');
+    talker.info('🔥 Streak calculated: $streak days (today: $todayStepsCount/$todayGoal)');
   }
 
   void _evaluateAchievements() {
@@ -587,13 +637,13 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     
     // Calculate effective total since install (for medals)
     // Note: totalStepsAllTime still shows historical data for the chart/stats
-    int totalSinceInstall = stepsToday.value;
+    int totalSinceInstall = stepsToday;
     if (validWeeklyLogs.isNotEmpty) {
       // Avoid double counting today if it's in weeklyLogs
       totalSinceInstall = validWeeklyLogs.fold<int>(0, (p, e) => p + e.steps);
     }
     
-    final todaySteps = stepsToday.value;
+    final currentStepsToday = stepsToday;
     final maxInWeek = validWeeklyLogs.isNotEmpty 
         ? validWeeklyLogs.map((e) => e.steps).reduce((a, b) => a > b ? a : b)
         : 0;
@@ -612,7 +662,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
           break;
         case 'goal_crusher':
           unlocked = validWeeklyLogs.any((l) => l.steps >= l.goal);
-          prog = unlocked ? 1.0 : (todaySteps / dailyGoal.value).clamp(0, 1);
+          prog = unlocked ? 1.0 : (currentStepsToday / dailyGoal.value).clamp(0, 1);
           break;
         case 'marathoner':
           unlocked = maxInWeek >= 42195;
@@ -636,8 +686,8 @@ class StepsController extends GetxController with WidgetsBindingObserver {
           break;
         case 'weekend_warrior':
           final isWeekend = DateTime.now().weekday == DateTime.saturday || DateTime.now().weekday == DateTime.sunday;
-          unlocked = isWeekend && todaySteps >= 20000 && !DateTime.now().isBefore(startBoundary);
-          prog = (todaySteps / 20000).clamp(0, 1);
+          unlocked = isWeekend && currentStepsToday >= 20000 && !DateTime.now().isBefore(startBoundary);
+          prog = (currentStepsToday / 20000).clamp(0, 1);
           break;
         case 'elite_week':
           final weekTotal = validWeeklyLogs.fold<int>(0, (p, e) => p + e.steps);
@@ -669,7 +719,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     );
   }
 
-  double get progress => dailyGoal.value > 0 ? (stepsToday.value / dailyGoal.value).clamp(0.0, 1.0) : 0.0;
+  double get progress => dailyGoal.value > 0 ? (stepsToday / dailyGoal.value).clamp(0.0, 1.0) : 0.0;
   
   // ✅ Professional Analytics: Computed Averages
   int get weeklyAverage {
@@ -702,9 +752,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   bool _hasNotifiedGoal = false;
 
   void _check80PercentGoal() {
-    if (progress >= 0.8 && !_hasNotified80 && stepsToday.value < dailyGoal.value) {
+    if (progress >= 0.8 && !_hasNotified80 && stepsToday < dailyGoal.value) {
       _hasNotified80 = true;
-      final remaining = (dailyGoal.value - stepsToday.value).clamp(0, 999999);
+      final remaining = (dailyGoal.value - stepsToday).clamp(0, 999999);
       _notificationService.showSmartStepsNotification(
         id: 80,
         title: 'almost_there_title'.tr,
@@ -722,7 +772,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         id: 100,
         title: 'goal_complete_title'.tr,
         body: 'goal_complete_body'.tr,
-        bigText: '${'goal_complete_body'.tr} 🎉\n${stepsToday.value} ${'step_unit'.tr} ${'of'.tr} ${dailyGoal.value}\n${'rest_well'.tr}',
+        bigText: '${'goal_complete_body'.tr} 🎉\n$stepsToday ${'step_unit'.tr} ${'of'.tr} ${dailyGoal.value}\n${'rest_well'.tr}',
         largeIcon: 'walker',
       );
     }
@@ -747,9 +797,8 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     updateGoal(baseGoal);
   }
 
-  /// ✅ Bug Fix: Made async to fetch todayLog instead of passing null.
-  /// Previously, saving biometrics would LOSE real sensor data and replace
-  /// it with estimates. Now it re-fetches the log to preserve sensor priority.
+  /// ✅ Bug Fix: Previously, saving biometrics would LOSE real sensor data and replace
+  /// it with estimates. Now it triggers syncData to preserve sensor priority.
   Future<void> saveBiometrics({double? height, double? weight, String? gender}) async {
     if (height != null) {
       userHeight.value = height;
@@ -763,101 +812,13 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       userGender.value = gender;
       _storage.write('user_gender', gender);
     }
-    final todayLog = await _repository.getStepLog(DateTime.now());
-    _recalculateTodayMetrics(todayLog);
+    syncData();
   }
 
-  /// ✅ Bug Fix: Removed redundant _recalculateTodayMetrics(null).
-  /// syncData() already calls _recalculateTodayMetrics(todayLog) with the
-  /// correct log. Calling it with null first would briefly flash wrong
-  /// estimated values before syncData overwrites them with sensor data.
   void updateDailyGoal(int newGoal) {
     dailyGoal.value = newGoal;
     _storage.write('daily_step_goal', newGoal);
     syncData();
   }
 
-  /// Expert-Grade Metrics Engine.
-  /// 
-  /// Priority chain:
-  /// 1. Real sensor data from Health Connect (if non-zero AND non-manual)
-  /// 2. High-precision biomechanical estimation (stride × weight formula)
-  ///
-  /// ✅ Bug Fix: Previously, sensor data with 0 calories/distance (common when
-  /// Health Connect returns steps but no energy/distance data) would be accepted
-  /// as-is, showing "0 سعرة" and "0.00 كم" even though the user walked thousands
-  /// of steps. Now we detect this case and fall through to estimation.
-  void _recalculateTodayMetrics(StepLog? log) {
-    final steps = stepsToday.value;
-    
-    // Logic 1: Use real sensor data ONLY if it's verified AND has meaningful values
-    if (log != null && !log.isManual) {
-      final bool hasSensorCalories = log.calories > 0;
-      final bool hasSensorDistance = log.distance > 0;
-      
-      if (hasSensorCalories && hasSensorDistance) {
-        // Full sensor data available — use it directly
-        caloriesToday.value = log.calories;
-        distanceToday.value = log.distance / 1000; // meters → km
-        return;
-      }
-      
-      // Partial sensor data: use what's available, estimate the rest
-      if (hasSensorDistance) {
-        distanceToday.value = log.distance / 1000;
-        // Estimate calories from real distance + weight
-        final w = userWeight.value ?? 70.0;
-        caloriesToday.value = distanceToday.value * w * 0.73;
-        _persistRecalculatedMetrics(steps, caloriesToday.value, distanceToday.value * 1000);
-        return;
-      }
-      
-      if (hasSensorCalories) {
-        caloriesToday.value = log.calories;
-        // Estimate distance from steps + stride
-        final h = userHeight.value ?? 170.0;
-        final g = userGender.value ?? 'male';
-        final multiplier = g == 'female' ? 0.413 : 0.415;
-        final strideLength = (h / 100) * multiplier;
-        distanceToday.value = (steps * strideLength) / 1000;
-        _persistRecalculatedMetrics(steps, caloriesToday.value, distanceToday.value * 1000);
-        return;
-      }
-      
-      // Sensor returned 0 for both — fall through to full estimation
-    }
-
-    // Logic 2: Biomechanical Estimation (Doctoral Formula)
-    final h = userHeight.value ?? 170.0;
-    final w = userWeight.value ?? 70.0;
-    final g = userGender.value ?? 'male';
-
-    // Stride Length in meters (research-backed multipliers)
-    final multiplier = g == 'female' ? 0.413 : 0.415;
-    final strideLength = (h / 100) * multiplier;
-
-    // Distance in km
-    final dist = (steps * strideLength) / 1000;
-    distanceToday.value = dist;
-
-    // Calories: MET-based walking energy expenditure
-    final cals = dist * w * 0.73;
-    caloriesToday.value = cals;
-
-    // ✅ Synchronize with Isar so Home Dashboard updates instantly
-    _persistRecalculatedMetrics(steps, cals, dist * 1000);
-  }
-
-  /// ✅ Professional Persistence: Ensures Home Dashboard (Isar Watcher) sees estimates immediately
-  Future<void> _persistRecalculatedMetrics(int steps, double calories, double distanceInMeters) async {
-    if (steps == 0 && calories == 0) return;
-    
-    await _repository.updateStepsLocally(
-      DateTime.now(),
-      steps,
-      isManual: false,
-      calories: calories,
-      distance: distanceInMeters,
-    );
-  }
 }

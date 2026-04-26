@@ -85,13 +85,13 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
     filteredTasks.assignAll(filtered);
   }
 
-  /// ✅ Phase 5: Race Condition Guard added
+  /// ✅ Phase 5 & 6: Race Condition Guard & Zombie Task Fix
   Future<void> deleteTask(Task task) async {
     if (isDeleting.value) return;
     try {
       isDeleting.value = true;
-      await _repository.deleteTask(task.id);
-      talker.info('🗑️ Task deleted: ${task.id}');
+      await _repository.deleteTaskAndStopRecurrence(task);
+      talker.info('🗑️ Task and its recurrence series deleted: ${task.title}');
       Get.snackbar('Success'.tr, 'task_deleted'.tr, snackPosition: SnackPosition.BOTTOM);
     } finally {
       isDeleting.value = false;

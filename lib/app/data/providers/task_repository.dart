@@ -1,5 +1,7 @@
 import '../../core/helpers/log_helper.dart';
 import 'package:isar/isar.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:intl/intl.dart';
 import '../models/task_model.dart';
 
 class TaskRepository {
@@ -57,6 +59,11 @@ class TaskRepository {
     return await _isar.tasks.get(id);
   }
 
+  // ✅ Global Watcher for Dashboard Sync
+  Stream<void> watchAllTasks() {
+    return _isar.tasks.watchLazy();
+  }
+
   /// Get all tasks (Future) with error handling
   Future<List<Task>> getAllTasks() async {
     try {
@@ -112,6 +119,47 @@ class TaskRepository {
       talker.error('🔴 Isar Database Error (Delete): $e');
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete Task)');
+    }
+  }
+
+  /// ✅ Phase 6: Delete task and stop recurrence series (Zombie Fix)
+  Future<void> deleteTaskAndStopRecurrence(Task task) async {
+    try {
+      await _isar.writeTxn(() async {
+        // 1. If it's a recurring task, stop the recurrence for all past/future instances
+        if (task.recurrence != TaskRecurrence.none) {
+          final siblings = await _isar.tasks
+              .filter()
+              .titleEqualTo(task.title)
+              .findAll();
+              
+          for (var sibling in siblings) {
+            sibling.recurrence = TaskRecurrence.none;
+            await _isar.tasks.put(sibling);
+          }
+        }
+        
+        // 2. Delete the actual instance the user selected
+        await _isar.tasks.delete(task.id);
+        
+        // ✅ Architecture Fix: Deletion Guard
+        // Save to GetStorage that this task title was explicitly deleted today
+        // to prevent the Recurrence Engine from re-creating it 1 second later.
+        if (task.recurrence != TaskRecurrence.none) {
+          final storage = GetStorage();
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final key = 'deleted_tasks_$todayStr';
+          final List deletedTitles = storage.read(key) ?? [];
+          if (!deletedTitles.contains(task.title)) {
+            deletedTitles.add(task.title);
+            storage.write(key, deletedTitles);
+          }
+        }
+      });
+    } on IsarError catch (e) {
+      talker.error('🔴 Isar Database Error (Delete & Stop Recurrence): $e');
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Delete & Stop Recurrence)');
     }
   }
 
@@ -175,6 +223,14 @@ class TaskRepository {
         }
 
         if (!isDue) continue;
+
+        // ✅ Architecture Fix: Check Deletion Guard
+        final todayStr = DateFormat('yyyy-MM-dd').format(now);
+        final List deletedTitles = GetStorage().read('deleted_tasks_$todayStr') ?? [];
+        if (deletedTitles.contains(template.title)) {
+          // talker.info('🛡️ Recurrence Guard: Skipping re-creation of deleted task "${template.title}"');
+          continue;
+        }
 
         // Check if an instance already exists for today with the same title
         final existing = await _isar.tasks

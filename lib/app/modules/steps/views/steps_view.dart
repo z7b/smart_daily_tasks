@@ -37,7 +37,7 @@ class StepsView extends GetView<StepsController> {
         body: SafeArea(
           child: Obx(() {
             if (controller.isLoading.value &&
-                controller.stepsToday.value == 0) {
+                controller.stepsToday == 0) {
               return Center(child: CircularProgressIndicator());
             }
 
@@ -468,7 +468,7 @@ class StepsView extends GetView<StepsController> {
 
   Widget _mainCard(BuildContext context) {
     final progress = controller.progress;
-    final steps = controller.stepsToday.value;
+    final steps = controller.stepsToday;
     final goal = controller.dailyGoal.value;
     final stepsLeft = (goal - steps).clamp(0, 999999);
     final progressPct = (progress * 100).toInt();
@@ -1070,10 +1070,10 @@ class StepsView extends GetView<StepsController> {
   }
 
   Widget _buildStatsGrid(BuildContext context) {
-    final activeTime = controller.activeTimeToday.value;
-    final calories = controller.caloriesToday.value;
-    final distance = controller.distanceToday.value;
-    final steps = controller.stepsToday.value;
+    final activeTime = controller.activeTimeForPeriod;
+    final calories = controller.caloriesForPeriod;
+    final distance = controller.distanceKmForPeriod;
+    final steps = controller.stepsForPeriod;
 
     final Color glowColor = const Color(0xFF22D3EE);
 
@@ -1200,7 +1200,7 @@ class StepsView extends GetView<StepsController> {
   }
 
   Widget _buildMotivationCard(BuildContext context) {
-    final remaining = (controller.dailyGoal.value - controller.stepsToday.value).clamp(0, 999999);
+    final remaining = (controller.dailyGoal.value - controller.stepsToday).clamp(0, 999999);
     final progress = controller.progress;
     
     String title = '';
@@ -1397,7 +1397,7 @@ class StepsView extends GetView<StepsController> {
                 'تحدي يومي',
                 'أكمل ${controller.dailyGoal.value.f} خطوة',
                 controller.progress,
-                '${controller.stepsToday.value.f} / ${controller.dailyGoal.value.f}',
+                '${controller.stepsToday.f} / ${controller.dailyGoal.value.f}',
                 _amber,
                 percent: '${(controller.progress * 100).toInt()}%',
               ),
@@ -1651,7 +1651,7 @@ class StepsView extends GetView<StepsController> {
   }
 
   Widget _todayActivity() {
-    final int total = controller.stepsToday.value;
+    final int total = controller.stepsToday;
     final int currentHour = DateTime.now().hour;
 
     // Expert Logic: Prefer real sensor data, fallback to estimation
@@ -1845,7 +1845,7 @@ class StepsView extends GetView<StepsController> {
   Widget _tipCard() {
     final progress = controller.progress;
     final avg = controller.getDailyAverage;
-    final steps = controller.stepsToday.value;
+    final steps = controller.stepsToday;
     
     String mainTip = '';
     String subTip = '';

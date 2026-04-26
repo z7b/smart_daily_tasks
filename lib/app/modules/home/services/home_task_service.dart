@@ -34,7 +34,18 @@ class HomeTaskService extends GetxService {
   final TaskRepository _repository;
   HomeTaskService(this._repository);
 
+  Stream<TaskDailyStats> watchDailyStats(DateTime viewDate) async* {
+    // 1. Emit Initial Value
+    yield await getDailyStats(viewDate);
+
+    // 2. Listen to GLOBAL task changes
+    // This ensures that if the "Next Task" (which might be tomorrow) is deleted,
+    // the Home Page reacts immediately.
+    yield* _repository.watchAllTasks().asyncMap((_) => getDailyStats(viewDate));
+  }
+
   Future<TaskDailyStats> getDailyStats(DateTime viewDate) async {
+    // Keep for one-time fetches if needed, but watchDailyStats is preferred for dashboard
     final startOfDay = DateTime(viewDate.year, viewDate.month, viewDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     final now = DateTime.now();

@@ -66,17 +66,25 @@ void callbackDispatcher() {
         AttendanceLogSchema,
       ], directory: dir.path, inspector: false);
 
+      // ✅ Inject StepRepository for SSOT writes in background
+      Get.put(StepRepository(isar));
+
       // Trigger the specialized background sync pulse
-      final healthService = HealthService(isar);
+      final healthService = HealthService();
       await healthService.init(); 
       
       if (healthService.isAuthorized.value == true) {
-        await healthService.fetchAndPersistSteps();
+        // ✅ Rule: Background tasks MUST have a timeout to prevent persistent DB locks
+        await healthService.fetchAndPersistSteps().timeout(
+          const Duration(seconds: 25),
+          onTimeout: () => 0,
+        );
       }
 
       await isar.close();
       return true;
     } catch (e) {
+      talker.error('❌ Background Sync Failed: $e');
       return false;
     }
   });
@@ -135,7 +143,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       if (isar == null) {
         int retryCount = 0;
-        while (retryCount <= 3) {
+        const int maxRetries = 5;
+        while (retryCount < maxRetries) {
           try {
             isar = await Isar.open([
               TaskSchema,
@@ -157,13 +166,15 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
             retryCount++;
             final errorStr = e.toString();
 
-            // Handle Lock Error (MdbxError 11 / EAGAIN)
+            // Handle Lock Error (MdbxError (11) / EAGAIN)
+            // This happens if a background process or previous run is holding the lock.
             if (errorStr.contains('MdbxError (11)') ||
                 errorStr.contains('Try again')) {
+              final delay = 500 * retryCount; // Exponential backoff
               talker.warning(
-                '🕒 Database locked by another instance. Retrying in 500ms... ($retryCount/4)',
+                '🕒 Database locked. Retrying in ${delay}ms... ($retryCount/$maxRetries)',
               );
-              await Future.delayed(const Duration(milliseconds: 500));
+              await Future.delayed(Duration(milliseconds: delay));
               continue;
             }
 
@@ -212,7 +223,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       // ✅ Step 3: Initialize Health & Pedometer
       talker.info('🏥 Initializing Health Services...');
-      await Get.putAsync(() => HealthService(isar!).init(), permanent: true);
+      await Get.putAsync(() => HealthService().init(), permanent: true);
 
       // ✅ Step 4: Initialize Features
       talker.info('🔔 Initializing Notifications...');

@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:health/health.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:isar/isar.dart';
+
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,11 +13,11 @@ import 'package:flutter/services.dart';
 import '../../routes/app_routes.dart';
 import 'dart:async';
 import 'dart:io';
+import '../providers/step_repository.dart';
 
 class HealthService extends GetxService {
-  final Isar _isar;
   final _storage = GetStorage();
-  HealthService(this._isar);
+  HealthService();
 
   final Health health = Health();
 
@@ -40,9 +40,15 @@ class HealthService extends GetxService {
     types = [
       HealthDataType.STEPS,
       HealthDataType.ACTIVE_ENERGY_BURNED,
-      HealthDataType.DISTANCE_DELTA,
-      HealthDataType.DISTANCE_WALKING_RUNNING,
     ];
+
+    // ✅ Architecture Fix: Distance metrics differ by platform
+    // Health Connect uses DISTANCE_DELTA, while Apple Health uses DISTANCE_WALKING_RUNNING
+    if (Platform.isIOS) {
+      types.add(HealthDataType.DISTANCE_WALKING_RUNNING);
+    } else {
+      types.add(HealthDataType.DISTANCE_DELTA);
+    }
 
     // Synchronize permissions list with types
     permissions = List.filled(types.length, HealthDataAccess.READ);
@@ -293,14 +299,17 @@ class HealthService extends GetxService {
       final date = targetDate ?? now;
       final midnight = DateTime(date.year, date.month, date.day);
       
-      talker.info('📥 Master Overhaul: Synchronizing official activity from Health Connect...');
+      // ✅ Sprint 1 Fix: Correct Time Window for Target Date
+      final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+      final endWindow = isToday ? now : midnight.add(const Duration(days: 1)).subtract(const Duration(milliseconds: 1));
+      
+      talker.info('📥 Master Overhaul: Synchronizing official activity from Health Connect ($midnight to $endWindow)...');
       
       // ✅ 1. Steps (Direct Aggregate - Google High Standard)
-      int steps = await health.getTotalStepsInInterval(midnight, now) ?? 0;
+      int steps = await health.getTotalStepsInInterval(midnight, endWindow) ?? 0;
       
       // ✅ 2. Exclusive Metrics Extraction (No Estimates)
       // On Android 16/Samsung, we check multiple source types to ensure we miss nothing
-      // ✅ 2. Exclusive Metrics Extraction (No Estimates)
       // We strictly fetch what the platform supports to avoid crashes
       final List<HealthDataType> metricsToFetch = [
         HealthDataType.ACTIVE_ENERGY_BURNED,
@@ -308,15 +317,13 @@ class HealthService extends GetxService {
       ];
       
       // ✅ Expert Fix: Platform-Specific Distance Handling
-      // Android Health Connect ONLY supports DISTANCE_DELTA
-      // Apple HealthKit supports DISTANCE_WALKING_RUNNING
       if (Platform.isIOS) {
         metricsToFetch.add(HealthDataType.DISTANCE_WALKING_RUNNING);
       }
       
       final List<HealthDataPoint> dataPoints = await health.getHealthDataFromTypes(
         startTime: midnight, 
-        endTime: now, 
+        endTime: endWindow, 
         types: metricsToFetch,
       );
       
@@ -357,22 +364,21 @@ class HealthService extends GetxService {
 
       talker.info('🏥 Official Sync Pulse: $steps steps | ${calories.toStringAsFixed(1)} kcal | ${distance.toStringAsFixed(1)}m');
 
-      // ✅ 3. Persistence to Isar (Medical Grade)
-      await _isar.writeTxn(() async {
-        final existing = await _isar.stepLogs.filter().dateEqualTo(midnight).findFirst();
-        final currentGoal = _storage.read('daily_step_goal') ?? 10000;
-        
-        final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
-          steps: steps,
-          calories: calories,
-          distance: distance,
-          goal: currentGoal,
-          isManual: false, 
-          lastSyncedAt: now,
-        );
-        lastSynced.value = updated.lastSyncedAt;
-        await _isar.stepLogs.put(updated);
-      });
+      // ✅ 3. Persistence to Isar (Medical Grade) - RULE: No writes outside Repository
+      final stepRepo = Get.find<StepRepository>();
+      final existing = await stepRepo.getStepLog(midnight);
+      final currentGoal = _storage.read('daily_step_goal') ?? 10000;
+      
+      final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
+        steps: steps,
+        calories: calories,
+        distance: distance,
+        goal: currentGoal,
+        isManual: false, 
+        lastSyncedAt: now,
+      );
+      lastSynced.value = updated.lastSyncedAt;
+      await stepRepo.saveStepLog(updated);
 
       return steps;
     } catch (e, stack) {
@@ -433,40 +439,40 @@ class HealthService extends GetxService {
                     }
                 }
                 
-                // Bulk Persist
+                // Bulk Persist - RULE: No writes outside Repository
                 final currentGoal = _storage.read('daily_step_goal') ?? 10000;
-                await _isar.writeTxn(() async {
-                    for (var entry in dailyBuckets.entries) {
-                        final midnight = entry.key;
-                        final metrics = entry.value;
-                        
-                        // ✅ Smart Estimation for Historical Data
-                        double finalCal = metrics['cal']!;
-                        double finalDist = metrics['dist']!;
-                        int finalSteps = metrics['steps']!.toInt();
-                        
-                        if (finalSteps > 0 && (finalCal == 0 || finalDist == 0)) {
-                          final h = (_storage.read('user_height') ?? 170.0).toDouble();
-                          final w = (_storage.read('user_weight') ?? 70.0).toDouble();
-                          final g = _storage.read('user_gender') ?? 'male';
-                          final double multiplier = g == 'female' ? 0.413 : 0.415;
-                          final double strideLength = (h / 100) * multiplier;
-                          
-                          if (finalDist == 0) finalDist = (finalSteps * strideLength).toDouble();
-                          if (finalCal == 0) finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
-                        }
-
-                        final existing = await _isar.stepLogs.filter().dateEqualTo(midnight).findFirst();
-                        final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
-                            steps: finalSteps,
-                            calories: finalCal,
-                            distance: finalDist,
-                            goal: existing == null ? currentGoal : existing.goal, 
-                            lastSyncedAt: DateTime.now(),
-                        );
-                        await _isar.stepLogs.put(updated);
+                final stepRepo = Get.find<StepRepository>();
+                
+                for (var entry in dailyBuckets.entries) {
+                    final midnight = entry.key;
+                    final metrics = entry.value;
+                    
+                    // ✅ Smart Estimation for Historical Data
+                    double finalCal = metrics['cal']!;
+                    double finalDist = metrics['dist']!;
+                    int finalSteps = metrics['steps']!.toInt();
+                    
+                    if (finalSteps > 0 && (finalCal == 0 || finalDist == 0)) {
+                      final h = (_storage.read('user_height') ?? 170.0).toDouble();
+                      final w = (_storage.read('user_weight') ?? 70.0).toDouble();
+                      final g = _storage.read('user_gender') ?? 'male';
+                      final double multiplier = g == 'female' ? 0.413 : 0.415;
+                      final double strideLength = (h / 100) * multiplier;
+                      
+                      if (finalDist == 0) finalDist = (finalSteps * strideLength).toDouble();
+                      if (finalCal == 0) finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
                     }
-                });
+
+                    final existing = await stepRepo.getStepLog(midnight);
+                    final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
+                        steps: finalSteps,
+                        calories: finalCal,
+                        distance: finalDist,
+                        goal: existing == null ? currentGoal : existing.goal, 
+                        lastSyncedAt: DateTime.now(),
+                    );
+                    await stepRepo.saveStepLog(updated);
+                }
                 talker.info('💾 Bucket Persisted: ${dailyBuckets.length} days synced');
             }
         } catch (e) {

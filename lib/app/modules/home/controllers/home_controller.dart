@@ -74,8 +74,10 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final calendarEventCount = 0.obs;
   final bookCount = 0.obs;
   
-  final _isBusy = false.obs; 
-  int _loadToken = 0; // ✅ Token System to prevent Race Conditions
+  // ✅ Architecture Fix: No more Dropped Events logic
+  final _isRefreshing = false.obs;
+  bool _needsRefresh = false; // Dirty flag for serial execution
+  final _loadToken = 0.obs; // For cancelling stale future results // ✅ Token System to prevent Race Conditions
 
   // Progress Pillars
   final mindProgress = 0.0.obs;
@@ -145,8 +147,18 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     );
 
     _updateGreeting();
-    _setupRealtimeListeners();
-    Future.delayed(const Duration(milliseconds: 100), () => _loadRealData());
+    _setupStaticListeners(); 
+    _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
+    _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
+    
+    // ✅ Architecture Fix: Re-bind dashboard when user changes the date
+    ever(selectedDate, (_) {
+      _bindTaskStream();
+      _loadRealData();
+    });
+
+    // ✅ Architecture Fix: Run recurrence engine once on boot
+    Get.find<TaskRepository>().instantiateRecurringTasks();
   }
 
   @override
@@ -208,11 +220,36 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     if (success) _loadRealData();
   }
 
-  void _setupRealtimeListeners() {
-    _taskSub = _isar.tasks.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-    
+  void _bindTaskStream() {
+    // ✅ Pure Reactive SSOT: This stream bypasses the _isBusy guard.
+    // It ensures that EVERY database change is reflected in the UI immediately.
+    _taskSub?.cancel();
+    _taskSub = _taskService.watchDailyStats(selectedDate.value).listen((stats) {
+      tasksLeftCount.value = stats.pending;
+      completedTasksCount.value = stats.completed;
+      cancelledTasksCount.value = stats.cancelled;
+      
+      nextTaskTitle.value = stats.nextTitle;
+      nextTaskTime.value = stats.nextTime;
+      nextTaskEndTime.value = stats.nextEndTime;
+      nextTaskTimeLeft.value = stats.nextTimeLeft;
+      nextTaskFullDate.value = stats.nextFullDate;
+      nextTaskPriority.value = stats.nextPriority;
+
+      // ✅ SSOT: Update Today's Total Count
+      taskCount.value = stats.total;
+
+      // Update Pillars that depend on tasks
+      final taskScore = stats.total > 0 ? (stats.completed / stats.total).clamp(0.0, 1.0) : 0.0;
+      final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
+      mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
+      
+      _updateTotalProgress();
+    });
+  }
+
+  void _setupStaticListeners() {
+    _pulseTimer?.cancel();
     _pulseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _updateGreeting();
       final now = DateTime.now();
@@ -220,14 +257,24 @@ class HomeController extends GetxController with WidgetsBindingObserver {
           selectedDate.value.month == now.month &&
           selectedDate.value.day == now.day) {
         _loadRealData();
+        // Periodically check for recurring tasks if the day has changed
+        Get.find<TaskRepository>().instantiateRecurringTasks();
       }
     });
+
+    // Note: Task watcher removed from here. Tasks are now handled via _bindTaskStream().
         
+    _journalSub?.cancel();
     _journalSub = _isar.journals.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookmarkSub?.cancel();
     _bookmarkSub = _isar.bookmarks.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookSub?.cancel();
     _bookSub = _isar.books.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _medicationSub?.cancel();
     _medicationSub = _isar.medications.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
-    _stepLogSub = _isar.stepLogs.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _stepLogSub?.cancel();
+    _stepLogSub = _isar.stepLogs.watchLazy().debounceTime(const Duration(milliseconds: 300)).listen((_) => _loadRealData());
+    _attendanceSub?.cancel();
     _attendanceSub = _isar.attendanceLogs.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
 
     GetStorage().listenKey('daily_step_goal', (_) => _loadRealData());
@@ -260,32 +307,46 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> _loadRealData() async {
-    if (_isBusy.value) return;
-    
-    final int currentToken = ++_loadToken; // ✅ Prevent Stale State
+    // ✅ Architecture Fix: Serial Execution (Dirty Flag Pattern)
+    // We never "drop" an event. If busy, we mark it as dirty and re-run after.
+    if (_isRefreshing.value) {
+      _needsRefresh = true;
+      talker.info('🕒 Home: Busy, marking state as DIRTY for next cycle');
+      return;
+    }
+
+    _isRefreshing.value = true;
+    _needsRefresh = false;
+
+    try {
+      await _performActualLoad();
+    } finally {
+      _isRefreshing.value = false;
+      // If a request came in while we were busy, run it now to ensure data fidelity.
+      if (_needsRefresh) {
+        talker.info('🔄 Home: Cycle complete, running PENDING dirty-refresh');
+        _loadRealData();
+      }
+    }
+  }
+
+  Future<void> _performActualLoad() async {
+    final int currentToken = ++_loadToken.value;
     final viewDate = selectedDate.value;
 
-    _isBusy.value = true;
-    
     try {
-      final taskRepo = Get.find<TaskRepository>();
-      await taskRepo.instantiateRecurringTasks();
-      
-      // ✅ Parallelize Heavy Data Fetching via Services!
       final results = await Future.wait([
         _medicationService.getDailyStats(viewDate),
-        _taskService.getDailyStats(viewDate),
         _healthServiceStats.getHealthStats(viewDate),
       ]);
-
-      if (currentToken != _loadToken) return; // 🛑 Race Condition Guard
+      
+      if (currentToken != _loadToken.value) return;
 
       final medStats = results[0] as MedicationDailyStats;
-      final taskStats = results[1] as TaskDailyStats;
-      final healthStats = results[2] as HomeHealthStats;
+      // Task stats removed from here - now handled by dedicated reactive stream
+      final healthStats = results[1] as HomeHealthStats;
 
-      // Update basic counts
-      taskCount.value = await _isar.tasks.count();
+      // Update Non-Task Counts
       noteCount.value = await _isar.notes.count();
       journalCount.value = await _isar.journals.count();
       bookmarkCount.value = await _isar.bookmarks.count();
@@ -293,17 +354,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       calendarEventCount.value = await _isar.calendarEvents.count();
       bookCount.value = await _isar.books.count();
 
-      // Update Tasks
-      tasksLeftCount.value = taskStats.pending;
-      completedTasksCount.value = taskStats.completed;
-      cancelledTasksCount.value = taskStats.cancelled;
-
-      nextTaskTitle.value = taskStats.nextTitle;
-      nextTaskTime.value = taskStats.nextTime;
-      nextTaskEndTime.value = taskStats.nextEndTime;
-      nextTaskTimeLeft.value = taskStats.nextTimeLeft;
-      nextTaskFullDate.value = taskStats.nextFullDate;
-      nextTaskPriority.value = taskStats.nextPriority;
+      // Update Work Profile (Non-reactive, pull-based)
+      final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
+      workCompany.value = profile.companyName ?? '';
+      workPosition.value = profile.jobPosition ?? '';
+      _updateSalaryCountdown(profile);
 
       // Update Medications
       medTakenDoses.value = medStats.taken;
@@ -334,17 +389,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
         healthLastSync.value = '';
       }
 
-      // Update Work Profile
-      final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
-      workCompany.value = profile.companyName ?? '';
-      workPosition.value = profile.jobPosition ?? '';
-      _updateSalaryCountdown(profile);
-
-      // --- Tri-Pillar Governance ---
-      final taskScore = taskStats.total > 0 ? (taskStats.completed / taskStats.total).clamp(0.0, 1.0) : 0.0;
-      final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
-      mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
-
       final medScore = medStats.expected > 0 ? (medStats.taken / medStats.expected).clamp(0.0, 1.0) : 0.0;
       bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
 
@@ -352,24 +396,25 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       final moodScore = moodMap[weeklyMoodTrend.value] ?? 0.6;
       spiritProgress.value = (healthStats.journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
 
-      progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
+      _updateTotalProgress();
 
-      // Unblocking analytics
       _loadWeeklyData();
       _loadCompletedDays();
-
+      _updateGreeting();
     } catch (e, stack) {
-      talker.handle(e, stack, '🔴 Home Data Load Error');
-    } finally {
-      if (currentToken == _loadToken) _isBusy.value = false;
+      talker.handle(e, stack, '🔴 Home Data Load Internal Error');
     }
   }
 
+  void _updateTotalProgress() {
+    progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
+  }
+
   void _updateSalaryCountdown(WorkProfile profile) {
-    final now = DateTime.now();
+    final contextDate = selectedDate.value; // ✅ Rule 2: Time Context
     final salDay = profile.salaryDay;
-    final nextSalary = now.nextOccurrenceOfMonthDay(salDay);
-    daysUntilSalary.value = nextSalary.normalized.difference(now.normalized).inDays;
+    final nextSalary = contextDate.nextOccurrenceOfMonthDay(salDay);
+    daysUntilSalary.value = nextSalary.normalized.difference(contextDate.normalized).inDays;
   }
 
   void onDateSelected(DateTime date) {
@@ -378,8 +423,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> _loadWeeklyData() async {
-    final now = DateTime.now();
-    final today = now.normalized;
+    final contextDate = selectedDate.value; // ✅ Rule 2: Time Context
+    final today = contextDate.normalized;
     final sevenDaysAgo = today.subtract(const Duration(days: 6));
     
     final completedDates = await _isar.tasks.filter()

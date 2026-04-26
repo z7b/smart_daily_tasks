@@ -559,6 +559,13 @@ class Messages extends Translations {
       'worst_week': 'Worst Week',
       'worst_month': 'Worst Month',
       'worst_day': 'Worst Day',
+      'no_pending_tasks': 'No pending tasks',
+      'no_medications_scheduled': 'No medications scheduled',
+      'no_shift_scheduled': 'No shifts scheduled',
+      'step_unit_name': 'Step',
+      'of_goal_desc': 'of goal',
+      'step_goal_reached_success': 'Goal achieved! Great job 🎉',
+      'step_goal_keep_going': 'Keep going! You\'re making steady progress',
     },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1141,6 +1148,13 @@ class Messages extends Translations {
       'worst_week': 'أقل أسبوع',
       'worst_month': 'أقل شهر',
       'worst_day': 'أقل يوم',
+      'no_pending_tasks': 'لا توجد مهام بانتظارك',
+      'no_medications_scheduled': 'لا توجد جرعات مجدولة اليوم',
+      'no_shift_scheduled': 'لا توجد فترات عمل مجدولة',
+      'step_unit_name': 'خطوة',
+      'of_goal_desc': 'من الهدف',
+      'step_goal_reached_success': 'تم تحقيق الهدف! عمل رائع 🎉',
+      'step_goal_keep_going': 'استمر! أنت تتقدم بثبات نحو هدفك',
     },
   };
 }

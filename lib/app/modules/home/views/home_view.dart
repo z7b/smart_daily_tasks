@@ -803,8 +803,8 @@ class HomeView extends GetView<HomeController> {
                         if (isAuth)
                           Text(
                             controller.stepsProgress.value >= 1.0
-                                ? 'تم تحقيق الهدف! عمل رائع 🎉'
-                                : 'استمر! أنت تتقدم بثبات نحو هدفك',
+                                ? 'step_goal_reached_success'.tr
+                                : 'step_goal_keep_going'.tr,
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.white.withValues(alpha: 0.5),
@@ -886,7 +886,7 @@ class HomeView extends GetView<HomeController> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
-                        'خطوة',
+                        'step_unit_name'.tr,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.6),
                           fontWeight: FontWeight.bold,
@@ -907,7 +907,7 @@ class HomeView extends GetView<HomeController> {
                           ),
                         ),
                         Text(
-                          'من الهدف',
+                          'of_goal_desc'.tr,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.4),
                             fontSize: 10,
@@ -961,21 +961,21 @@ class HomeView extends GetView<HomeController> {
                     _buildPremiumInsight(
                       CupertinoIcons.flame_fill,
                       controller.caloriesCount.value.toInt().f,
-                      'سعرة',
+                      'calorie_unit'.tr,
                       const Color(0xFFF87171),
                     ),
                     const SizedBox(width: 12),
                     _buildPremiumInsight(
                       CupertinoIcons.location_solid,
                       (controller.distanceCount.value / 1000).fd(2),
-                      'كم',
+                      'km'.tr,
                       const Color(0xFF60A5FA),
                     ),
                     const SizedBox(width: 12),
                     _buildPremiumInsight(
                       CupertinoIcons.timer_fill,
                       (controller.stepsCount.value / 100).toInt().f,
-                      'دقيقة',
+                      'minute_unit'.tr,
                       const Color(0xFF34D399),
                     ),
                   ],
@@ -1399,7 +1399,7 @@ class HomeView extends GetView<HomeController> {
                 ),
               ] else ...[
                 Text(
-                  'No medications scheduled',
+                  'no_medications_scheduled'.tr,
                   style: TextStyle(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.3)
@@ -1583,7 +1583,7 @@ class HomeView extends GetView<HomeController> {
                 ),
               ] else ...[
                 Text(
-                  'No pending tasks',
+                  'no_pending_tasks'.tr,
                   style: TextStyle(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.3)

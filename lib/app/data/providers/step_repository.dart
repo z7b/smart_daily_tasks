@@ -61,6 +61,19 @@ class StepRepository {
     return await _isar.stepLogs.filter().dateEqualTo(start).findFirst();
   }
 
+  /// SSOT: Watch a specific day's log for reactive UI updates
+  Stream<StepLog?> watchStepLog(DateTime date) {
+    final start = DateTime(date.year, date.month, date.day);
+    return _isar.stepLogs.filter().dateEqualTo(start).watch(fireImmediately: true).map((list) => list.isNotEmpty ? list.first : null);
+  }
+
+  /// SSOT: Pure write endpoint for any StepLog mutation
+  Future<void> saveStepLog(StepLog log) async {
+    await _isar.writeTxn(() async {
+      await _isar.stepLogs.put(log);
+    });
+  }
+
   /// Get all logs for a range
   Future<List<StepLog>> getLogsInRange(DateTime start, DateTime end) async {
     // ✅ Concept D2 Fix: Reverse range recovery
