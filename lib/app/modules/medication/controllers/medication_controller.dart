@@ -6,6 +6,7 @@ import '../../../data/models/medication_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import '../../../core/helpers/number_extension.dart';
+import 'package:get_storage/get_storage.dart';
 
 class MedicationController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -111,11 +112,11 @@ class MedicationController extends GetxController {
       }
     } else if (frequency != null) {
       if (frequency <= 0 || frequency > 24) return times;
-      // ✅ Phase 3: Spread frequency over Waking Hours (16 hours) instead of 24
-      final wakingHours = 16; 
-      final interval = frequency > 1 ? wakingHours ~/ (frequency - 1) : 0;
+      // ✅ Phase 3: Spread frequency over Waking Hours (configurable, defaults to 16)
+      final int wakingHours = GetStorage().read<int>('wakingHours') ?? 16;  
+      final int interval = frequency > 1 ? wakingHours ~/ (frequency - 1) : 0;
       for (int i = 0; i < frequency; i++) {
-        int hour = (startTime.hour + (i * interval)) % 24;
+        int hour = ((startTime.hour + (i * interval)) % 24).toInt();
         final time = TimeOfDay(hour: hour, minute: startTime.minute);
         final formatted = _formatTimeOfDay(time);
         if (!times.contains(formatted)) times.add(formatted);

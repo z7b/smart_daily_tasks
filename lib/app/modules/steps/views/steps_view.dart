@@ -896,8 +896,24 @@ class StepsView extends GetView<StepsController> {
                   getDrawingHorizontalLine: (v) => FlLine(
                     color: Color(0xFFEEF0F3), 
                     strokeWidth: 1, 
-                    dashArray: v == goalY ? [6, 4] : null,
                   ),
+                ),
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: goalY,
+                      color: _orange.withValues(alpha: 0.8),
+                      strokeWidth: 2,
+                      dashArray: [8, 4],
+                      label: HorizontalLineLabel(
+                        show: true,
+                        alignment: Alignment.topRight,
+                        padding: EdgeInsets.only(right: 4, bottom: 4),
+                        style: TextStyle(fontSize: 10, color: _orange, fontWeight: FontWeight.bold),
+                        labelResolver: (line) => 'your_goal'.trParams({'goal': goalY.toInt().f}),
+                      ),
+                    ),
+                  ],
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
