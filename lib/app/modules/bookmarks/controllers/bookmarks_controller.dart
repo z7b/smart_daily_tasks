@@ -171,14 +171,15 @@ class BookmarksController extends GetxController {
 
   Future<void> openUrl(String url) async {
     try {
-      final uri = Uri.parse(url);
+      final validUrl = url.startsWith('http') ? url : 'https://$url';
+      final uri = Uri.parse(validUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        _showSnackbar('Error'.tr, 'Could not open URL', isError: true);
+        _showSnackbar('error'.tr, 'Could not open URL', isError: true);
       }
     } catch (e) {
-      _showSnackbar('Error'.tr, 'Invalid URL', isError: true);
+      _showSnackbar('error'.tr, 'Invalid URL', isError: true);
     }
   }
 

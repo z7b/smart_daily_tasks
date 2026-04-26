@@ -477,6 +477,12 @@ class Messages extends Translations {
       'sedentary': 'Sedentary',
       'pro': 'Pro Athlete',
       'steps_left_msg': 'Only @count steps left!',
+
+      'start_writing_hint': 'Start writing...',
+      'bookmark_added': 'Bookmark Added',
+      'bookmark_updated': 'Bookmark Updated',
+      'url_hint': 'https://example.com',
+      'note_added': 'Note added successfully',
     },
     'ar': {
       'title': 'مهامي الذكية',
@@ -977,6 +983,12 @@ class Messages extends Translations {
       'insight_late': 'لقد لاحظنا تأخراً بسيطاً عن الموعد المبرمج. حاول تحسين الالتزام بالوقت.',
       'insight_early': 'ممتاز! حضورك المبكر يعكس التزاماً ومهنية عالية.',
       'week': 'الأسبوع',
+
+      'start_writing_hint': 'ابدأ الكتابة...',
+      'bookmark_added': 'تم إضافة الإشارة المرجعية',
+      'bookmark_updated': 'تم تحديث الإشارة المرجعية',
+      'url_hint': 'https://example.com',
+      'note_added': 'تم إضافة الملاحظة بنجاح',
     },
   };
 }

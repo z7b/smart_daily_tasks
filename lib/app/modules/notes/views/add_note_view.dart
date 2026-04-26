@@ -82,7 +82,7 @@ class AddNoteView extends GetView<NotesController> {
               ),
               onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(controller.contentFocusNode),
               decoration: InputDecoration(
-                hintText: 'Title...',
+                hintText: 'title_hint'.tr,
                 hintStyle: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -109,7 +109,7 @@ class AddNoteView extends GetView<NotesController> {
                   child: const Icon(CupertinoIcons.paintbrush, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 12),
-                Text('Color', style: TextStyle(fontSize: 16, color: theme.textTheme.bodyMedium?.color)),
+                Text('color'.tr, style: TextStyle(fontSize: 16, color: theme.textTheme.bodyMedium?.color)),
                 const Spacer(),
                 _buildColorPalette(context),
               ],
@@ -128,7 +128,7 @@ class AddNoteView extends GetView<NotesController> {
                 height: 1.5,
               ),
               decoration: InputDecoration(
-                hintText: 'Start writing...',
+                hintText: 'start_writing_hint'.tr,
                 hintStyle: TextStyle(
                   fontSize: 16,
                   color: theme.dividerColor,
