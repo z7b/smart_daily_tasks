@@ -11,6 +11,23 @@ class JournalRepository {
   }
 
   /// Create a new journal entry with success result
+  Future<List<Journal>> getJournalsInRange(DateTime start, DateTime end) async {
+    final startOfDay = DateTime(start.year, start.month, start.day);
+    final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+    return await _isar.journals.filter()
+        .dateBetween(startOfDay, endOfDay)
+        .sortByDateDesc()
+        .findAll();
+  }
+
+  Future<int> getJournalsCountForDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    return await _isar.journals.filter()
+        .dateBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
+        .count();
+  }
+
   Future<bool> addJournal(Journal journal) async {
     try {
       await _isar.writeTxn(() async {

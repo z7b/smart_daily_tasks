@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 
-import 'package:smart_daily_tasks/app/modules/tasks/controllers/task_controller.dart';
+import 'package:smart_daily_tasks/app/modules/tasks/controllers/task_list_controller.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -76,7 +76,7 @@ class TaskTile extends StatelessWidget {
                 if (!isCompleted && !isCancelled)
                   Obx(() {
                     // Access currentTime to trigger rebuilds on ticks
-                    Get.find<TaskController>().currentTime.value;
+                    Get.find<TaskListController>().currentTime.value;
                     final progress = task.progress;
                     if (progress <= 0 || progress >= 1) return const SizedBox.shrink();
                     
@@ -236,7 +236,7 @@ class TaskTile extends StatelessWidget {
                                   
                                   // Live Time Left Intelligence
                                   Obx(() {
-                                    Get.find<TaskController>().currentTime.value;
+                                    Get.find<TaskListController>().currentTime.value;
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(

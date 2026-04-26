@@ -7,11 +7,12 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../../../data/models/task_model.dart';
-import '../controllers/task_controller.dart';
+import '../controllers/task_list_controller.dart';
+import '../controllers/task_form_controller.dart';
 import 'widgets/task_tile.dart';
 import '../../../core/helpers/number_extension.dart';
 
-class TasksView extends GetView<TaskController> {
+class TasksView extends GetView<TaskListController> {
   const TasksView({super.key});
 
   @override
@@ -195,7 +196,7 @@ class TasksView extends GetView<TaskController> {
                       task: task,
                       onTap: () => _showTaskDetails(context, task),
                       onEdit: () {
-                        controller.loadTaskIntoForm(task);
+                        Get.find<TaskFormController>().loadTaskIntoForm(task);
                         Get.toNamed('/add-task', arguments: task);
                       },
                       onCompleted: (val) =>
@@ -543,7 +544,7 @@ class TasksView extends GetView<TaskController> {
                       color: AppTheme.primary,
                       onPressed: () {
                         if (Get.isBottomSheetOpen ?? false) Get.back();
-                        controller.loadTaskIntoForm(task);
+                        Get.find<TaskFormController>().loadTaskIntoForm(task);
                         Get.toNamed('/add-task', arguments: task);
                       },
                     ),

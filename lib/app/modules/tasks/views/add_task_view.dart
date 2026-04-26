@@ -4,11 +4,11 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../controllers/task_controller.dart';
+import '../controllers/task_form_controller.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import '../../../core/helpers/number_extension.dart';
 
-class AddTaskView extends GetView<TaskController> {
+class AddTaskView extends GetView<TaskFormController> {
   const AddTaskView({super.key});
 
   Task? get _task => Get.arguments as Task?;

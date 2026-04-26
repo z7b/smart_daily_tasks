@@ -1,17 +1,20 @@
 import 'dart:math';
 import 'dart:async';
+import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
+import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
 import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
 import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
@@ -19,18 +22,31 @@ import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
 import 'package:smart_daily_tasks/app/data/models/book_model.dart';
 import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
 import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
-import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
-import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 
-class HomeController extends GetxController {
+import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
+
+import '../services/home_medication_service.dart';
+import '../services/home_task_service.dart';
+import '../services/home_health_service.dart';
+
+class HomeController extends GetxController with WidgetsBindingObserver {
+  // Dependencies
   final _isar = Get.find<Isar>();
   final _healthService = Get.find<HealthService>();
   
+  late final HomeMedicationService _medicationService;
+  late final HomeTaskService _taskService;
+  late final HomeHealthService _healthServiceStats;
+
+  // Streams
   StreamSubscription? _taskSub;
   StreamSubscription? _journalSub;
   StreamSubscription? _bookmarkSub;
@@ -48,7 +64,7 @@ class HomeController extends GetxController {
 
   // Real-time Database Counts
   final taskCount = 0.obs;
-  final tasksLeftCount = 0.obs; // Active/Pending
+  final tasksLeftCount = 0.obs;
   final completedTasksCount = 0.obs;
   final cancelledTasksCount = 0.obs;
   final noteCount = 0.obs;
@@ -58,9 +74,10 @@ class HomeController extends GetxController {
   final calendarEventCount = 0.obs;
   final bookCount = 0.obs;
   
-  final _isBusy = false.obs; // Logic guard for data loading concurrency
-  
-  // Progress Pillars (Doctoral Logic: Symmetry & Balance)
+  final _isBusy = false.obs; 
+  int _loadToken = 0; // ✅ Token System to prevent Race Conditions
+
+  // Progress Pillars
   final mindProgress = 0.0.obs;
   final bodyProgress = 0.0.obs;
   final spiritProgress = 0.0.obs;
@@ -93,7 +110,7 @@ class HomeController extends GetxController {
   final isHealthVerified = false.obs;
   final healthLastSync = ''.obs;
   final isSyncingHealth = false.obs;
-  final currentStreak = 0.obs; // 🔥 Added for Activity Card Streak display
+  final currentStreak = 0.obs;
 
   final medTakenDoses = 0.obs;
   final medExpectedDoses = 0.obs;
@@ -111,45 +128,39 @@ class HomeController extends GetxController {
 
   final weeklyLabels = <String>[].obs;
 
-  void refreshDashboard() {
-    _healthService.fetchAndPersistSteps(); // Sync health data on manual refresh
-    _loadRealData();
-  }
-  
-  void connectHealth() async {
-    final success = await _healthService.requestPermissions();
-    if (success) {
-      _loadRealData();
-    }
-  }
+  DateTime _lastRefreshDay = DateTime.now();
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Initialize Services
+    _medicationService = HomeMedicationService(Get.find<MedicationRepository>());
+    _taskService = HomeTaskService(Get.find<TaskRepository>());
+    _healthServiceStats = HomeHealthService(
+      Get.find<StepRepository>(),
+      Get.find<JournalRepository>(),
+      _isar,
+    );
+
     _updateGreeting();
     _setupRealtimeListeners();
-    // ✅ Defer heavy DB work to the next frame to avoid ANR on startup
     Future.delayed(const Duration(milliseconds: 100), () => _loadRealData());
   }
 
   @override
   void onReady() {
     super.onReady();
-    
-    // 🛡️ Enforce Cold Boot Security Locks
     if (Get.isRegistered<AppLockObserver>()) {
       Get.find<AppLockObserver>().enforceColdBootLock();
     }
 
-    // ✅ Doctoral Logic: Navigation Governance
-    // Push the user-configured Start Screen *over* HomeView.
-    // This allows the Back button to gracefully return to the underlying Dashboard.
     final startRoute = AppPages.savedStartRoute;
     if (startRoute != Routes.HOME) {
       Get.toNamed(startRoute);
     }
 
-    // ✅ Phase 5 Optimization: Defer health sync to background after UI is ready
     Future.delayed(const Duration(seconds: 2), () {
       if (_healthService.isAuthorized.value == true) {
         talker.info('🏥 Phase 5: Triggering background pulse sync...');
@@ -160,6 +171,7 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _taskSub?.cancel();
     _journalSub?.cancel();
     _bookmarkSub?.cancel();
@@ -171,58 +183,56 @@ class HomeController extends GetxController {
     super.onClose();
   }
 
+  /// ✅ Midnight Bug Fix: Full Date Comparison
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      // Compare Full Date (Year/Month/Day) instead of just Day
+      if (now.year != _lastRefreshDay.year || now.month != _lastRefreshDay.month || now.day != _lastRefreshDay.day) {
+        talker.info('🌙 Midnight transition detected! Refreshing Dashboard.');
+        _lastRefreshDay = now;
+        selectedDate.value = now;
+        _loadRealData();
+      }
+    }
+  }
+
+  void refreshDashboard() {
+    _healthService.fetchAndPersistSteps();
+    _loadRealData();
+  }
+  
+  void connectHealth() async {
+    final success = await _healthService.requestPermissions();
+    if (success) _loadRealData();
+  }
+
   void _setupRealtimeListeners() {
-    // ✅ Debounce DB listeners to prevent rapid UI rebuilds during batch ops
     _taskSub = _isar.tasks.watchLazy()
         .debounceTime(const Duration(milliseconds: 500))
         .listen((_) => _loadRealData());
     
-    // ✅ Step 2: Set the Pulse (Life OS Heartbeat)
-    // Refreshes the dashboard stats and greetings automatically
     _pulseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _updateGreeting();
-      // ✅ Concept 9: Only pulse reload if current view is actually Today
-      if (selectedDate.value.year == DateTime.now().year &&
-          selectedDate.value.month == DateTime.now().month &&
-          selectedDate.value.day == DateTime.now().day) {
+      final now = DateTime.now();
+      if (selectedDate.value.year == now.year &&
+          selectedDate.value.month == now.month &&
+          selectedDate.value.day == now.day) {
         _loadRealData();
       }
     });
         
-    _journalSub = _isar.journals.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-        
-    _bookmarkSub = _isar.bookmarks.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-        
-    _bookSub = _isar.books.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
+    _journalSub = _isar.journals.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookmarkSub = _isar.bookmarks.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookSub = _isar.books.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _medicationSub = _isar.medications.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _stepLogSub = _isar.stepLogs.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _attendanceSub = _isar.attendanceLogs.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
 
-    _medicationSub = _isar.medications.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-
-    _stepLogSub = _isar.stepLogs.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-
-    _attendanceSub = _isar.attendanceLogs.watchLazy()
-        .debounceTime(const Duration(milliseconds: 500))
-        .listen((_) => _loadRealData());
-
-    // ✅ Expert Health Audit Fix: Listen to global goal changes in storage
-    // This allows the dashboard to react instantly if the user changes their goal in Settings.
-    final storage = GetStorage();
-    storage.listenKey('daily_step_goal', (_) {
-      talker.info('🎯 Goal updated in storage. Re-syncing dashboard stats...');
-      _loadRealData();
-    });
+    GetStorage().listenKey('daily_step_goal', (_) => _loadRealData());
   }
 
-  /// ✅ Doctoral Logic: Dynamic Greeting Engine based on Time & Spirit
   void _updateGreeting() {
     final hour = DateTime.now().hour;
     final random = Random();
@@ -244,33 +254,37 @@ class HomeController extends GetxController {
       greetingMsg.value = 'msg_night';
     }
 
-    // ✅ Doctoral Integration: Contextual Praise based on real progress
-    _applyAchievementContext();
-  }
-
-  void _applyAchievementContext() {
-    // If progress is very high, give standard high-performance praise
     if (progressPercentage.value >= 0.9) {
       greetingMsg.value = 'msg_high_performance';
     } 
-    // Medical excellence check: if meds are done (and there were any)
-    else if (medicationCount.value > 0 && progressPercentage.value > 0.5) {
-       // We can add more specific keys here if needed
-    }
   }
 
   Future<void> _loadRealData() async {
     if (_isBusy.value) return;
+    
+    final int currentToken = ++_loadToken; // ✅ Prevent Stale State
+    final viewDate = selectedDate.value;
+
     _isBusy.value = true;
     
     try {
       final taskRepo = Get.find<TaskRepository>();
-      
-      // ✅ Phase 4: Intelligence - Automatic Recurrence
       await taskRepo.instantiateRecurringTasks();
       
-      final now = DateTime.now(); 
-      // Health syncing is handled by the initial pulse and manual refresh to avoid infinite loops.
+      // ✅ Parallelize Heavy Data Fetching via Services!
+      final results = await Future.wait([
+        _medicationService.getDailyStats(viewDate),
+        _taskService.getDailyStats(viewDate),
+        _healthServiceStats.getHealthStats(viewDate),
+      ]);
+
+      if (currentToken != _loadToken) return; // 🛑 Race Condition Guard
+
+      final medStats = results[0] as MedicationDailyStats;
+      final taskStats = results[1] as TaskDailyStats;
+      final healthStats = results[2] as HomeHealthStats;
+
+      // Update basic counts
       taskCount.value = await _isar.tasks.count();
       noteCount.value = await _isar.notes.count();
       journalCount.value = await _isar.journals.count();
@@ -279,257 +293,39 @@ class HomeController extends GetxController {
       calendarEventCount.value = await _isar.calendarEvents.count();
       bookCount.value = await _isar.books.count();
 
-      final date = selectedDate.value;
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
+      // Update Tasks
+      tasksLeftCount.value = taskStats.pending;
+      completedTasksCount.value = taskStats.completed;
+      cancelledTasksCount.value = taskStats.cancelled;
 
-      // 1. Task Progress (50%)
-      final dayTasks = await _isar.tasks
-          .filter()
-          .scheduledAtBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
-          .findAll();
-      final int total = dayTasks.length;
-      final int completed = dayTasks.where((t) => t.status == TaskStatus.completed).length;
-      final int cancelled = dayTasks.where((t) => t.status == TaskStatus.cancelled).length;
-      final int pending = dayTasks.where((t) => t.status == TaskStatus.active).length;
+      nextTaskTitle.value = taskStats.nextTitle;
+      nextTaskTime.value = taskStats.nextTime;
+      nextTaskEndTime.value = taskStats.nextEndTime;
+      nextTaskTimeLeft.value = taskStats.nextTimeLeft;
+      nextTaskFullDate.value = taskStats.nextFullDate;
+      nextTaskPriority.value = taskStats.nextPriority;
+
+      // Update Medications
+      medTakenDoses.value = medStats.taken;
+      medExpectedDoses.value = medStats.expected;
+      nextMedicationTime.value = medStats.nextTime;
+      nextMedicationName.value = medStats.nextName;
+      nextMedicationTimeLeft.value = medStats.nextTimeLeft;
+
+      // Update Health & Activity
+      currentStreak.value = healthStats.currentStreak;
+      moodEmoji.value = healthStats.moodEmoji;
+      weeklyMoodTrend.value = healthStats.moodTrend;
+      currentBookTitle.value = healthStats.currentBookTitle;
+      currentBookProgress.value = healthStats.currentBookProgress;
       
-      taskCount.value = total;
-      tasksLeftCount.value = pending;
-      completedTasksCount.value = completed;
-      cancelledTasksCount.value = cancelled;
-
-
-      
-      // 2. Health Progress (30%) - Medication Adherence
-      final allMeds = await _isar.medications.filter().isActiveEqualTo(true).findAll();
-      int expected = 0;
-      int taken = 0;
-      final viewDate = selectedDate.value;
-
-
-      for (var med in allMeds) {
-        // Check if med was active on the selected date (Normalized to midnight)
-        final medStart = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
-        final medEnd = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
-        final normalizedView = DateTime(viewDate.year, viewDate.month, viewDate.day);
-        
-        if (!normalizedView.isBefore(medStart) && 
-           (medEnd == null || !normalizedView.isAfter(medEnd))) {
-          
-          final int expectedForThisMed = med.reminderTimes.length;
-          int takenForThisMed = 0;
-          for (var intake in med.intakeHistory) {
-             if (intake.isSameDay(viewDate)) {
-               takenForThisMed++;
-             }
-          }
-          
-          expected += expectedForThisMed;
-          // ✅ Concept 6 Fix: Clamp taken doses per med to not exceed expected
-          taken += takenForThisMed > expectedForThisMed ? expectedForThisMed : takenForThisMed;
-        }
-      }
-      medTakenDoses.value = taken;
-      medExpectedDoses.value = expected;
-      
-      // ✅ Concept R1 Fix: Zero out expected doses for future dates to prevent misleading adherence percentages
-      final todayNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final normalizedView = DateTime(viewDate.year, viewDate.month, viewDate.day);
-      if (normalizedView.isAfter(todayNormalized)) {
-        medTakenDoses.value = 0;
-        medExpectedDoses.value = 0;
-        expected = 0; // ✅ Reset locals so medProgress below uses correct values
-        taken = 0;
-      }
-
-      // Calculate Next Dose Time (Only relevant for today or future)
-      nextMedicationTime.value = '';
-      nextMedicationName.value = '';
-      nextMedicationTimeLeft.value = '';
-      
-      if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
-        DateTime? nextDoseDateTime;
-        String nextDoseName = '';
-        final locale = Get.locale?.languageCode ?? 'en';
-        final todayStart = DateTime(now.year, now.month, now.day);
-        
-        for (var med in allMeds) {
-          final medStartN = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
-          final medEndN = med.endDate != null ? DateTime(med.endDate!.year, med.endDate!.month, med.endDate!.day) : null;
-          
-          // Logic Audit: Find the earliest valid day for this medication that is either Today or in the Future
-          DateTime? candidateDate;
-
-          // 1. Check Today
-          if (!todayStart.isBefore(medStartN) && (medEndN == null || !todayStart.isAfter(medEndN))) {
-            final sortedTimes = List<String>.from(med.reminderTimes);
-            sortedTimes.sort((a, b) {
-              final tA = _parseRobustTime(a) ?? DateTime(1970, 1, 1, 0, 0);
-              final tB = _parseRobustTime(b) ?? DateTime(1970, 1, 1, 0, 0);
-              if (tA.hour != tB.hour) return tA.hour.compareTo(tB.hour);
-              return tA.minute.compareTo(tB.minute);
-            });
-
-            final todayIntakeCount = med.todayDoseCount;
-            for (int i = 0; i < sortedTimes.length; i++) {
-              if (i < todayIntakeCount) continue;
-              final timeStr = sortedTimes[i];
-              final time = _parseRobustTime(timeStr);
-              if (time == null) continue;
-              final scheduledDate = DateTime(todayStart.year, todayStart.month, todayStart.day, time.hour, time.minute);
-              if (scheduledDate.isBefore(now)) continue;
-              
-              candidateDate = scheduledDate;
-              break; 
-            }
-          }
-
-          // 2. If no dose today, look for the first future dose
-          if (candidateDate == null && med.reminderTimes.isNotEmpty) {
-            final firstTimeActionable = List<String>.from(med.reminderTimes);
-            firstTimeActionable.sort((a, b) {
-              final tA = _parseRobustTime(a) ?? DateTime(1970, 1, 1, 0, 0);
-              final tB = _parseRobustTime(b) ?? DateTime(1970, 1, 1, 0, 0);
-              if (tA.hour != tB.hour) return tA.hour.compareTo(tB.hour);
-              return tA.minute.compareTo(tB.minute);
-            });
-            final bestTime = _parseRobustTime(firstTimeActionable.first)!;
-
-            // Target day is the later of (startDate) and (Tomorrow)
-            DateTime tomorrow = todayStart.add(const Duration(days: 1));
-            DateTime targetDay = medStartN.isAfter(tomorrow) ? medStartN : tomorrow;
-
-            if (medEndN == null || !targetDay.isAfter(medEndN)) {
-              candidateDate = DateTime(targetDay.year, targetDay.month, targetDay.day, bestTime.hour, bestTime.minute);
-            }
-          }
-
-          // Update Global Best
-          if (candidateDate != null) {
-            if (nextDoseDateTime == null || candidateDate.isBefore(nextDoseDateTime)) {
-              nextDoseDateTime = candidateDate;
-              nextDoseName = med.name;
-            }
-          }
-        }
-        
-        if (nextDoseDateTime != null) {
-          // ✅ Localize the time string properly (e.g. 10:30 ص instead of 10:30 AM)
-          nextMedicationTime.value = DateFormat.jm(locale).format(nextDoseDateTime).f;
-          nextMedicationName.value = nextDoseName;
-          
-          final diff = nextDoseDateTime.difference(now);
-          
-          if (diff.isNegative) {
-            nextMedicationTimeLeft.value = 'dose_missed'.tr;
-          } else {
-            if (diff.inDays >= 1) {
-              // Distant Dose: Show Date or relative days
-              if (diff.inDays == 1) {
-                nextMedicationTimeLeft.value = 'tomorrow'.tr;
-              } else if (diff.inDays < 7) {
-                nextMedicationTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
-              } else {
-                nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(nextDoseDateTime).f;
-              }
-            } else {
-              // Close Dose: Show hours/minutes
-              final hours = diff.inHours;
-              final minutes = (diff.inMinutes % 60).abs();
-              if (hours > 0) {
-                nextMedicationTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
-              } else {
-                nextMedicationTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
-              }
-            }
-          }
-        }
-      }
-
-      // --- Doctoral Logic: Task Next Item Tracking (Unlimited Predictive Engine) ---
-      nextTaskTitle.value = '';
-      nextTaskTime.value = '';
-      nextTaskTimeLeft.value = '';
-
-      if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
-        final locale = Get.locale?.languageCode ?? 'en';
-        Task? predictiveTask;
-
-        // 1. Stage 1: Try finding the next actionable task for TODAY
-        final upcomingToday = dayTasks
-            .where((t) => t.status == TaskStatus.active && t.scheduledAt.isAfter(now))
-            .toList();
-        
-        if (upcomingToday.isNotEmpty) {
-          upcomingToday.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-          predictiveTask = upcomingToday.first;
-        }
-
-        // 2. Stage 2: If no tasks left today, find the absolute next global task
-        if (predictiveTask == null) {
-          final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
-          predictiveTask = await _isar.tasks
-              .filter()
-              .statusEqualTo(TaskStatus.active)
-              .scheduledAtGreaterThan(endOfToday)
-              .sortByScheduledAt()
-              .findFirst();
-        }
-        
-        if (predictiveTask != null) {
-          nextTaskTitle.value = predictiveTask.title;
-          nextTaskTime.value = DateFormat.jm(locale).format(predictiveTask.scheduledAt).f;
-          nextTaskEndTime.value = predictiveTask.scheduledEnd != null ? DateFormat.jm(locale).format(predictiveTask.scheduledEnd!).f : '';
-          nextTaskPriority.value = predictiveTask.priority;
-          nextTaskFullDate.value = '${DateFormat('dd MMMM yyyy', locale).format(predictiveTask.scheduledAt).f} • ${nextTaskTime.value}';
-          
-          final diff = predictiveTask.scheduledAt.difference(now);
-          if (diff.isNegative) {
-            nextTaskTimeLeft.value = 'overdue'.tr;
-          } else {
-            if (diff.inDays >= 1) {
-              // Special Formatting for distant tasks
-              if (diff.inDays == 1) {
-                nextTaskTimeLeft.value = 'tomorrow'.tr;
-              } else if (diff.inDays < 7) {
-                nextTaskTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
-              } else {
-                nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(predictiveTask.scheduledAt).f;
-              }
-            } else {
-              final hours = diff.inHours;
-              final minutes = (diff.inMinutes % 60).abs();
-              if (hours > 0) {
-                nextTaskTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
-              } else {
-                nextTaskTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
-              }
-            }
-          }
-        }
-      }
-
-      // ✅ Critical Fix: No meds should NOT mean 100% compliance
-      final double medProgress = expected > 0 ? (taken / expected).clamp(0.0, 1.0) : 0.0;
-
-      // 3. Mind Progress (15%) - Journaling
-      final journalToday = await _isar.journals.filter()
-          .dateBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
-          .count();
-      final double journalProgress = journalToday > 0 ? 1.0 : 0.0;
-
-      // 4. Activity Progress (15%) - Steps
-      final stepLog = await _isar.stepLogs.filter().dateEqualTo(startOfDay).findFirst();
+      final stepLog = healthStats.todayStepLog;
       stepsCount.value = stepLog?.steps ?? 0;
       stepsGoal.value = stepLog?.goal ?? 10000;
       stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
       caloriesCount.value = stepLog?.calories ?? 0.0;
       distanceCount.value = stepLog?.distance ?? 0.0;
       
-      // ✅ Logic: Calculate Streak for Home Card
-      await _calculateActivityStreak();
-      
-      // ✅ Expert Metadata Injection
       isHealthVerified.value = stepLog?.isManual == false;
       if (stepLog?.lastSyncedAt != null) {
         final locale = Get.locale?.languageCode ?? 'en';
@@ -537,178 +333,43 @@ class HomeController extends GetxController {
       } else {
         healthLastSync.value = '';
       }
-      // 5. Work Progress (20%) - Attendance (Only if working day)
+
+      // Update Work Profile
       final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
       workCompany.value = profile.companyName ?? '';
       workPosition.value = profile.jobPosition ?? '';
-
-      // Calculate Salary Countdown for Bento
       _updateSalaryCountdown(profile);
 
-      // --- Unified Life OS Governance: Tri-Pillar Calculation ---
-      tasksLeftCount.value = total - completed;
-      
-      // 1. Mind Pillar (Tasks & Intellectual Growth)
-      // ✅ Critical Fix: No tasks = 0 progress, not 100%
-      final taskScore = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
+      // --- Tri-Pillar Governance ---
+      final taskScore = taskStats.total > 0 ? (taskStats.completed / taskStats.total).clamp(0.0, 1.0) : 0.0;
       final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
       mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
 
-      // 2. Body Pillar (Physical Health & Vitality)
-      final stepScore = stepsProgress.value;
-      final medScore = medProgress;
-      bodyProgress.value = (stepScore * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
+      final medScore = medStats.expected > 0 ? (medStats.taken / medStats.expected).clamp(0.0, 1.0) : 0.0;
+      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
 
-      // 3. Spirit Pillar (Mindfulness & Reflection)
-      final moodMap = {
-        'happy': 1.0,
-        'relaxed': 0.8,
-        'neutral': 0.6,
-        'stressed': 0.4,
-        'sad': 0.2,
-      };
+      final moodMap = {'happy': 1.0, 'relaxed': 0.8, 'neutral': 0.6, 'stressed': 0.4, 'sad': 0.2};
       final moodScore = moodMap[weeklyMoodTrend.value] ?? 0.6;
-      spiritProgress.value = (journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
+      spiritProgress.value = (healthStats.journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
 
-      // Global Governance Average
       progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
 
-      // ✅ Parallelize non-essential analytics to speed up UI responsiveness
-      Future.wait([
-        _loadWeeklyData(),
-        _loadCompletedDays(),
-        _analyzeMoodData(),
-        _loadReadingStats(),
-      ]);
-      
+      // Unblocking analytics
+      _loadWeeklyData();
+      _loadCompletedDays();
+
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Home Data Load Error');
     } finally {
-      _isBusy.value = false;
-    }
-  }
-
-  /// ✅ Logic: High-Precision Streak Engine (Synced with StepsController logic)
-  Future<void> _calculateActivityStreak() async {
-    try {
-      int streak = 0;
-      final now = DateTime.now();
-      
-      // Get logs for the last 60 days to be safe
-      final startRange = now.subtract(const Duration(days: 60));
-      final normalStart = DateTime(startRange.year, startRange.month, startRange.day);
-      final normalEnd = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
-      
-      final allLogs = await _isar.stepLogs
-          .filter()
-          .dateBetween(normalStart, normalEnd, includeLower: true, includeUpper: false)
-          .findAll();
-          
-      final Map<String, StepLog> logMap = {};
-      for (var log in allLogs) {
-        final key = '${log.date.year}-${log.date.month}-${log.date.day}';
-        logMap[key] = log;
-      }
-      
-      DateTime cursor = DateTime(now.year, now.month, now.day);
-      
-      // 1. Check Today (Live data)
-      final todayKey = '${cursor.year}-${cursor.month}-${cursor.day}';
-      final todayLog = logMap[todayKey];
-      final int todaySteps = stepsCount.value;
-      final int todayGoal = todayLog?.goal ?? stepsGoal.value;
-      
-      if (todaySteps >= todayGoal && todayGoal > 0) {
-        streak = 1;
-        cursor = cursor.subtract(const Duration(days: 1));
-      } else {
-        // Today goal not reached yet, start counting from yesterday
-        cursor = cursor.subtract(const Duration(days: 1));
-      }
-      
-      // 2. Walk backwards
-      while (streak < 365) {
-        final key = '${cursor.year}-${cursor.month}-${cursor.day}';
-        final log = logMap[key];
-        
-        if (log != null && log.goal > 0 && log.steps >= log.goal) {
-          streak++;
-          cursor = cursor.subtract(const Duration(days: 1));
-        } else {
-          break; // Broken streak
-        }
-      }
-      
-      currentStreak.value = streak;
-    } catch (e) {
-      talker.error('Failed to calculate streak in HomeController: $e');
+      if (currentToken == _loadToken) _isBusy.value = false;
     }
   }
 
   void _updateSalaryCountdown(WorkProfile profile) {
     final now = DateTime.now();
     final salDay = profile.salaryDay;
-    
     final nextSalary = now.nextOccurrenceOfMonthDay(salDay);
-    
-    // Normalize both sides to midnight for exact day count
     daysUntilSalary.value = nextSalary.normalized.difference(now.normalized).inDays;
-  }
-
-  Future<void> _loadReadingStats() async {
-    try {
-      // ✅ Optimization: Query only active books sorted by last read, avoid full mapping
-      final activeBooks = await _isar.books
-          .filter()
-          .isCompletedEqualTo(false)
-          .sortByLastReadAtDesc()
-          .thenByCreatedAtDesc()
-          .limit(1)
-          .findAll();
-
-      if (activeBooks.isNotEmpty) {
-        currentBookTitle.value = activeBooks.first.title;
-        currentBookProgress.value = activeBooks.first.progress;
-      } else {
-        currentBookTitle.value = 'my_library'.tr;
-        currentBookProgress.value = 0.0;
-      }
-    } catch (e) {
-      talker.error('Error loading reading stats: $e');
-    }
-  }
-
-  Future<void> _analyzeMoodData() async {
-    // ✅ Critical Fix: Use selectedDate context, not always DateTime.now()
-    final targetDate = selectedDate.value;
-    final weekStart = targetDate.subtract(const Duration(days: 7));
-    final logs = await _isar.journals.filter()
-        .dateGreaterThan(weekStart)
-        .findAll();
-    
-    if (logs.isEmpty) {
-      weeklyMoodTrend.value = 'neutral';
-      moodEmoji.value = '😐';
-      return;
-    }
-
-    final counts = <Mood, int>{};
-    for (var j in logs) {
-      counts[j.mood] = (counts[j.mood] ?? 0) + 1;
-    }
-    // ✅ Concept M1: Use >= for tie-break stability (ensures latest dominant mood is picked)
-    final topMood = counts.entries
-        .fold<MapEntry<Mood, int>?>(null, (max, e) => (max == null || e.value >= max.value) ? e : max)
-        ?.key ?? Mood.neutral;
-    weeklyMoodTrend.value = topMood.name;
-    
-    switch (topMood) {
-      case Mood.amazing:  moodEmoji.value = '🤩'; break;
-      case Mood.good:     moodEmoji.value = '😊'; break;
-      case Mood.neutral:  moodEmoji.value = '😐'; break;
-      case Mood.bad:      moodEmoji.value = '😢'; break;
-      case Mood.terrible: moodEmoji.value = '😤'; break;
-    }
   }
 
   void onDateSelected(DateTime date) {
@@ -719,9 +380,8 @@ class HomeController extends GetxController {
   Future<void> _loadWeeklyData() async {
     final now = DateTime.now();
     final today = now.normalized;
-    final sevenDaysAgo = today.subtract(const Duration(days: 6)); // Past 6 days + Today = 7 Days window
+    final sevenDaysAgo = today.subtract(const Duration(days: 6));
     
-    // ✅ Optimization: Use property query to only fetch timestamps
     final completedDates = await _isar.tasks.filter()
         .statusEqualTo(TaskStatus.completed)
         .completedAtGreaterThan(sevenDaysAgo)
@@ -745,7 +405,6 @@ class HomeController extends GetxController {
   }
 
   Future<void> _loadCompletedDays() async {
-    // ✅ Optimization: Use property query to only fetch timestamps, avoid loading full Task objects
     final completedDates = await _isar.tasks.filter()
         .statusEqualTo(TaskStatus.completed)
         .completedAtProperty()
@@ -765,45 +424,4 @@ class HomeController extends GetxController {
     currentIndex.value = index;
     if (index == 0) _loadRealData();
   }
-
-  DateTime? _parseRobustTime(String timeStr) {
-    try {
-      const english = ['0','1','2','3','4','5','6','7','8','9'];
-      const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-      String normalized = timeStr.trim();
-      for (int i = 0; i < english.length; i++) {
-        normalized = normalized.replaceAll(arabic[i], english[i]);
-      }
-      
-      // Expand linguistic mapping (order matters: longer strings first)
-      normalized = normalized
-          .replaceAll('صباحاً', 'AM')
-          .replaceAll('مساءً', 'PM')
-          .replaceAll('في الصباح', 'AM')
-          .replaceAll('في المساء', 'PM')
-          .replaceAll('ص', 'AM')
-          .replaceAll('م', 'PM')
-          .replaceAll('am', 'AM')
-          .replaceAll('pm', 'PM');
-          
-      return DateFormat.jm().parse(normalized);
-    } catch (e) {
-      // Fallback: try extracting HH:MM pattern via regex
-      try {
-        final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
-        if (match != null) {
-          final h = int.parse(match.group(1)!);
-          final m = int.parse(match.group(2)!);
-          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-            return DateTime(1970, 1, 1, h, m);
-          }
-        }
-      } catch (_) {}
-      
-      talker.error('🕒 Time Parse Error ($timeStr): $e');
-      return null;
-    }
-  }
-
-
 }

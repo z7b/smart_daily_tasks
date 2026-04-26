@@ -25,13 +25,31 @@ class TaskRepository {
     }
   }
 
-  // Read all (limited to 300 to prevent OOM)
-  Stream<List<Task>> watchAllTasks({int limit = 300}) async* {
+  // ✅ Phase 2: Memory Over-fetching fix
+  Stream<List<Task>> watchTasksForDateRange(DateTime start, DateTime end) async* {
     yield* _isar.tasks
-        .where()
-        .sortByCreatedAtDesc()
-        .limit(limit)
+        .filter()
+        .scheduledAtBetween(start, end, includeLower: true, includeUpper: false)
+        .sortByScheduledAt()
         .watch(fireImmediately: true);
+  }
+
+  Future<List<Task>> getTasksForDateRange(DateTime start, DateTime end) async {
+    return await _isar.tasks
+        .filter()
+        .scheduledAtBetween(start, end, includeLower: true, includeUpper: false)
+        .sortByScheduledAt()
+        .findAll();
+  }
+
+  // ✅ Used for Home Predictive Engine
+  Future<Task?> getNextActiveTask(DateTime afterDate) async {
+    return await _isar.tasks
+        .filter()
+        .statusEqualTo(TaskStatus.active)
+        .scheduledAtGreaterThan(afterDate)
+        .sortByScheduledAt()
+        .findFirst();
   }
 
   // Read by ID
@@ -61,6 +79,25 @@ class TaskRepository {
       return false;
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Update Task)');
+      return false;
+    }
+  }
+
+  /// ✅ Phase 2: Atomicity Failure fix - Completes task and spawns recurrence in one transaction
+  Future<bool> completeAndSpawnRecurringTask(Task currentTask, Task? nextTask) async {
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.tasks.put(currentTask);
+        if (nextTask != null) {
+          await _isar.tasks.put(nextTask);
+        }
+      });
+      return true;
+    } on IsarError catch (e) {
+      talker.error('🔴 Isar Database Error (Complete & Spawn): $e');
+      return false;
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Complete & Spawn)');
       return false;
     }
   }
