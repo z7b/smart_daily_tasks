@@ -1,4 +1,4 @@
-﻿import 'package:get/get.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/step_log_model.dart';
@@ -421,7 +421,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       }
       return {
         'title': 'best_week'.tr,
-        'label': 'الأسبوع ${best['label']}',
+        'label': '${'the_week'.tr} ${best['label']}',
         'sublabel': '${best['dateRange']} ${DateFormat.MMM(Get.locale?.languageCode ?? 'en').format(DateTime.now())}',
         'value': best['value'],
       };
@@ -448,7 +448,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       return {
         'title': 'best_day'.tr,
         'label': DateFormat.E(Get.locale?.languageCode ?? 'en').format(best.date),
-        'sublabel': DateFormat('d MMM', 'ar').format(best.date),
+        'sublabel': DateFormat('d MMM', Get.locale?.languageCode ?? 'en').format(best.date),
         'value': best.steps,
       };
     }
@@ -458,41 +458,41 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     final filter = selectedTimeFilter.value;
     if (filter == 'monthly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أقل أسبوع', 'label': 'the_week'.tr, 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'worst_week'.tr, 'label': 'the_week'.tr, 'sublabel': '', 'value': 0};
       var worst = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) < (worst['value'] as int)) worst = a;
       }
       return {
-        'title': 'أقل أسبوع',
-        'label': 'الأسبوع ${worst['label']}',
+        'title': 'worst_week'.tr,
+        'label': '${'the_week'.tr} ${worst['label']}',
         'sublabel': '${worst['dateRange']} ${DateFormat.MMM(Get.locale?.languageCode ?? 'en').format(DateTime.now())}',
         'value': worst['value'],
       };
     } else if (filter == 'yearly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أقل شهر', 'label': 'the_month'.tr, 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'worst_month'.tr, 'label': 'the_month'.tr, 'sublabel': '', 'value': 0};
       var worst = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) < (worst['value'] as int)) worst = a;
       }
       return {
-        'title': 'أقل شهر',
+        'title': 'worst_month'.tr,
         'label': worst['label'],
         'sublabel': '${selectedYear.value}',
         'value': worst['value'],
       };
     } else {
       final logs = weeklyLogs;
-      if (logs.isEmpty) return {'title': 'أقل يوم', 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
+      if (logs.isEmpty) return {'title': 'worst_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
       StepLog worst = logs.first;
       for (var l in logs) {
         if (l.steps < worst.steps) worst = l;
       }
       return {
-        'title': 'أقل يوم',
+        'title': 'worst_day'.tr,
         'label': DateFormat.E(Get.locale?.languageCode ?? 'en').format(worst.date),
-        'sublabel': DateFormat('d MMM', 'ar').format(worst.date),
+        'sublabel': DateFormat('d MMM', Get.locale?.languageCode ?? 'en').format(worst.date),
         'value': worst.steps,
       };
     }

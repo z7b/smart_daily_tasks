@@ -556,6 +556,9 @@ class Messages extends Translations {
       'the_month': 'Month',
       'best_day': 'Best Day',
       'the_day': 'Day',
+      'worst_week': 'Worst Week',
+      'worst_month': 'Worst Month',
+      'worst_day': 'Worst Day',
     },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1135,6 +1138,9 @@ class Messages extends Translations {
       'the_month': 'الشهر',
       'best_day': 'أفضل يوم',
       'the_day': 'اليوم',
+      'worst_week': 'أقل أسبوع',
+      'worst_month': 'أقل شهر',
+      'worst_day': 'أقل يوم',
     },
   };
 }
