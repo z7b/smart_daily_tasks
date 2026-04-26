@@ -33,7 +33,11 @@ enum StartScreen {
   calendar('calendar'),
   tasks('tasks'),
   notes('notes'),
-  journal('journal');
+  journal('journal'),
+  steps('my_steps'),
+  job('my_job'),
+  medication('my_medications'),
+  books('my_library');
 
   const StartScreen(this.key);
 
@@ -61,6 +65,14 @@ enum StartScreen {
         return '/notes';
       case StartScreen.journal:
         return '/journal';
+      case StartScreen.steps:
+        return '/steps';
+      case StartScreen.job:
+        return '/job';
+      case StartScreen.medication:
+        return '/medication';
+      case StartScreen.books:
+        return '/books';
     }
   }
 }
