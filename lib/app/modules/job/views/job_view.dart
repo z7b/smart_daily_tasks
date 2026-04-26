@@ -659,8 +659,6 @@ class JobView extends GetView<JobController> {
 
   // ─── Metric Overview ──────────────────────────────────────────
   Widget _buildMetricOverview(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         16,
@@ -778,7 +776,7 @@ class JobView extends GetView<JobController> {
                     maxLines: 2,
                     overflow: TextOverflow.visible,
                   ),
-                  if (subtitle != null) subtitle,
+                  ?subtitle,
                 ],
               ),
             ),
@@ -902,7 +900,7 @@ class JobView extends GetView<JobController> {
                             return PieChartSectionData(
                               color: entry.value,
                               value: count.toDouble(),
-                              title: count > 0 ? '${count.f}' : '',
+                              title: count > 0 ? count.f : '',
                               radius: 50,
                               titleStyle: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -1139,8 +1137,9 @@ class JobView extends GetView<JobController> {
               reservedSize: 42, // ✅ Increased for tilt clearance
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= data.length)
+                if (index < 0 || index >= data.length) {
                   return const SizedBox.shrink();
+                }
 
                 final isYearly = period == JobAnalyticsPeriod.yearly;
                 return SideTitleWidget(

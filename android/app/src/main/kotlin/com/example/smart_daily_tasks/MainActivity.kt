@@ -47,6 +47,29 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        checkIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        checkIntent(intent)
+    }
+
+    private fun checkIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        if (action == "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" || 
+            action == "android.intent.action.VIEW_PERMISSION_USAGE") {
+            
+            // Notify Flutter that we need to show the Health Rationale screen
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, "com.example.smart_daily_tasks/health_rationale")
+                    .invokeMethod("showRationale", null)
+            }
+        }
+    }
+
     private fun openPdfFile(path: String) {
         val file = File(path)
         if (!file.exists()) {

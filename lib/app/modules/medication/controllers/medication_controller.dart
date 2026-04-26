@@ -155,8 +155,8 @@ class MedicationController extends GetxController {
 
         final notifyService = Get.find<NotificationService>();
         final deterministicId = notifyService.getDeterministicId(
-          '${med.name}_${timeStr}', 
-          offset: NotificationService.MED_OFFSET
+          '${med.name}_$timeStr', 
+          offset: NotificationService.medOffset
         );
 
         notifyService.scheduleNotification(
@@ -178,8 +178,8 @@ class MedicationController extends GetxController {
     final notifyService = Get.find<NotificationService>();
     for (final timeStr in med.reminderTimes) {
        final deterministicId = notifyService.getDeterministicId(
-         '${med.name}_${timeStr}', 
-         offset: NotificationService.MED_OFFSET
+         '${med.name}_$timeStr', 
+         offset: NotificationService.medOffset
        );
        notifyService.cancelNotification(deterministicId);
     }

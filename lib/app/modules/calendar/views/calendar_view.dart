@@ -10,12 +10,8 @@ import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../../../data/models/calendar_event_model.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/models/medication_model.dart';
-import '../../../data/providers/task_repository.dart';
-import '../../../data/providers/medication_repository.dart';
 import '../controllers/calendar_controller.dart';
 import '../../settings/controllers/settings_controller.dart';
-import '../../tasks/controllers/task_controller.dart';
-import '../../medication/controllers/medication_controller.dart';
 import '../../../core/helpers/number_extension.dart';
 
 class CalendarView extends GetView<CalendarController> {
@@ -431,11 +427,11 @@ class CalendarView extends GetView<CalendarController> {
     
     TimeOfDay? startTime;
     TimeOfDay? endTime;
+    String? errorMessage;
 
     BottomSheetHelper.showSafeBottomSheet(
       builder: (context, setState) {
         final theme = Theme.of(context);
-        String? errorMessage;
         
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),

@@ -3,6 +3,7 @@
 /// Every enum value carries a [key] that matches the GetX
 /// translation key **and** the GetStorage persistence key.
 /// This prevents typos while keeping the UI's `.tr` calls intact.
+library;
 
 // ─── Language ─────────────────────────────────────────────
 enum AppLanguage {

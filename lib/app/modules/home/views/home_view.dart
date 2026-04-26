@@ -9,7 +9,7 @@ import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/modules/settings/views/settings_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/controllers/home_controller.dart';
 import 'package:smart_daily_tasks/app/modules/home/widgets/quick_log_strip.dart';
-import 'package:smart_daily_tasks/app/modules/home/widgets/productivity_chart.dart';
+
 import 'package:smart_daily_tasks/app/modules/home/widgets/floating_navigation_bar.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
@@ -99,7 +99,7 @@ class HomeView extends GetView<HomeController> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildStepsHomeCard(context),
+            child: _buildActivityHomeCard(context),
           ),
         ),
 
@@ -503,7 +503,6 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildSalaryHomeCard(BuildContext context) {
-    final theme = Theme.of(context);
     return Obx(() {
       final days = controller.daysUntilSalary.value;
       final now = DateTime.now();
@@ -573,101 +572,323 @@ class HomeView extends GetView<HomeController> {
     });
   }
 
-  Widget _buildStepsHomeCard(BuildContext context) {
+  Widget _buildActivityHomeCard(BuildContext context) {
     final healthService = Get.find<HealthService>();
 
     return Obx(() {
-      final isAuthorized = healthService.isAuthorized.value;
+      final authStatus = healthService.isAuthorized.value;
+      final isAuth = authStatus == true;
+      final isChecking = authStatus == null;
       final isConnecting = healthService.isConnecting.value;
 
+      final Color primaryColor = const Color(0xFF0F172A); // Slate 900 (Deep/Premium)
+      final Color accentColor = const Color(0xFF1E293B);  // Slate 800
+      final Color glowColor = const Color(0xFF22D3EE);   // Cyan 400 (Energy)
+      final Color progressColor = const Color(0xFF3B82F6); // Blue 500
+
       return GestureDetector(
-        onTap: isAuthorized ? () => Get.toNamed(Routes.STEPS) : null,
+        onTap: isAuth ? () => Get.toNamed(Routes.STEPS) : null,
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            gradient: isAuth
+                ? LinearGradient(
+                    colors: [primaryColor, accentColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isAuth ? null : Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.tealAccent.withAlpha(20)),
+            boxShadow: isAuth
+                ? [
+                    BoxShadow(
+                      color: glowColor.withValues(alpha: 0.1),
+                      blurRadius: 40,
+                      offset: const Offset(0, 10),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : null,
+            border: isAuth
+                ? Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5)
+                : Border.all(color: Colors.blueAccent.withAlpha(20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header Row
               Row(
                 children: [
-                  const Icon(
-                    Icons.directions_walk,
-                    color: Colors.tealAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'steps_today'.tr,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: glowColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.bolt_fill,
+                      color: glowColor,
+                      size: 20,
                     ),
                   ),
-                  const Spacer(),
-                  if (isAuthorized)
-                    Text(
-                      '${controller.stepsCount.value.f} / ${controller.stepsGoal.value.f}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'النشاط والحركة',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                                color: isAuth ? Colors.white : null,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            if (isAuth && controller.currentStreak.value > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🔥', style: TextStyle(fontSize: 10)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${controller.currentStreak.value.f} يوم',
+                                      style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ).animate().fadeIn().scale(),
+                            ],
+                          ],
+                        ),
+                        if (isAuth)
+                          Text(
+                            controller.stepsProgress.value >= 1.0 
+                                ? 'تم تحقيق الهدف! عمل رائع 🎉'
+                                : 'استمر! أنت تتقدم بثبات نحو هدفك',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isAuth)
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white.withValues(alpha: 0.3),
+                      size: 14,
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
-              if (!isAuthorized)
+              const SizedBox(height: 24),
+              
+              if (isChecking)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                    ),
+                  ),
+                )
+              else if (!isAuth)
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: isConnecting
-                        ? null
-                        : () => controller.connectHealth(),
+                    onPressed: isConnecting ? null : () => controller.connectHealth(),
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.tealAccent.withAlpha(20),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                     child: isConnecting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.tealAccent,
-                            ),
-                          )
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(
                             'connect_fit'.tr,
-                            style: const TextStyle(
-                              color: Colors.tealAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                           ),
                   ),
                 )
-              else
-                LinearProgressIndicator(
-                  value: controller.stepsProgress.value,
-                  backgroundColor: Colors.tealAccent.withAlpha(20),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Colors.tealAccent,
-                  ),
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(3),
+              else ...[
+                // Steps Display
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      controller.stepsCount.value.f,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 42,
+                        height: 1,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'خطوة',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${(controller.stepsProgress.value * 100).toInt().f}%',
+                          style: TextStyle(
+                            color: glowColor,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'من الهدف',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
+                
+                // Enhanced Progress Bar
+                Stack(
+                  children: [
+                    Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.easeOutCubic,
+                      height: 12,
+                      width: (Get.width - 96) * controller.stepsProgress.value.clamp(0.0, 1.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [progressColor, glowColor],
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: glowColor.withValues(alpha: 0.4),
+                            blurRadius: 10,
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Metrics Grid (Calories, Distance, Active Time)
+                Row(
+                  children: [
+                    _buildPremiumInsight(
+                      CupertinoIcons.flame_fill,
+                      controller.caloriesCount.value.toInt().f,
+                      'سعرة',
+                      const Color(0xFFF87171),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildPremiumInsight(
+                      CupertinoIcons.location_solid,
+                      (controller.distanceCount.value / 1000).fd(2),
+                      'كم',
+                      const Color(0xFF60A5FA),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildPremiumInsight(
+                      CupertinoIcons.timer_fill,
+                      (controller.stepsCount.value / 100).toInt().f,
+                      'دقيقة',
+                      const Color(0xFF34D399),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       );
     });
   }
+
+  Widget _buildPremiumInsight(IconData icon, String value, String unit, Color iconColor) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 16, color: iconColor),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Text(
+              unit,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   Widget _buildNextShiftHomeCard(BuildContext context) {
     if (!Get.isRegistered<JobController>()) return const SizedBox();

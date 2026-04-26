@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+
 import 'package:get/get.dart';
 import '../core/helpers/log_helper.dart';
 
@@ -25,6 +25,7 @@ import '../modules/medication/bindings/medication_binding.dart';
 import '../modules/medication/views/medication_view.dart';
 import '../modules/steps/bindings/steps_binding.dart';
 import '../modules/steps/views/steps_view.dart';
+import '../modules/steps/views/health_rationale_view.dart';
 import '../modules/job/bindings/job_binding.dart';
 import '../modules/job/views/job_view.dart';
 import '../modules/job/views/job_settings_view.dart';
@@ -38,7 +39,7 @@ class AppPages {
 
   static String get savedStartRoute {
     try {
-      return SettingsController.getSavedStartRoute() ?? Routes.HOME;
+      return SettingsController.getSavedStartRoute();
     } catch (e, stack) {
       talker.handle(e, stack, '⚠️ Error reading saved start route');
       return Routes.HOME;
@@ -120,6 +121,10 @@ class AppPages {
       name: Routes.JOB_SETTINGS,
       page: () => const JobSettingsView(),
       binding: JobBinding(),
+    ),
+    GetPage(
+      name: Routes.HEALTH_RATIONALE,
+      page: () => const HealthRationaleView(),
     ),
   ];
 }

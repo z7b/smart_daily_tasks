@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:isar/isar.dart';
@@ -22,7 +22,7 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
-import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
+
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
@@ -88,6 +88,12 @@ class HomeController extends GetxController {
   final stepsCount = 0.obs;
   final stepsGoal = 10000.obs;
   final stepsProgress = 0.0.obs;
+  final caloriesCount = 0.0.obs;
+  final distanceCount = 0.0.obs;
+  final isHealthVerified = false.obs;
+  final healthLastSync = ''.obs;
+  final isSyncingHealth = false.obs;
+  final currentStreak = 0.obs; // 🔥 Added for Activity Card Streak display
 
   final medTakenDoses = 0.obs;
   final medExpectedDoses = 0.obs;
@@ -145,7 +151,7 @@ class HomeController extends GetxController {
 
     // ✅ Phase 5 Optimization: Defer health sync to background after UI is ready
     Future.delayed(const Duration(seconds: 2), () {
-      if (_healthService.isAuthorized.value) {
+      if (_healthService.isAuthorized.value == true) {
         talker.info('🏥 Phase 5: Triggering background pulse sync...');
         _healthService.fetchAndPersistSteps();
       }
@@ -206,6 +212,14 @@ class HomeController extends GetxController {
     _attendanceSub = _isar.attendanceLogs.watchLazy()
         .debounceTime(const Duration(milliseconds: 500))
         .listen((_) => _loadRealData());
+
+    // ✅ Expert Health Audit Fix: Listen to global goal changes in storage
+    // This allows the dashboard to react instantly if the user changes their goal in Settings.
+    final storage = GetStorage();
+    storage.listenKey('daily_step_goal', (_) {
+      talker.info('🎯 Goal updated in storage. Re-syncing dashboard stats...');
+      _loadRealData();
+    });
   }
 
   /// ✅ Doctoral Logic: Dynamic Greeting Engine based on Time & Spirit
@@ -284,15 +298,14 @@ class HomeController extends GetxController {
       completedTasksCount.value = completed;
       cancelledTasksCount.value = cancelled;
 
-      // ✅ Critical Fix: "Null Success Bug" - No tasks should NOT mean 100% success
-      final double taskProgress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
+
       
       // 2. Health Progress (30%) - Medication Adherence
       final allMeds = await _isar.medications.filter().isActiveEqualTo(true).findAll();
       int expected = 0;
       int taken = 0;
       final viewDate = selectedDate.value;
-      final isToday = viewDate.isSameDay(DateTime.now());
+
 
       for (var med in allMeds) {
         // Check if med was active on the selected date (Normalized to midnight)
@@ -337,7 +350,6 @@ class HomeController extends GetxController {
       if (viewDate.isSameDay(DateTime.now()) || viewDate.isAfter(DateTime.now())) {
         DateTime? nextDoseDateTime;
         String nextDoseName = '';
-        String nextDoseTimeStr = '';
         final locale = Get.locale?.languageCode ?? 'en';
         final todayStart = DateTime(now.year, now.month, now.day);
         
@@ -347,7 +359,6 @@ class HomeController extends GetxController {
           
           // Logic Audit: Find the earliest valid day for this medication that is either Today or in the Future
           DateTime? candidateDate;
-          String? candidateTimeStr;
 
           // 1. Check Today
           if (!todayStart.isBefore(medStartN) && (medEndN == null || !todayStart.isAfter(medEndN))) {
@@ -369,7 +380,6 @@ class HomeController extends GetxController {
               if (scheduledDate.isBefore(now)) continue;
               
               candidateDate = scheduledDate;
-              candidateTimeStr = timeStr;
               break; 
             }
           }
@@ -391,7 +401,6 @@ class HomeController extends GetxController {
 
             if (medEndN == null || !targetDay.isAfter(medEndN)) {
               candidateDate = DateTime(targetDay.year, targetDay.month, targetDay.day, bestTime.hour, bestTime.minute);
-              candidateTimeStr = firstTimeActionable.first;
             }
           }
 
@@ -400,7 +409,6 @@ class HomeController extends GetxController {
             if (nextDoseDateTime == null || candidateDate.isBefore(nextDoseDateTime)) {
               nextDoseDateTime = candidateDate;
               nextDoseName = med.name;
-              nextDoseTimeStr = candidateTimeStr!;
             }
           }
         }
@@ -515,27 +523,25 @@ class HomeController extends GetxController {
       stepsCount.value = stepLog?.steps ?? 0;
       stepsGoal.value = stepLog?.goal ?? 10000;
       stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
-      final double stepProgress = stepsProgress.value;
-
+      caloriesCount.value = stepLog?.calories ?? 0.0;
+      distanceCount.value = stepLog?.distance ?? 0.0;
+      
+      // ✅ Logic: Calculate Streak for Home Card
+      await _calculateActivityStreak();
+      
+      // ✅ Expert Metadata Injection
+      isHealthVerified.value = stepLog?.isManual == false;
+      if (stepLog?.lastSyncedAt != null) {
+        final locale = Get.locale?.languageCode ?? 'en';
+        healthLastSync.value = DateFormat.jm(locale).format(stepLog!.lastSyncedAt!).f;
+      } else {
+        healthLastSync.value = '';
+      }
       // 5. Work Progress (20%) - Attendance (Only if working day)
       final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
       workCompany.value = profile.companyName ?? '';
       workPosition.value = profile.jobPosition ?? '';
-      // WorkProfile.workingDays uses 0=Sun,1=Mon..6=Sat
-      // DateTime.weekday uses 1=Mon..7=Sun
-      // Convert: Sunday(7)->0, Monday(1)->1, etc.
-      final dayIndex = startOfDay.weekday == 7 ? 0 : startOfDay.weekday;
-      final isWorkDay = profile.workingDays.contains(dayIndex);
-      
-      final attendanceLog = await _isar.attendanceLogs.filter().dateEqualTo(startOfDay).findFirst();
-      // ✅ Fix: Non-work days should not penalize progress (treat as neutral 1.0)
-      final double workProgress;
-      if (!isWorkDay) {
-        workProgress = 1.0; // Day off - no penalty
-      } else {
-        workProgress = attendanceLog?.status == AttendanceStatus.present ? 1.0 : 0.0;
-      }
-      
+
       // Calculate Salary Countdown for Bento
       _updateSalaryCountdown(profile);
 
@@ -579,6 +585,63 @@ class HomeController extends GetxController {
       talker.handle(e, stack, '🔴 Home Data Load Error');
     } finally {
       _isBusy.value = false;
+    }
+  }
+
+  /// ✅ Logic: High-Precision Streak Engine (Synced with StepsController logic)
+  Future<void> _calculateActivityStreak() async {
+    try {
+      int streak = 0;
+      final now = DateTime.now();
+      
+      // Get logs for the last 60 days to be safe
+      final startRange = now.subtract(const Duration(days: 60));
+      final normalStart = DateTime(startRange.year, startRange.month, startRange.day);
+      final normalEnd = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+      
+      final allLogs = await _isar.stepLogs
+          .filter()
+          .dateBetween(normalStart, normalEnd, includeLower: true, includeUpper: false)
+          .findAll();
+          
+      final Map<String, StepLog> logMap = {};
+      for (var log in allLogs) {
+        final key = '${log.date.year}-${log.date.month}-${log.date.day}';
+        logMap[key] = log;
+      }
+      
+      DateTime cursor = DateTime(now.year, now.month, now.day);
+      
+      // 1. Check Today (Live data)
+      final todayKey = '${cursor.year}-${cursor.month}-${cursor.day}';
+      final todayLog = logMap[todayKey];
+      final int todaySteps = stepsCount.value;
+      final int todayGoal = todayLog?.goal ?? stepsGoal.value;
+      
+      if (todaySteps >= todayGoal && todayGoal > 0) {
+        streak = 1;
+        cursor = cursor.subtract(const Duration(days: 1));
+      } else {
+        // Today goal not reached yet, start counting from yesterday
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+      
+      // 2. Walk backwards
+      while (streak < 365) {
+        final key = '${cursor.year}-${cursor.month}-${cursor.day}';
+        final log = logMap[key];
+        
+        if (log != null && log.goal > 0 && log.steps >= log.goal) {
+          streak++;
+          cursor = cursor.subtract(const Duration(days: 1));
+        } else {
+          break; // Broken streak
+        }
+      }
+      
+      currentStreak.value = streak;
+    } catch (e) {
+      talker.error('Failed to calculate streak in HomeController: $e');
     }
   }
 
@@ -742,21 +805,5 @@ class HomeController extends GetxController {
     }
   }
 
-  void _debugStepsData() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    final log = await Get.find<StepRepository>().getStepLog(today);
-    
-    talker.info('''
-      🔍 DEBUG: Steps Data
-      ═════════════════════
-      Today: $today
-      Steps: ${log?.steps ?? 'NO DATA'}
-      Goal: ${log?.goal ?? 'NO DATA'}
-      Is Manual: ${log?.isManual ?? 'NO DATA'}
-      Last Synced: ${log?.lastSyncedAt ?? 'NEVER'}
-      Health Authorized: ${Get.find<HealthService>().isAuthorized.value}
-    ''');
-  }
+
 }

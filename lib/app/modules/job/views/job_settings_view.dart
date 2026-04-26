@@ -111,7 +111,7 @@ class JobSettingsView extends GetView<JobController> {
                 title: Text('shift_reminders'.tr),
                 value: controller.profile.value.remindersEnabled,
                 onChanged: (val) => controller.updateJobSettings(reminders: val),
-                activeColor: AppTheme.primary,
+                activeThumbColor: AppTheme.primary,
               )),
             ]),
 
@@ -182,7 +182,11 @@ class JobSettingsView extends GetView<JobController> {
                 selected: isSelected,
                 onSelected: (val) {
                   final days = List<int>.from(controller.profile.value.workingDays);
-                  if (val) days.add(i); else days.remove(i);
+                  if (val) {
+                    days.add(i);
+                  } else {
+                    days.remove(i);
+                  }
                   controller.updateJobSettings(workDays: days);
                 },
                 selectedColor: AppTheme.primary,
@@ -201,226 +205,229 @@ class JobSettingsView extends GetView<JobController> {
       if (workingDays.isEmpty) return const SizedBox.shrink();
 
     return Column(
-        children: workingDays.map((day) {
-          final shifts = controller.getShiftsForDay(day);
-          final hasOverride = controller.getCustomSchedules().containsKey(day.toString());
-          final isHoliday = controller.isDayHoliday(day);
+        children: [
+          ...workingDays.map((day) {
+            final shifts = controller.getShiftsForDay(day);
+            final hasOverride = controller.getCustomSchedules().containsKey(day.toString());
+            final isHoliday = controller.isDayHoliday(day);
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                  color: isHoliday 
-                      ? Colors.green.withAlpha(80) 
-                      : (hasOverride ? AppTheme.primary.withAlpha(80) : Theme.of(context).dividerColor.withAlpha(20))),
-              boxShadow: isHoliday 
-                  ? [BoxShadow(color: Colors.green.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))] 
-                  : (hasOverride ? [BoxShadow(color: AppTheme.primary.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))] : []),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.calendar_today, size: 18, color: isHoliday ? Colors.green : (hasOverride ? AppTheme.primary : Colors.grey)),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              DateFormat.EEEE(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + day)), 
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold, 
-                                fontSize: 15, 
-                                color: (hasOverride || isHoliday) ? null : Colors.grey
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: isHoliday 
+                        ? Colors.green.withAlpha(80) 
+                        : (hasOverride ? AppTheme.primary.withAlpha(80) : Theme.of(context).dividerColor.withAlpha(20))),
+                boxShadow: isHoliday 
+                    ? [BoxShadow(color: Colors.green.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))] 
+                    : (hasOverride ? [BoxShadow(color: AppTheme.primary.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))] : []),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(CupertinoIcons.calendar_today, size: 18, color: isHoliday ? Colors.green : (hasOverride ? AppTheme.primary : Colors.grey)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                DateFormat.EEEE(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + day)), 
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 15, 
+                                  color: (hasOverride || isHoliday) ? null : Colors.grey
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                      CupertinoSlidingSegmentedControl<bool>(
-                        groupValue: isHoliday,
-                        onValueChanged: (bool? val) {
-                          if (val != null) {
-                            controller.setCustomShifts(day, shifts, isHoliday: val);
-                          }
-                        },
-                      children: {
-                        false: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('work_shift'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                        true: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('holiday'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (isHoliday)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(16)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(CupertinoIcons.tree, size: 18, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Text('holiday'.tr, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14)),
-                      ],
-                    ),
-                  )
-                else
-                  ...shifts.asMap().entries.map((entry) {
-                    final i = entry.key;
-                    final s = entry.value;
-                    final start = s['start'] as int;
-                    final end = s['end'] as int;
-                    
-                    final durationMinutes = end >= start ? (end - start) : ((24 * 60 - start) + end);
-                    final durationHours = (durationMinutes / 60).toStringAsFixed(1);
-                    
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: i < shifts.length - 1 ? 12.0 : 0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: start ~/ 60, minute: start % 60));
-                                if (time != null) {
-                                  final newShifts = List<Map<String, dynamic>>.from(shifts);
-                                  newShifts[i] = {'start': time.hour * 60 + time.minute, 'end': end};
-                                  controller.setCustomShifts(day, newShifts, isHoliday: false);
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: hasOverride ? AppTheme.primary.withAlpha(15) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: hasOverride ? AppTheme.primary.withAlpha(30) : Theme.of(context).dividerColor.withAlpha(20)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(CupertinoIcons.sun_min_fill, size: 14, color: hasOverride ? AppTheme.primary : Colors.grey),
-                                        const SizedBox(width: 4),
-                                        Flexible(child: Text('start_time'.tr, style: const TextStyle(fontSize: 10, color: Colors.grey), overflow: TextOverflow.ellipsis)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(controller.formatMinutes(start).f, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hasOverride ? AppTheme.primary : null)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: hasOverride ? AppTheme.primary.withAlpha(20) : Colors.grey.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                            child: Text('${durationHours.f}h', style: TextStyle(fontSize: 10, color: hasOverride ? AppTheme.primary : Colors.grey, fontWeight: FontWeight.bold)),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: end ~/ 60, minute: end % 60));
-                                if (time != null) {
-                                  final newShifts = List<Map<String, dynamic>>.from(shifts);
-                                  newShifts[i] = {'start': start, 'end': time.hour * 60 + time.minute};
-                                  controller.setCustomShifts(day, newShifts, isHoliday: false);
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: hasOverride ? Colors.orange.withAlpha(15) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: hasOverride ? Colors.orange.withAlpha(30) : Theme.of(context).dividerColor.withAlpha(20)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Flexible(child: Text('end_time'.tr, style: const TextStyle(fontSize: 10, color: Colors.grey), overflow: TextOverflow.ellipsis)),
-                                        const SizedBox(width: 4),
-                                        Icon(CupertinoIcons.moon_stars_fill, size: 14, color: hasOverride ? Colors.orange : Colors.grey),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(controller.formatMinutes(end).f, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hasOverride ? Colors.orange : null)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (hasOverride && !isHoliday)
-                            IconButton(
-                              padding: const EdgeInsets.only(left: 8),
-                              constraints: const BoxConstraints(),
-                              icon: Icon(shifts.length == 1 ? CupertinoIcons.clear_circled_solid : CupertinoIcons.minus_circle_fill, size: 22, color: Colors.redAccent),
-                              onPressed: () {
-                                if (shifts.length == 1) {
-                                  controller.setCustomShifts(day, null, isHoliday: null);
-                                } else {
-                                  final newShifts = List<Map<String, dynamic>>.from(shifts);
-                                  newShifts.removeAt(i);
-                                  controller.setCustomShifts(day, newShifts, isHoliday: false);
-                                }
-                              },
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  if (!isHoliday && hasOverride)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            final newShifts = List<Map<String, dynamic>>.from(shifts);
-                            final lastEnd = newShifts.last['end'] as int;
-                            final newStart = (lastEnd + 60) % (24 * 60); // Default 1 hour break
-                            final newEnd = (newStart + 4 * 60) % (24 * 60); // Default 4 hour shift addition
-                            newShifts.add({'start': newStart, 'end': newEnd});
-                            controller.setCustomShifts(day, newShifts, isHoliday: false);
+                        CupertinoSlidingSegmentedControl<bool>(
+                          groupValue: isHoliday,
+                          onValueChanged: (bool? val) {
+                            if (val != null) {
+                              controller.setCustomShifts(day, shifts, isHoliday: val);
+                            }
                           },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withAlpha(20),
-                              borderRadius: BorderRadius.circular(20),
+                        children: {
+                          false: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('work_shift'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                          true: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('holiday'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (isHoliday)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(16)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(CupertinoIcons.tree, size: 18, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Text('holiday'.tr, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    ...shifts.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final s = entry.value;
+                      final start = s['start'] as int;
+                      final end = s['end'] as int;
+                      
+                      final durationMinutes = end >= start ? (end - start) : ((24 * 60 - start) + end);
+                      final durationHours = (durationMinutes / 60).toStringAsFixed(1);
+                      
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: i < shifts.length - 1 ? 12.0 : 0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () async {
+                                  final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: start ~/ 60, minute: start % 60));
+                                  if (time != null) {
+                                    final newShifts = List<Map<String, dynamic>>.from(shifts);
+                                    newShifts[i] = {'start': time.hour * 60 + time.minute, 'end': end};
+                                    controller.setCustomShifts(day, newShifts, isHoliday: false);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: hasOverride ? AppTheme.primary.withAlpha(15) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: hasOverride ? AppTheme.primary.withAlpha(30) : Theme.of(context).dividerColor.withAlpha(20)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(CupertinoIcons.sun_min_fill, size: 14, color: hasOverride ? AppTheme.primary : Colors.grey),
+                                          const SizedBox(width: 4),
+                                          Flexible(child: Text('start_time'.tr, style: const TextStyle(fontSize: 10, color: Colors.grey), overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(controller.formatMinutes(start).f, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hasOverride ? AppTheme.primary : null)),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(CupertinoIcons.plus_circle, size: 16, color: AppTheme.primary),
-                                const SizedBox(width: 6),
-                                Text('work_shift'.tr, style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.bold)),
-                              ],
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: hasOverride ? AppTheme.primary.withAlpha(20) : Colors.grey.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+                              child: Text('${durationHours.f}h', style: TextStyle(fontSize: 10, color: hasOverride ? AppTheme.primary : Colors.grey, fontWeight: FontWeight.bold)),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () async {
+                                  final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: end ~/ 60, minute: end % 60));
+                                  if (time != null) {
+                                    final newShifts = List<Map<String, dynamic>>.from(shifts);
+                                    newShifts[i] = {'start': start, 'end': time.hour * 60 + time.minute};
+                                    controller.setCustomShifts(day, newShifts, isHoliday: false);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: hasOverride ? Colors.orange.withAlpha(15) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: hasOverride ? Colors.orange.withAlpha(30) : Theme.of(context).dividerColor.withAlpha(20)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Flexible(child: Text('end_time'.tr, style: const TextStyle(fontSize: 10, color: Colors.grey), overflow: TextOverflow.ellipsis)),
+                                          const SizedBox(width: 4),
+                                          Icon(CupertinoIcons.moon_stars_fill, size: 14, color: hasOverride ? Colors.orange : Colors.grey),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(controller.formatMinutes(end).f, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hasOverride ? Colors.orange : null)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (hasOverride && !isHoliday)
+                              IconButton(
+                                padding: const EdgeInsets.only(left: 8),
+                                constraints: const BoxConstraints(),
+                                icon: Icon(shifts.length == 1 ? CupertinoIcons.clear_circled_solid : CupertinoIcons.minus_circle_fill, size: 22, color: Colors.redAccent),
+                                onPressed: () {
+                                  if (shifts.length == 1) {
+                                    controller.setCustomShifts(day, null, isHoliday: null);
+                                  } else {
+                                    final newShifts = List<Map<String, dynamic>>.from(shifts);
+                                    newShifts.removeAt(i);
+                                    controller.setCustomShifts(day, newShifts, isHoliday: false);
+                                  }
+                                },
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (!isHoliday && hasOverride)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              final newShifts = List<Map<String, dynamic>>.from(shifts);
+                              final lastEnd = newShifts.last['end'] as int;
+                              final newStart = (lastEnd + 60) % (24 * 60); // Default 1 hour break
+                              final newEnd = (newStart + 4 * 60) % (24 * 60); // Default 4 hour shift addition
+                              newShifts.add({'start': newStart, 'end': newEnd});
+                              controller.setCustomShifts(day, newShifts, isHoliday: false);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withAlpha(20),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.plus_circle, size: 16, color: AppTheme.primary),
+                                  const SizedBox(width: 6),
+                                  Text('work_shift'.tr, style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-              ],
-            ),
-          );
-        }).toList(),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
       );
     });
   }

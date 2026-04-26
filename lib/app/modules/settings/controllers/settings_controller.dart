@@ -174,8 +174,8 @@ class SettingsController extends GetxController {
       }
 
       // 1. Request/Verify Permissions
-      final batteryStatus = await notificationService.requestBatteryExemption();
-      final alarmStatus = await notificationService.checkExactAlarmPermission();
+      await notificationService.requestBatteryExemption();
+      await notificationService.checkExactAlarmPermission();
       final isStable = await notificationService.isSystemStable();
 
       // 2. Update Status Reactive UI

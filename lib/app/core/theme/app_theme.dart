@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/storage_keys.dart';
 
 class AppTheme {
   // iOS/Apple Style Aesthetics
@@ -25,11 +23,7 @@ class AppTheme {
     }
   }
 
-  static double _fontSizeScale(String sizeKey) => fontSizeScale(sizeKey);
-
   static TextTheme _resolveBaseTextTheme(String fontName) {
-    // Ensuring Arabic fonts have proper height for visibility
-    final double height = (fontName == 'Amiri' || fontName == 'Cairo') ? 1.4 : 1.2;
     
     try {
       switch (fontName) {
@@ -58,7 +52,6 @@ class AppTheme {
         fontSize: (style.fontSize ?? 14) * scale,
         color: primaryColor,
         fontWeight: isBold ? FontWeight.bold : style.fontWeight,
-        height: (fontName == 'Amiri') ? 1.5 : null, // Amiri needs more line height
       );
     }
 
@@ -81,23 +74,14 @@ class AppTheme {
     );
   }
 
-  static (String, double) _readFontPrefs() {
-    try {
-      final box = GetStorage();
-      final String fontName = box.read('fontType') ?? 'Rubik';
-      final String sizeKey  = box.read('fontSize') ?? 'medium';
-      return (fontName, _fontSizeScale(sizeKey));
-    } catch (_) {
-      return ('Rubik', 1.0);
-    }
-  }
+
 
   static ThemeData buildTheme({
     required bool isDark,
     required String fontName,
     required String fontSizeKey,
   }) {
-    final scale = _fontSizeScale(fontSizeKey);
+    final scale = fontSizeScale(fontSizeKey);
     final bg = isDark ? backgroundDark : backgroundLight;
     final surface = isDark ? surfaceDark : surfaceLight;
     final textPrimary = isDark ? textPrimaryDark : textPrimaryLight;

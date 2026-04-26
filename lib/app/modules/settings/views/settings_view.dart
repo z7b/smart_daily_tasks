@@ -253,7 +253,6 @@ class SettingsView extends GetView<SettingsController> {
 
   Widget _buildNumberFormatTile(BuildContext context) {
     final theme = Theme.of(context);
-    final isAr = Get.locale?.languageCode == 'ar';
     
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

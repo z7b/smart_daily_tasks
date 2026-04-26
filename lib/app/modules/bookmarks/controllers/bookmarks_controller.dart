@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+
 import '../../../data/models/bookmark_model.dart';
 import '../../../data/providers/bookmark_repository.dart';
 import '../../../core/helpers/log_helper.dart';
@@ -187,13 +187,6 @@ class BookmarksController extends GetxController {
     urlController.text = bookmark.url;
     categoryController.text = bookmark.category ?? '';
     descriptionController.text = bookmark.description ?? '';
-  }
-
-  void _clearForm() {
-    titleController.clear();
-    urlController.clear();
-    categoryController.clear();
-    descriptionController.clear();
   }
 
   @override

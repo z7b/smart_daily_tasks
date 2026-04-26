@@ -19,6 +19,7 @@ abstract class Routes {
   static const STEPS = _Paths.STEPS;
   static const JOB = _Paths.JOB;
   static const JOB_SETTINGS = _Paths.JOB_SETTINGS;
+  static const HEALTH_RATIONALE = _Paths.HEALTH_RATIONALE;
 }
 
 abstract class _Paths {
@@ -40,4 +41,5 @@ abstract class _Paths {
   static const STEPS = '/steps';
   static const JOB = '/job';
   static const JOB_SETTINGS = '/job-settings';
+  static const HEALTH_RATIONALE = '/health-rationale';
 }

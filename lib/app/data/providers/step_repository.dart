@@ -1,7 +1,6 @@
 import 'package:isar/isar.dart';
 import 'package:get_storage/get_storage.dart';
 import '../models/step_log_model.dart';
-import '../../core/helpers/log_helper.dart';
 
 class StepRepository {
   final Isar _isar;
@@ -18,6 +17,8 @@ class StepRepository {
     DateTime date,
     int steps, {
     bool isManual = false,
+    double? calories,
+    double? distance,
   }) async {
     final start = DateTime(date.year, date.month, date.day);
     int finalSteps = steps;
@@ -30,8 +31,13 @@ class StepRepository {
       if (existing != null) {
         finalSteps = isManual ? (existing.steps + steps) : steps;
         existing.steps = finalSteps;
-        existing.isManual = isManual; // Tag the log's provenance
-        if (existing.goal == 10000) existing.goal = _currentGoal;
+        existing.isManual = isManual;
+        existing.goal = _currentGoal; 
+        
+        // Only update if values are provided and not zero (to avoid overwriting real data with zeros)
+        if (calories != null && calories > 0) existing.calories = calories;
+        if (distance != null && distance > 0) existing.distance = distance;
+        
         await _isar.stepLogs.put(existing);
       } else {
         await _isar.stepLogs.put(
@@ -39,6 +45,8 @@ class StepRepository {
             date: start, 
             steps: finalSteps, 
             goal: _currentGoal,
+            calories: calories ?? 0.0,
+            distance: distance ?? 0.0,
             isManual: isManual,
           ),
         );

@@ -11,10 +11,12 @@ class StepLog {
 
   int steps;
   int goal;
+  double calories; // Energy burned (kcal)
+  double distance; // Distance walked (meters)
   bool isManual;
   
   @Index()
-  DateTime lastSyncedAt = DateTime.now();
+  DateTime? lastSyncedAt;
 
   double get progress => goal > 0 ? (steps / goal).clamp(0.0, 1.0) : 0.0;
 
@@ -23,6 +25,8 @@ class StepLog {
     required this.date,
     this.steps = 0,
     this.goal = 10000,
+    this.calories = 0.0,
+    this.distance = 0.0,
     this.isManual = false,
     DateTime? lastSyncedAt,
   }) : lastSyncedAt = lastSyncedAt ?? DateTime.now();
@@ -32,6 +36,8 @@ class StepLog {
     DateTime? date,
     int? steps,
     int? goal,
+    double? calories,
+    double? distance,
     bool? isManual,
     DateTime? lastSyncedAt,
   }) {
@@ -40,6 +46,9 @@ class StepLog {
       date: date ?? this.date,
       steps: steps ?? this.steps,
       goal: goal ?? this.goal,
+      calories: calories ?? this.calories,
+      distance: distance ?? this.distance,
+      isManual: isManual ?? this.isManual,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }
@@ -50,8 +59,10 @@ class StepLog {
       'date': date.toIso8601String(),
       'steps': steps,
       'goal': goal,
+      'calories': calories,
+      'distance': distance,
       'isManual': isManual,
-      'lastSyncedAt': lastSyncedAt.toIso8601String(),
+      'lastSyncedAt': lastSyncedAt?.toIso8601String(),
     };
   }
 }

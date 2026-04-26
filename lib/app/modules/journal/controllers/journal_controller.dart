@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:isar/isar.dart';
+
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../data/providers/journal_repository.dart';

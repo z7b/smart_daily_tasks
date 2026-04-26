@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_theme.dart';
+
 import '../controllers/home_controller.dart';
 import '../../../routes/app_routes.dart';
 

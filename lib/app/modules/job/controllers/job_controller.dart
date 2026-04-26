@@ -7,7 +7,7 @@ import '../../../data/models/attendance_log_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
-import '../../../core/extensions/date_time_extensions.dart';
+
 import 'package:isar/isar.dart';
 
 enum JobAnalyticsPeriod { weekly, monthly, yearly }
@@ -100,10 +100,12 @@ class JobController extends GetxController {
       0,
     ).day;
 
-    if (salDay > daysInPrevMonth)
+    if (salDay > daysInPrevMonth) {
       prevSalary = DateTime(now.year, now.month, daysInPrevMonth);
-    if (salDay > daysInNextMonth)
+    }
+    if (salDay > daysInNextMonth) {
       nextSalary = DateTime(now.year, now.month + 1, daysInNextMonth);
+    }
 
     if (now.isAfter(prevSalary) || now.isAtSameMomentAs(prevSalary)) {
       // In current cycle looking ahead to next month
@@ -638,7 +640,7 @@ class JobController extends GetxController {
 
       // Logic: id = SHIFT_OFFSET + day
       await service.scheduleWeeklyNotification(
-        id: NotificationService.SHIFT_OFFSET + day,
+        id: NotificationService.shiftOffset + day,
         title: 'job_reminder_title'.tr, // "Work Duty"
         body: 'job_reminder_msg'.trParams({
           'time': formatMinutes(startMinGlobal),
@@ -653,7 +655,7 @@ class JobController extends GetxController {
   void _cancelShiftReminders() {
     final service = Get.find<NotificationService>();
     for (int i = 0; i <= 7; i++) {
-      service.cancelNotification(NotificationService.SHIFT_OFFSET + i);
+      service.cancelNotification(NotificationService.shiftOffset + i);
     }
   }
 

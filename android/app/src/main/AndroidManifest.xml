@@ -19,8 +19,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
 
-    <!-- Health & Activity Permissions (Dual-Stack for Health Connect & Android 14) -->
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <!-- Health Connect natively does not require ACTIVITY_RECOGNITION -->
     
     <!-- Location Permissions (Required for some legacy Huawei/Samsung health sensors) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -83,6 +82,18 @@
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
+        
+        <!-- ✅ Highest Google Standards: Activity Alias for Android 14+ Health Privacy Dashboard -->
+        <activity-alias
+            android:name="com.example.smart_daily_tasks.ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity="com.example.smart_daily_tasks.MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -120,6 +131,11 @@
         <meta-data
             android:name="health_permissions_rationale"
             android:resource="@string/health_permissions_rationale" />
+
+        <!-- ✅ Crucial: Health Connect Permission Mapping (Fixes "Required Update" status) -->
+        <meta-data android:name="com.google.android.health.permission.READ_STEPS" android:value="true" />
+        <meta-data android:name="com.google.android.health.permission.READ_ACTIVE_CALORIES_BURNED" android:value="true" />
+        <meta-data android:name="com.google.android.health.permission.READ_TOTAL_CALORIES_BURNED" android:value="true" />
     </application>
 
     <queries>

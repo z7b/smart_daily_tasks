@@ -47,23 +47,28 @@ const WorkProfileSchema = CollectionSchema(
       name: r'monthlySalary',
       type: IsarType.double,
     ),
-    r'remindersEnabled': PropertySchema(
+    r'officialWorkHours': PropertySchema(
       id: 6,
+      name: r'officialWorkHours',
+      type: IsarType.double,
+    ),
+    r'remindersEnabled': PropertySchema(
+      id: 7,
       name: r'remindersEnabled',
       type: IsarType.bool,
     ),
     r'salaryDay': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'salaryDay',
       type: IsarType.long,
     ),
     r'startMinutes': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'startMinutes',
       type: IsarType.long,
     ),
     r'workingDays': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'workingDays',
       type: IsarType.longList,
     )
@@ -128,10 +133,11 @@ void _workProfileSerialize(
   writer.writeString(offsets[3], object.jobPosition);
   writer.writeString(offsets[4], object.jobTitle);
   writer.writeDouble(offsets[5], object.monthlySalary);
-  writer.writeBool(offsets[6], object.remindersEnabled);
-  writer.writeLong(offsets[7], object.salaryDay);
-  writer.writeLong(offsets[8], object.startMinutes);
-  writer.writeLongList(offsets[9], object.workingDays);
+  writer.writeDouble(offsets[6], object.officialWorkHours);
+  writer.writeBool(offsets[7], object.remindersEnabled);
+  writer.writeLong(offsets[8], object.salaryDay);
+  writer.writeLong(offsets[9], object.startMinutes);
+  writer.writeLongList(offsets[10], object.workingDays);
 }
 
 WorkProfile _workProfileDeserialize(
@@ -148,10 +154,11 @@ WorkProfile _workProfileDeserialize(
     jobPosition: reader.readStringOrNull(offsets[3]),
     jobTitle: reader.readStringOrNull(offsets[4]),
     monthlySalary: reader.readDoubleOrNull(offsets[5]),
-    remindersEnabled: reader.readBoolOrNull(offsets[6]) ?? true,
-    salaryDay: reader.readLongOrNull(offsets[7]) ?? 25,
-    startMinutes: reader.readLongOrNull(offsets[8]) ?? 540,
-    workingDays: reader.readLongList(offsets[9]) ?? const [1, 2, 3, 4, 5],
+    officialWorkHours: reader.readDoubleOrNull(offsets[6]),
+    remindersEnabled: reader.readBoolOrNull(offsets[7]) ?? true,
+    salaryDay: reader.readLongOrNull(offsets[8]) ?? 25,
+    startMinutes: reader.readLongOrNull(offsets[9]) ?? 540,
+    workingDays: reader.readLongList(offsets[10]) ?? const [1, 2, 3, 4, 5],
   );
   return object;
 }
@@ -176,12 +183,14 @@ P _workProfileDeserializeProp<P>(
     case 5:
       return (reader.readDoubleOrNull(offset)) as P;
     case 6:
-      return (reader.readBoolOrNull(offset) ?? true) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 7:
-      return (reader.readLongOrNull(offset) ?? 25) as P;
+      return (reader.readBoolOrNull(offset) ?? true) as P;
     case 8:
-      return (reader.readLongOrNull(offset) ?? 540) as P;
+      return (reader.readLongOrNull(offset) ?? 25) as P;
     case 9:
+      return (reader.readLongOrNull(offset) ?? 540) as P;
+    case 10:
       return (reader.readLongList(offset) ?? const [1, 2, 3, 4, 5]) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1090,6 +1099,90 @@ extension WorkProfileQueryFilter
   }
 
   QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'officialWorkHours',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'officialWorkHours',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'officialWorkHours',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'officialWorkHours',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'officialWorkHours',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      officialWorkHoursBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'officialWorkHours',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
       remindersEnabledEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1441,6 +1534,20 @@ extension WorkProfileQuerySortBy
   }
 
   QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      sortByOfficialWorkHours() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'officialWorkHours', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      sortByOfficialWorkHoursDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'officialWorkHours', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
       sortByRemindersEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remindersEnabled', Sort.asc);
@@ -1570,6 +1677,20 @@ extension WorkProfileQuerySortThenBy
   }
 
   QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      thenByOfficialWorkHours() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'officialWorkHours', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      thenByOfficialWorkHoursDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'officialWorkHours', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
       thenByRemindersEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remindersEnabled', Sort.asc);
@@ -1653,6 +1774,13 @@ extension WorkProfileQueryWhereDistinct
   }
 
   QueryBuilder<WorkProfile, WorkProfile, QDistinct>
+      distinctByOfficialWorkHours() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'officialWorkHours');
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QDistinct>
       distinctByRemindersEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'remindersEnabled');
@@ -1720,6 +1848,13 @@ extension WorkProfileQueryProperty
   QueryBuilder<WorkProfile, double?, QQueryOperations> monthlySalaryProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'monthlySalary');
+    });
+  }
+
+  QueryBuilder<WorkProfile, double?, QQueryOperations>
+      officialWorkHoursProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'officialWorkHours');
     });
   }
 

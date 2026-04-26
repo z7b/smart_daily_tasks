@@ -10,9 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/bindings/initial_binding.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:smart_daily_tasks/app/core/translations/messages.dart';
-import 'package:smart_daily_tasks/app/core/theme/app_theme.dart';
 import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
 import 'package:smart_daily_tasks/app/core/services/security_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_service.dart';
@@ -44,6 +42,46 @@ import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
 
+import 'package:workmanager/workmanager.dart';
+
+// ✅ Phase 6: Expert Background Sync Dispatcher (Google Standards)
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      // Background isolate has its own memory; we must re-init essential services
+      final dir = await getApplicationDocumentsDirectory();
+      
+      // Open Isar (Background Instance)
+      final isar = await Isar.open([
+        TaskSchema,
+        NoteSchema,
+        JournalSchema,
+        CalendarEventSchema,
+        BookmarkSchema,
+        BookSchema,
+        MedicationSchema,
+        StepLogSchema,
+        WorkProfileSchema,
+        AttendanceLogSchema,
+      ], directory: dir.path, inspector: false);
+
+      // Trigger the specialized background sync pulse
+      final healthService = HealthService(isar);
+      await healthService.init(); 
+      
+      if (healthService.isAuthorized.value == true) {
+        await healthService.fetchAndPersistSteps();
+      }
+
+      await isar.close();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -55,6 +93,12 @@ void main() async {
   };
 
   talker.info('🚀 Life OS Initializing...');
+  
+  // ✅ Initialize Background Synchronization
+  Workmanager().initialize(
+    callbackDispatcher,
+  );
+
   tz.initializeTimeZones();
   await GetStorage.init();
   runApp(const AppBootstrapper());
@@ -148,8 +192,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
         talker.info('♻️ Reusing existing Isar singleton instance');
       }
 
-      if (isar == null)
+      if (isar == null) {
         throw Exception('Failed to initialize database after retries');
+      }
       Get.put<Isar>(isar, permanent: true);
 
       // ✅ Step 2: Register Repositories

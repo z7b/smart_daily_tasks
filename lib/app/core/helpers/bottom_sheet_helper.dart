@@ -13,7 +13,7 @@ class BottomSheetHelper {
 
     // 2. استخدام السياق (Context) الآمن
     final ctx = Get.overlayContext ?? Get.context;
-    if (ctx == null) return null;
+    if (ctx == null || !ctx.mounted) return null;
 
     // 3. بناء النافذة
     return await showModalBottomSheet<T>(

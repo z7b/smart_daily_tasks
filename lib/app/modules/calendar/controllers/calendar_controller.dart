@@ -11,7 +11,7 @@ import '../../../data/providers/calendar_repository.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../data/providers/medication_repository.dart';
 
-import '../../../core/theme/app_theme.dart';
+
 import '../../../core/helpers/log_helper.dart';
 import 'dart:async';
 

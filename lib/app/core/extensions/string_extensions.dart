@@ -21,5 +21,5 @@ extension StringNormalization on String {
   }
 
   /// Combined search normalization (Lowercase + Arabic Normalization)
-  String get searchNormalized => this.toLowerCase().normalizeArabic();
+  String get searchNormalized => toLowerCase().normalizeArabic();
 }

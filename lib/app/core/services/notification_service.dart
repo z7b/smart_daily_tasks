@@ -3,6 +3,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../helpers/log_helper.dart';
 
@@ -13,10 +14,11 @@ class NotificationService extends GetxService {
   final isInitialized = false.obs;
   
   // 🛡️ Global ID Governance (Phase 4: Triple Hardening)
-  static const int MED_OFFSET = 100000000;
-  static const int TASK_OFFSET = 200000000;
-  static const int SHIFT_OFFSET = 300000000;
-  static const int CALENDAR_OFFSET = 400000000;
+  static const int medOffset = 100000000;
+  static const int taskOffset = 200000000;
+  static const int shiftOffset = 300000000;
+  static const int calendarOffset = 400000000;
+  static const int stepsOffset = 500000000;
 
   /// ✅ Phase 4: Deterministic ID Strategy
   /// Ensures notifications are consistent across app installs/restores.
@@ -80,6 +82,20 @@ class NotificationService extends GetxService {
             AndroidFlutterLocalNotificationsPlugin
           >()
           ?.createNotificationChannel(shiftChannel);
+
+      // Create channel for steps smart reminders
+      const AndroidNotificationChannel stepsChannel = AndroidNotificationChannel(
+        'steps_smart_channel',
+        'خطواتي',
+        description: 'تذكيرات ذكية للمشي والنشاط',
+        importance: Importance.high,
+      );
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(stepsChannel);
           
       // ✅ Defer permissions explicitly to prevent racing with Health Service during boot
       Future.delayed(const Duration(seconds: 5), () {
@@ -161,6 +177,7 @@ class NotificationService extends GetxService {
     required String title,
     required String body,
     required DateTime scheduledTime,
+    String? largeIcon,
   }) async {
     // Safety check for initialization
     if (!isInitialized.value) {
@@ -196,7 +213,7 @@ class NotificationService extends GetxService {
         title,
         body,
         tzTime,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_tasks_channel',
             'Smart Daily Tasks',
@@ -204,6 +221,8 @@ class NotificationService extends GetxService {
             importance: Importance.max,
             priority: Priority.high,
             showWhen: true,
+            subText: 'Life OS',
+            largeIcon: largeIcon != null ? DrawableResourceAndroidBitmap(largeIcon) : null,
           ),
         ),
         androidScheduleMode: canScheduleExact 
@@ -356,5 +375,178 @@ class NotificationService extends GetxService {
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Weekly notification scheduling failed');
     }
+  }
+
+  /// ✅ Smart Steps Notification: Premium RTL Arabic notification
+  /// Layout (RTL): شعار التطبيق (يسار) ← النص (وسط) ← الصورة (يمين)
+  /// Android automatically places largeIcon on the right in RTL mode
+  Future<void> showSmartStepsNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? bigText,
+    String? largeIcon,
+  }) async {
+    if (!isInitialized.value) await _waitForInit();
+    
+    if (!(await Permission.notification.isGranted)) return;
+
+    try {
+      // ✅ Expert: largeIcon appears on the RIGHT in RTL (Arabic) — exactly where we want it
+      // The small app icon (@mipmap/ic_launcher) appears on the LEFT automatically
+      AndroidBitmap<Object>? iconBitmap;
+      if (largeIcon != null) {
+        iconBitmap = DrawableResourceAndroidBitmap(largeIcon);
+      }
+
+      await flutterLocalNotificationsPlugin.show(
+        stepsOffset + id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'steps_smart_channel',
+            'خطواتي',
+            channelDescription: 'تذكيرات ذكية للمشي والنشاط',
+            importance: Importance.high,
+            priority: Priority.high,
+            showWhen: true,
+            // ✅ Image on the right (RTL) with no background — Android crops to circle
+            largeIcon: iconBitmap,
+            // ✅ App name as subtext under notification
+            subText: 'Life OS',
+            styleInformation: bigText != null
+                ? BigTextStyleInformation(
+                    bigText,
+                    contentTitle: title,
+                    summaryText: 'خطواتي • نشاطك اليومي',
+                    htmlFormatBigText: false,
+                    htmlFormatContentTitle: false,
+                  )
+                : null,
+            category: AndroidNotificationCategory.reminder,
+          ),
+        ),
+        payload: 'steps_smart',
+      );
+      talker.info('🚶 Smart Steps Notification Sent: $title');
+    } on PlatformException catch (e) {
+      // ✅ Fallback: If largeIcon resource fails, send without it
+      talker.error('❌ Large Icon resource error: ${e.message}. Sending without icon.');
+      await flutterLocalNotificationsPlugin.show(
+        stepsOffset + id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'steps_smart_channel',
+            'خطواتي',
+            channelDescription: 'تذكيرات ذكية للمشي والنشاط',
+            importance: Importance.high,
+            priority: Priority.high,
+            showWhen: true,
+            subText: 'Life OS',
+            styleInformation: bigText != null
+                ? BigTextStyleInformation(
+                    bigText,
+                    contentTitle: title,
+                    summaryText: 'خطواتي • نشاطك اليومي',
+                  )
+                : null,
+            category: AndroidNotificationCategory.reminder,
+          ),
+        ),
+        payload: 'steps_smart',
+      );
+    } catch (e, stack) {
+      talker.handle(e, stack, '❌ Smart Steps Notification Failed');
+    }
+  }
+
+  /// ✅ Schedule daily smart steps reminders at key activity hours
+  Future<void> scheduleSmartStepsReminders({
+    required int goal,
+    required int currentSteps,
+  }) async {
+    if (!isInitialized.value) await _waitForInit();
+    if (!(await Permission.notification.isGranted)) return;
+
+    // Cancel existing step reminders before rescheduling
+    for (int i = 1; i <= 4; i++) {
+      await cancelNotification(stepsOffset + i);
+    }
+
+    final now = DateTime.now();
+    final progress = goal > 0 ? (currentSteps / goal).clamp(0.0, 1.0) : 0.0;
+    final remaining = (goal - currentSteps).clamp(0, 999999);
+    final goalFormatted = _formatNumber(goal);
+    final remainingFormatted = _formatNumber(remaining);
+
+    // Morning reminder (8:00 AM)
+    if (now.hour < 8) {
+      final morningTime = DateTime(now.year, now.month, now.day, 8, 0);
+      await scheduleNotification(
+        id: stepsOffset + 1,
+        title: 'صباح النشاط! ☀️',
+        body: 'هدفك اليوم $goalFormatted خطوة\nخطوة صغيرة الآن... تصنع فرقاً كبيراً لاحقاً 💪',
+        scheduledTime: morningTime,
+        largeIcon: 'walker',
+      );
+    }
+
+    // Midday check (1:00 PM)
+    if (now.hour < 13 && progress < 0.5) {
+      final middayTime = DateTime(now.year, now.month, now.day, 13, 0);
+      await scheduleNotification(
+        id: stepsOffset + 2,
+        title: 'وقت التحرك! 🚶‍♂️',
+        body: 'باقي $remainingFormatted خطوة لهدفك\nاستغل وقت الظهيرة للمشي ☕',
+        scheduledTime: middayTime,
+        largeIcon: 'walker',
+      );
+    }
+
+    // Evening push (6:00 PM)
+    if (now.hour < 18 && progress < 0.8) {
+      final eveningTime = DateTime(now.year, now.month, now.day, 18, 0);
+      await scheduleNotification(
+        id: stepsOffset + 3,
+        title: 'أنت قريب من إنجازه! 🔥',
+        body: 'هدفك اليوم $goalFormatted خطوة\nأفضل وقت للمشي هو بين 6 - 8 مساءً 🏃‍♂️',
+        scheduledTime: eveningTime,
+        largeIcon: 'walker',
+      );
+    }
+
+    // Night celebration or final push (9:00 PM)
+    if (now.hour < 21) {
+      final nightTime = DateTime(now.year, now.month, now.day, 21, 0);
+      if (progress >= 1.0) {
+        await scheduleNotification(
+          id: stepsOffset + 4,
+          title: 'بطل حقيقي! 🏆',
+          body: 'لقد حققت هدفك اليوم بنجاح!\nاحرص على الراحة والنوم الجيد 😴',
+          scheduledTime: nightTime,
+          largeIcon: 'walker',
+        );
+      } else {
+        await scheduleNotification(
+          id: stepsOffset + 4,
+          title: 'فرصة أخيرة اليوم! 🌟',
+          body: 'باقي $remainingFormatted خطوة فقط\n10 دقائق مشي قبل النوم تفرق كثيراً 🌙',
+          scheduledTime: nightTime,
+          largeIcon: 'walker',
+        );
+      }
+    }
+
+    talker.info('🔔 Smart Steps Reminders Scheduled (progress: ${(progress * 100).toInt()}%)');
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(number % 1000 == 0 ? 0 : 1)},${(number % 1000).toString().padLeft(3, '0').substring(0, 3)}';
+    }
+    return number.toString();
   }
 }

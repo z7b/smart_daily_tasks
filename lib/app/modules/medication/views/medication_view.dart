@@ -642,7 +642,7 @@ class MedicationView extends GetView<MedicationController> {
                                   ? 7
                                   : durationDays.value,
                               underline: const SizedBox(),
-                              items: ([3, 5, 7, 10, 14, 30, durationDays.value].toSet().toList()..sort())
+                              items: ({3, 5, 7, 10, 14, 30, durationDays.value}.toList()..sort())
                                   .map((e) => DropdownMenuItem(
                                       value: e,
                                       child: Text('${e.f} ${'days'.tr}')))
@@ -663,6 +663,27 @@ class MedicationView extends GetView<MedicationController> {
                                     selected: selectedType.value == type,
                                     onSelected: (_) =>
                                         selectedType.value = type,
+                                  ))
+                              .toList(),
+                        )),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('med_instruction'.tr, theme),
+                    Obx(() => Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            MedicationInstruction.beforeFood,
+                            MedicationInstruction.afterFood,
+                            MedicationInstruction.withFood,
+                            MedicationInstruction.emptyStomach,
+                            MedicationInstruction.beforeSleep,
+                            MedicationInstruction.none,
+                          ]
+                              .map((ins) => ChoiceChip(
+                                    label: Text(_getInstructionText(ins)),
+                                    selected: selectedInstruction.value == ins,
+                                    onSelected: (_) =>
+                                        selectedInstruction.value = ins,
                                   ))
                               .toList(),
                         )),
@@ -697,7 +718,7 @@ class MedicationView extends GetView<MedicationController> {
                                   const Spacer(),
                                   DropdownButton<int>(
                                     value: frequencyCount.value,
-                                    items: ([1, 2, 3, 4, 5, 6, frequencyCount.value].toSet().toList()..sort())
+                                    items: ({1, 2, 3, 4, 5, 6, frequencyCount.value}.toList()..sort())
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
@@ -722,7 +743,7 @@ class MedicationView extends GetView<MedicationController> {
                                   const Spacer(),
                                   DropdownButton<int>(
                                     value: intervalHours.value,
-                                    items: ([4, 6, 8, 12, intervalHours.value].toSet().toList()..sort())
+                                    items: ({4, 6, 8, 12, intervalHours.value}.toList()..sort())
                                         .map((e) => DropdownMenuItem(
                                             value: e,
                                             child:
@@ -858,24 +879,7 @@ class MedicationView extends GetView<MedicationController> {
       ),
     );
   }
-  Widget _statusBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
+
 
   Widget _miniInfoBadge(String label, Color? color) {
     return Container(

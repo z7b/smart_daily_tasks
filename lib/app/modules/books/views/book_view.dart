@@ -623,7 +623,7 @@ class BookView extends GetView<BookController> {
                      child: const Icon(CupertinoIcons.book_solid, color: AppTheme.primary, size: 24),
                    ),
                    const SizedBox(width: 14),
-                   Text('update_progress'.tr ?? 'Update Progress',
+                   Text('update_progress'.tr,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ],
               ),

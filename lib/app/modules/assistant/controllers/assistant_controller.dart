@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:isar/isar.dart';
@@ -7,7 +6,6 @@ import '../../../data/models/note_model.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../data/providers/note_repository.dart';
-import '../../../data/providers/journal_repository.dart';
 import '../../../data/providers/medication_repository.dart';
 import '../../../data/providers/step_repository.dart';
 import '../../../core/helpers/log_helper.dart';
@@ -223,7 +221,7 @@ class AssistantController extends GetxController {
         } else if (normalized.contains('تقويم') ||
             normalized.contains('calendar')) {
           Get.toNamed('/calendar');
-          responseText = '📅 ' + 'calendar'.tr;
+          responseText = '📅 ${'calendar'.tr}';
         } else {
           // 🛡️ Smart Fallback: Guessing the user's intent if it looks like a title
           final wordCount = rawText.split(' ').length;
@@ -239,7 +237,7 @@ class AssistantController extends GetxController {
       messages.add(Message(text: responseText, isUser: false));
     } catch (e, stack) {
       talker.handle(e, stack, '🤖 Assistant command processing error');
-      messages.add(Message(text: 'error'.tr + ': $e', isUser: false));
+      messages.add(Message(text: '${'error'.tr}: $e', isUser: false));
     }
   }
 
@@ -409,7 +407,7 @@ class AssistantController extends GetxController {
 
       return 'all_meds_taken_today'.tr;
     } catch (e) {
-      return 'error'.tr + ': $e';
+      return '${'error'.tr}: $e';
     }
   }
 }

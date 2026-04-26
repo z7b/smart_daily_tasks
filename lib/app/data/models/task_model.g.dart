@@ -115,6 +115,19 @@ const TaskSchema = CollectionSchema(
         )
       ],
     ),
+    r'scheduledEnd': IndexSchema(
+      id: 3012965124172800662,
+      name: r'scheduledEnd',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'scheduledEnd',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
     r'color': IndexSchema(
       id: 880366885425937065,
       name: r'color',
@@ -371,6 +384,14 @@ extension TaskQueryWhereSort on QueryBuilder<Task, Task, QWhere> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterWhere> anyScheduledEnd() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'scheduledEnd'),
+      );
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterWhere> anyColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -563,6 +584,116 @@ extension TaskQueryWhere on QueryBuilder<Task, Task, QWhereClause> {
         lower: [lowerScheduledAt],
         includeLower: includeLower,
         upper: [upperScheduledAt],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'scheduledEnd',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'scheduledEnd',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndEqualTo(
+      DateTime? scheduledEnd) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'scheduledEnd',
+        value: [scheduledEnd],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndNotEqualTo(
+      DateTime? scheduledEnd) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scheduledEnd',
+              lower: [],
+              upper: [scheduledEnd],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scheduledEnd',
+              lower: [scheduledEnd],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scheduledEnd',
+              lower: [scheduledEnd],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'scheduledEnd',
+              lower: [],
+              upper: [scheduledEnd],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndGreaterThan(
+    DateTime? scheduledEnd, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'scheduledEnd',
+        lower: [scheduledEnd],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndLessThan(
+    DateTime? scheduledEnd, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'scheduledEnd',
+        lower: [],
+        upper: [scheduledEnd],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> scheduledEndBetween(
+    DateTime? lowerScheduledEnd,
+    DateTime? upperScheduledEnd, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'scheduledEnd',
+        lower: [lowerScheduledEnd],
+        includeLower: includeLower,
+        upper: [upperScheduledEnd],
         includeUpper: includeUpper,
       ));
     });

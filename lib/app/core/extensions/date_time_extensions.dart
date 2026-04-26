@@ -8,8 +8,8 @@ extension DateTimeExtensions on DateTime {
 
   /// Returns true if this date is within the range [start] and [end] (inclusive).
   bool isBetween(DateTime start, DateTime end) {
-    return (isAfter(start) || isSameDay(start)) && 
-           (isBefore(end) || isSameDay(end));
+    return (isAfter(start) || isSameDay(start)) &&
+        (isBefore(end) || isSameDay(end));
   }
 
   /// Returns a normalized date (time set to 00:00:00).
@@ -25,11 +25,11 @@ extension DateTimeExtensions on DateTime {
   DateTime nextOccurrenceOfMonthDay(int dayOfMonth) {
     // Clamp to valid day range
     final clampedDay = dayOfMonth.clamp(1, 31);
-    
+
     // Try current month first if not already passed
     DateTime candidate = DateTime(year, month, min(clampedDay, daysInMonth));
-    
-    if (!this.normalized.isBefore(candidate)) {
+
+    if (!normalized.isBefore(candidate)) {
       // Move to next month (current day is same or after candidate)
       int nextMonth = month + 1;
       int nextYear = year;
@@ -37,11 +37,11 @@ extension DateTimeExtensions on DateTime {
         nextMonth = 1;
         nextYear++;
       }
-      
+
       int daysInNext = DateTime(nextYear, nextMonth + 1, 0).day;
       candidate = DateTime(nextYear, nextMonth, min(clampedDay, daysInNext));
     }
-    
+
     return candidate;
   }
 }

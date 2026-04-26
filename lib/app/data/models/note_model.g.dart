@@ -135,12 +135,7 @@ int _noteEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  {
-    final value = object.contentLower;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
+  bytesCount += 3 + object.contentLower.length * 3;
   bytesCount += 3 + object.title.length * 3;
   bytesCount += 3 + object.titleLower.length * 3;
   return bytesCount;
@@ -196,7 +191,7 @@ P _noteDeserializeProp<P>(
     case 2:
       return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readDateTime(offset)) as P;
     case 5:
@@ -566,28 +561,8 @@ extension NoteQueryWhere on QueryBuilder<Note, Note, QWhereClause> {
     });
   }
 
-  QueryBuilder<Note, Note, QAfterWhereClause> contentLowerIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'contentLower',
-        value: [null],
-      ));
-    });
-  }
-
-  QueryBuilder<Note, Note, QAfterWhereClause> contentLowerIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'contentLower',
-        lower: [null],
-        includeLower: false,
-        upper: [],
-      ));
-    });
-  }
-
   QueryBuilder<Note, Note, QAfterWhereClause> contentLowerEqualTo(
-      String? contentLower) {
+      String contentLower) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
         indexName: r'contentLower',
@@ -597,7 +572,7 @@ extension NoteQueryWhere on QueryBuilder<Note, Note, QWhereClause> {
   }
 
   QueryBuilder<Note, Note, QAfterWhereClause> contentLowerNotEqualTo(
-      String? contentLower) {
+      String contentLower) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -632,7 +607,7 @@ extension NoteQueryWhere on QueryBuilder<Note, Note, QWhereClause> {
   }
 
   QueryBuilder<Note, Note, QAfterWhereClause> contentLowerGreaterThan(
-    String? contentLower, {
+    String contentLower, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -646,7 +621,7 @@ extension NoteQueryWhere on QueryBuilder<Note, Note, QWhereClause> {
   }
 
   QueryBuilder<Note, Note, QAfterWhereClause> contentLowerLessThan(
-    String? contentLower, {
+    String contentLower, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -660,8 +635,8 @@ extension NoteQueryWhere on QueryBuilder<Note, Note, QWhereClause> {
   }
 
   QueryBuilder<Note, Note, QAfterWhereClause> contentLowerBetween(
-    String? lowerContentLower,
-    String? upperContentLower, {
+    String lowerContentLower,
+    String upperContentLower, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1081,24 +1056,8 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'contentLower',
-      ));
-    });
-  }
-
-  QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'contentLower',
-      ));
-    });
-  }
-
   QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerEqualTo(
-    String? value, {
+    String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1111,7 +1070,7 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerGreaterThan(
-    String? value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1126,7 +1085,7 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerLessThan(
-    String? value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1141,8 +1100,8 @@ extension NoteQueryFilter on QueryBuilder<Note, Note, QFilterCondition> {
   }
 
   QueryBuilder<Note, Note, QAfterFilterCondition> contentLowerBetween(
-    String? lower,
-    String? upper, {
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -1991,7 +1950,7 @@ extension NoteQueryProperty on QueryBuilder<Note, Note, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Note, String?, QQueryOperations> contentLowerProperty() {
+  QueryBuilder<Note, String, QQueryOperations> contentLowerProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'contentLower');
     });

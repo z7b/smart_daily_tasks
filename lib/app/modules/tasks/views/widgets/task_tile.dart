@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:smart_daily_tasks/app/modules/tasks/controllers/task_controller.dart';
 
 class TaskTile extends StatelessWidget {

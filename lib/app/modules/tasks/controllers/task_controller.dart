@@ -227,7 +227,7 @@ class TaskController extends GetxController {
           final notifyService = Get.find<NotificationService>();
           final deterministicId = notifyService.getDeterministicId(
             '${task.title}_${task.scheduledAt.toIso8601String()}', 
-            offset: NotificationService.TASK_OFFSET
+            offset: NotificationService.taskOffset
           );
 
           notifyService.scheduleNotification(
@@ -248,7 +248,7 @@ class TaskController extends GetxController {
       final notifyService = Get.find<NotificationService>();
       final deterministicId = notifyService.getDeterministicId(
         '${task.title}_${task.scheduledAt.toIso8601String()}', 
-        offset: NotificationService.TASK_OFFSET
+        offset: NotificationService.taskOffset
       );
       
       await notifyService.cancelNotification(deterministicId);
@@ -280,7 +280,7 @@ class TaskController extends GetxController {
       await _repository.updateTask(updatedTask);
       
       if (isNowCompleted) {
-        await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
+        await Get.find<NotificationService>().cancelNotification(NotificationService.taskOffset + task.id);
         
          // --- Recurrence Engine: Clone-and-Spawn ---
         if (updatedTask.recurrence != TaskRecurrence.none) {
@@ -353,7 +353,7 @@ class TaskController extends GetxController {
       );
       
       await _repository.updateTask(updatedTask);
-      await Get.find<NotificationService>().cancelNotification(NotificationService.TASK_OFFSET + task.id);
+      await Get.find<NotificationService>().cancelNotification(NotificationService.taskOffset + task.id);
       
       _showSnackbar('success'.tr, 'task_cancelled'.tr);
       

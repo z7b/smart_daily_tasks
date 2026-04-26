@@ -24,7 +24,7 @@ class Note {
 
   @Index(type: IndexType.value)
   // ✅ Concept A2 Fix: Use distinct marker for null to differentiate from empty strings in Isar indices
-  String get contentLower => content?.toLowerCase() ?? '\0NULL_MARKER\0';
+  String get contentLower => content?.toLowerCase() ?? '[NULL_MARKER]';
 
   Note({
     this.id = Isar.autoIncrement,
