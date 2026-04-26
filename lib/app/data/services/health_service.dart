@@ -124,13 +124,16 @@ class HealthService extends GetxService {
         isAuthorized.value = true;
         _storage.write(_authIntentKey, true);
         checkDetailedPermissions();
-      } else if (hasHealth == null && hadPriorConnection) {
-        // ⚠️ Indeterminate (very common on Android) — trust the persisted intent
-        // Don't downgrade to false — the user already connected successfully before
+      } else if (hadPriorConnection) {
+        // 🛡️ Premium Restoration Logic: 
+        // If we previously connected successfully, we keep the "Authorized" state in the UI 
+        // to prevent the "Connect Health" button from flickering or reappearing.
+        // Even if hasHealth returns false/null (common during early boot or platform delays), 
+        // we trust the user's intent.
         isAuthorized.value = true;
-        talker.info('🔄 Health: Indeterminate result, preserving prior connection intent');
+        talker.info('🔄 Health: Preserving prior connection state (Indeterminate/False result bypassed)');
       } else {
-        // ❌ Explicit false or null with no prior connection
+        // ❌ No prior connection AND not currently authorized
         isAuthorized.value = false;
       }
       
