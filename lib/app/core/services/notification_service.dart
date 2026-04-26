@@ -178,6 +178,10 @@ class NotificationService extends GetxService {
     required String body,
     required DateTime scheduledTime,
     String? largeIcon,
+    String? bigText,
+    bool htmlFormatTitle = false,
+    bool htmlFormatBigText = false,
+    List<AndroidNotificationAction>? actions,
   }) async {
     // Safety check for initialization
     if (!isInitialized.value) {
@@ -223,6 +227,15 @@ class NotificationService extends GetxService {
             showWhen: true,
             subText: 'Life OS',
             largeIcon: largeIcon != null ? DrawableResourceAndroidBitmap(largeIcon) : null,
+            styleInformation: bigText != null
+                ? BigTextStyleInformation(
+                    bigText,
+                    contentTitle: title,
+                    htmlFormatBigText: htmlFormatBigText,
+                    htmlFormatContentTitle: htmlFormatTitle,
+                  )
+                : null,
+            actions: actions,
           ),
         ),
         androidScheduleMode: canScheduleExact 
@@ -420,11 +433,19 @@ class NotificationService extends GetxService {
                     bigText,
                     contentTitle: title,
                     summaryText: 'خطواتي • نشاطك اليومي',
-                    htmlFormatBigText: false,
-                    htmlFormatContentTitle: false,
+                    htmlFormatBigText: true,
+                    htmlFormatContentTitle: true,
                   )
                 : null,
             category: AndroidNotificationCategory.reminder,
+            actions: [
+              const AndroidNotificationAction(
+                'remind_later',
+                'ذكرني لاحقًا',
+                showsUserInterface: true,
+                cancelNotification: false,
+              ),
+            ],
           ),
         ),
         payload: 'steps_smart',
@@ -451,9 +472,19 @@ class NotificationService extends GetxService {
                     bigText,
                     contentTitle: title,
                     summaryText: 'خطواتي • نشاطك اليومي',
+                    htmlFormatBigText: true,
+                    htmlFormatContentTitle: true,
                   )
                 : null,
             category: AndroidNotificationCategory.reminder,
+            actions: [
+              const AndroidNotificationAction(
+                'remind_later',
+                'ذكرني لاحقًا',
+                showsUserInterface: true,
+                cancelNotification: false,
+              ),
+            ],
           ),
         ),
         payload: 'steps_smart',
@@ -482,15 +513,26 @@ class NotificationService extends GetxService {
     final goalFormatted = _formatNumber(goal);
     final remainingFormatted = _formatNumber(remaining);
 
+    final remindAction = AndroidNotificationAction(
+      'remind_later',
+      'ذكرني لاحقًا',
+      showsUserInterface: true,
+      cancelNotification: false,
+    );
+
     // Morning reminder (8:00 AM)
     if (now.hour < 8) {
       final morningTime = DateTime(now.year, now.month, now.day, 8, 0);
       await scheduleNotification(
         id: stepsOffset + 1,
-        title: 'صباح النشاط! ☀️',
-        body: 'هدفك اليوم $goalFormatted خطوة\nخطوة صغيرة الآن... تصنع فرقاً كبيراً لاحقاً 💪',
+        title: '<font color="#3B82F6">خطوة صغيرة الآن...</font>',
+        body: 'نشاطك اليومي',
+        bigText: 'تصنع فرقًا كبيرًا لاحقًا 💪<br>هدفك اليوم <font color="#3B82F6">$goalFormatted</font> خطوة،<br>أنت قريب من إنجازه!',
+        htmlFormatTitle: true,
+        htmlFormatBigText: true,
         scheduledTime: morningTime,
         largeIcon: 'walker',
+        actions: [remindAction],
       );
     }
 
@@ -499,10 +541,14 @@ class NotificationService extends GetxService {
       final middayTime = DateTime(now.year, now.month, now.day, 13, 0);
       await scheduleNotification(
         id: stepsOffset + 2,
-        title: 'وقت التحرك! 🚶‍♂️',
-        body: 'باقي $remainingFormatted خطوة لهدفك\nاستغل وقت الظهيرة للمشي ☕',
+        title: '<font color="#3B82F6">وقت التحرك! 🚶‍♂️</font>',
+        body: 'نشاطك اليومي',
+        bigText: 'استغل وقت الظهيرة للمشي ☕<br>باقي <font color="#3B82F6">$remainingFormatted</font> خطوة لهدفك،<br>جدد نشاطك وأكمل التحدي!',
+        htmlFormatTitle: true,
+        htmlFormatBigText: true,
         scheduledTime: middayTime,
         largeIcon: 'walker',
+        actions: [remindAction],
       );
     }
 
@@ -511,10 +557,14 @@ class NotificationService extends GetxService {
       final eveningTime = DateTime(now.year, now.month, now.day, 18, 0);
       await scheduleNotification(
         id: stepsOffset + 3,
-        title: 'أنت قريب من إنجازه! 🔥',
-        body: 'هدفك اليوم $goalFormatted خطوة\nأفضل وقت للمشي هو بين 6 - 8 مساءً 🏃‍♂️',
+        title: '<font color="#FF9500">أنت قريب من إنجازه! 🔥</font>',
+        body: 'نشاطك اليومي',
+        bigText: 'أفضل وقت للمشي هو بين 6 - 8 مساءً 🏃‍♂️<br>باقي فقط <font color="#FF9500">$remainingFormatted</font> خطوة،<br>لا تستسلم الآن، يمكنك فعلها!',
+        htmlFormatTitle: true,
+        htmlFormatBigText: true,
         scheduledTime: eveningTime,
         largeIcon: 'walker',
+        actions: [remindAction],
       );
     }
 
@@ -524,18 +574,25 @@ class NotificationService extends GetxService {
       if (progress >= 1.0) {
         await scheduleNotification(
           id: stepsOffset + 4,
-          title: 'بطل حقيقي! 🏆',
-          body: 'لقد حققت هدفك اليوم بنجاح!\nاحرص على الراحة والنوم الجيد 😴',
+          title: '<font color="#34C759">بطل حقيقي! 🏆</font>',
+          body: 'إنجاز اليوم',
+          bigText: 'لقد حققت هدفك اليوم بنجاح!<br>أنجزت <font color="#34C759">$goalFormatted</font> خطوة،<br>احرص على الراحة والنوم الجيد 😴',
+          htmlFormatTitle: true,
+          htmlFormatBigText: true,
           scheduledTime: nightTime,
-          largeIcon: 'walker',
+          largeIcon: 'achievement',
         );
       } else {
         await scheduleNotification(
           id: stepsOffset + 4,
-          title: 'فرصة أخيرة اليوم! 🌟',
-          body: 'باقي $remainingFormatted خطوة فقط\n10 دقائق مشي قبل النوم تفرق كثيراً 🌙',
+          title: '<font color="#FF3B30">فرصة أخيرة اليوم! 🌟</font>',
+          body: 'نشاطك اليومي',
+          bigText: '10 دقائق مشي قبل النوم تفرق كثيراً 🌙<br>ينقصك <font color="#FF3B30">$remainingFormatted</font> خطوة فقط،<br>أنهِ يومك بإنجاز قوي!',
+          htmlFormatTitle: true,
+          htmlFormatBigText: true,
           scheduledTime: nightTime,
           largeIcon: 'walker',
+          actions: [remindAction],
         );
       }
     }

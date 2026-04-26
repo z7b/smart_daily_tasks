@@ -7,7 +7,6 @@ import '../../../data/models/journal_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../data/providers/note_repository.dart';
 import '../../../data/providers/medication_repository.dart';
-import '../../../data/providers/step_repository.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../core/helpers/ai_command_helper.dart';
 import '../../../core/extensions/date_time_extensions.dart';
@@ -37,7 +36,6 @@ class AssistantController extends GetxController {
   late final TaskRepository _taskRepository;
   late final NoteRepository _noteRepository;
   late final MedicationRepository _medicationRepository;
-  late final StepRepository _stepRepository;
   late final Isar _isar;
 
   @override
@@ -46,7 +44,6 @@ class AssistantController extends GetxController {
     _taskRepository = Get.find<TaskRepository>();
     _noteRepository = Get.find<NoteRepository>();
     _medicationRepository = Get.find<MedicationRepository>();
-    _stepRepository = Get.find<StepRepository>();
     _isar = Get.find<Isar>();
     talker.info('🤖 AssistantController initialized with Governance Sync');
     _addWelcomeMessage();
@@ -139,9 +136,7 @@ class AssistantController extends GetxController {
         final journalRegex = RegExp(
           r'^(?:log|journal|diary|record|سجل|يوميات|مذكره|تدوين|كتبت)(?:\s+(.+))?',
         );
-        final stepsRegex = RegExp(
-          r'^(?:add|log|record|سجل|مشيت|خطوات|ضيف)\s+(\d+)\s+(?:steps|خطوه)',
-        );
+
         final goalRegex = RegExp(
           r'^(?:set|target|update|هدف|هدفي|تغيير)\s+(?:goal|target|هدف)\s+(\d+)',
         );
@@ -200,12 +195,7 @@ class AssistantController extends GetxController {
           }
         }
         // 4. Health & Steps
-        else if (stepsRegex.hasMatch(normalized)) {
-          final match = stepsRegex.firstMatch(normalized);
-          final count = int.tryParse(match?.group(1) ?? '0') ?? 0;
-          await _recordSteps(count);
-          responseText = 'steps_added'.tr;
-        } else if (goalRegex.hasMatch(normalized)) {
+        else if (goalRegex.hasMatch(normalized)) {
           final match = goalRegex.firstMatch(normalized);
           final goal = int.tryParse(match?.group(1) ?? '0') ?? 0;
           await _updateStepGoal(goal);
@@ -366,14 +356,6 @@ class AssistantController extends GetxController {
     } catch (e) {
       return 'error'.tr;
     }
-  }
-
-  Future<void> _recordSteps(int count) async {
-    await _stepRepository.updateStepsLocally(
-      DateTime.now(),
-      count,
-      isManual: true,
-    );
   }
 
   Future<void> _updateStepGoal(int goal) async {

@@ -240,7 +240,6 @@ class AssistantView extends GetView<AssistantController> {
           {'label': 'quick_action_task'.tr, 'text': 'أضف مهمة '},
           {'label': 'quick_action_note'.tr, 'text': 'أضف ملاحظة '},
           {'label': 'quick_action_journal'.tr, 'text': 'سجل تدوينة '},
-          {'label': 'steps'.tr, 'text': 'مشيت 5000 خطوة'},
           {'label': 'goal'.tr, 'text': 'هدفي اليومي 10000 خطوة'},
           {'label': 'calendar'.tr, 'text': 'افتح التقويم'},
         ];
