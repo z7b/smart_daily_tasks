@@ -52,8 +52,12 @@ class HealthService extends GetxService {
     _initializeTypes();
     try {
       // ✅ Step 1: Configure Health (Health Connect is now the exclusive Android provider in v13+)
-      await health.configure();
-      talker.info('🏥 Health Service Configured for Life OS (Health Connect Verified)');
+      try {
+        await health.configure();
+        talker.info('🏥 Health Service Configured for Life OS (Health Connect Verified)');
+      } catch (configError) {
+        talker.error('❌ Health Service: configure() failed — $configError');
+      }
       
       // ✅ Highest Standard: Read connection intent BEFORE checking actual permissions
       // This prevents the "Connect" button from flickering on every app restart.

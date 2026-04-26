@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+﻿import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/step_log_model.dart';
@@ -356,7 +356,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
           orElse: () => StepLog(date: d, goal: dailyGoal.value),
         );
         result.add({
-          'label': DateFormat.E('ar').format(d),
+          'label': DateFormat.E(Get.locale?.languageCode ?? 'en').format(d),
           'value': match.steps,
         });
       }
@@ -377,10 +377,10 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       }
       final lastDay = DateTime(now.year, now.month + 1, 0).day;
       result = [
-        {'label': 'الأول', 'value': week1, 'dateRange': '1 - 7'},
-        {'label': 'الثاني', 'value': week2, 'dateRange': '8 - 14'},
-        {'label': 'الثالث', 'value': week3, 'dateRange': '15 - 21'},
-        {'label': 'الرابع', 'value': week4, 'dateRange': '22 - $lastDay'},
+        {'label': 'week_1'.tr, 'value': week1, 'dateRange': '1 - 7'},
+        {'label': 'week_2'.tr, 'value': week2, 'dateRange': '8 - 14'},
+        {'label': 'week_3'.tr, 'value': week3, 'dateRange': '15 - 21'},
+        {'label': 'week_4'.tr, 'value': week4, 'dateRange': '22 - $lastDay'},
       ];
     } else if (filter == 'yearly') {
       // 12 months of selected year
@@ -393,7 +393,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       for (int i = 1; i <= 12; i++) {
         final d = DateTime(targetYear, i, 1);
         result.add({
-          'label': DateFormat.MMM('ar').format(d),
+          'label': DateFormat.MMM(Get.locale?.languageCode ?? 'en').format(d),
           'value': monthlySums[i] ?? 0,
         });
       }
@@ -414,40 +414,40 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     final filter = selectedTimeFilter.value;
     if (filter == 'monthly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أفضل أسبوع', 'label': 'الأسبوع', 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'best_week'.tr, 'label': 'the_week'.tr, 'sublabel': '', 'value': 0};
       var best = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) > (best['value'] as int)) best = a;
       }
       return {
-        'title': 'أفضل أسبوع',
+        'title': 'best_week'.tr,
         'label': 'الأسبوع ${best['label']}',
-        'sublabel': '${best['dateRange']} ${DateFormat.MMM('ar').format(DateTime.now())}',
+        'sublabel': '${best['dateRange']} ${DateFormat.MMM(Get.locale?.languageCode ?? 'en').format(DateTime.now())}',
         'value': best['value'],
       };
     } else if (filter == 'yearly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أفضل شهر', 'label': 'الشهر', 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'best_month'.tr, 'label': 'the_month'.tr, 'sublabel': '', 'value': 0};
       var best = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) > (best['value'] as int)) best = a;
       }
       return {
-        'title': 'أفضل شهر',
+        'title': 'best_month'.tr,
         'label': best['label'],
         'sublabel': '${selectedYear.value}',
         'value': best['value'],
       };
     } else {
       final logs = weeklyLogs;
-      if (logs.isEmpty) return {'title': 'أفضل يوم', 'label': 'اليوم', 'sublabel': '', 'value': stepsToday.value};
+      if (logs.isEmpty) return {'title': 'best_day'.tr, 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
       StepLog best = logs.first;
       for (var l in logs) {
         if (l.steps > best.steps) best = l;
       }
       return {
-        'title': 'أفضل يوم',
-        'label': DateFormat.E('ar').format(best.date),
+        'title': 'best_day'.tr,
+        'label': DateFormat.E(Get.locale?.languageCode ?? 'en').format(best.date),
         'sublabel': DateFormat('d MMM', 'ar').format(best.date),
         'value': best.steps,
       };
@@ -458,7 +458,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     final filter = selectedTimeFilter.value;
     if (filter == 'monthly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أقل أسبوع', 'label': 'الأسبوع', 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'أقل أسبوع', 'label': 'the_week'.tr, 'sublabel': '', 'value': 0};
       var worst = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) < (worst['value'] as int)) worst = a;
@@ -466,12 +466,12 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       return {
         'title': 'أقل أسبوع',
         'label': 'الأسبوع ${worst['label']}',
-        'sublabel': '${worst['dateRange']} ${DateFormat.MMM('ar').format(DateTime.now())}',
+        'sublabel': '${worst['dateRange']} ${DateFormat.MMM(Get.locale?.languageCode ?? 'en').format(DateTime.now())}',
         'value': worst['value'],
       };
     } else if (filter == 'yearly') {
       final aggregated = getAggregatedChartData();
-      if (aggregated.isEmpty) return {'title': 'أقل شهر', 'label': 'الشهر', 'sublabel': '', 'value': 0};
+      if (aggregated.isEmpty) return {'title': 'أقل شهر', 'label': 'the_month'.tr, 'sublabel': '', 'value': 0};
       var worst = aggregated.first;
       for (var a in aggregated) {
         if ((a['value'] as int) < (worst['value'] as int)) worst = a;
@@ -484,14 +484,14 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       };
     } else {
       final logs = weeklyLogs;
-      if (logs.isEmpty) return {'title': 'أقل يوم', 'label': 'اليوم', 'sublabel': '', 'value': stepsToday.value};
+      if (logs.isEmpty) return {'title': 'أقل يوم', 'label': 'the_day'.tr, 'sublabel': '', 'value': stepsToday.value};
       StepLog worst = logs.first;
       for (var l in logs) {
         if (l.steps < worst.steps) worst = l;
       }
       return {
         'title': 'أقل يوم',
-        'label': DateFormat.E('ar').format(worst.date),
+        'label': DateFormat.E(Get.locale?.languageCode ?? 'en').format(worst.date),
         'sublabel': DateFormat('d MMM', 'ar').format(worst.date),
         'value': worst.steps,
       };
@@ -598,15 +598,8 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         ? validWeeklyLogs.map((e) => e.steps).reduce((a, b) => a > b ? a : b)
         : 0;
         
-    // Calculate current streak from valid logs
-    int streak = 0;
-    for (var log in validWeeklyLogs) {
-      if (log.steps >= log.goal) {
-        streak++;
-      } else {
-        break;
-      }
-    }
+    // ✅ Fix: Use unified currentStreak instead of separate calculation
+    final streak = currentStreak.value;
 
     achievements.assignAll(achievements.map((a) {
       bool unlocked = false;
@@ -669,9 +662,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   void _notifyAchievement(StepAchievement achievement) {
     _notificationService.showSmartStepsNotification(
       id: achievement.id.hashCode % 1000000,
-      title: 'إنجاز جديد! 🎖️',
-      body: 'تهانينا! لقد حصلت على وسام: ${achievement.titleKey.tr}',
-      bigText: 'إنجاز جديد! 🎖️\n\nلقد حصلت على وسام: ${achievement.titleKey.tr}\n${achievement.descKey.tr}\n\nاستمر في التقدم لتحقيق المزيد من الإنجازات! 💪',
+      title: 'new_achievement'.tr,
+      body: 'achievement_earned'.trParams({'name': achievement.titleKey.tr}),
+      bigText: '${'new_achievement'.tr}\n\n${'achievement_earned'.trParams({'name': achievement.titleKey.tr})}\n${achievement.descKey.tr}\n\n${'keep_achieving'.tr}',
       largeIcon: 'achievement',
     );
   }
@@ -698,7 +691,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
   }
 
   void updateGoal(int newGoal) {
-    if (newGoal <= 0 || newGoal > 200000) return; // Reasonable bounds
+    if (newGoal < 500 || newGoal > 200000) return; // ✅ Fix: Min 500 steps, Max 200k
     dailyGoal.value = newGoal;
     dailyGoalController.text = newGoal.toString();
     _storage.write('daily_step_goal', newGoal);
@@ -714,9 +707,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       final remaining = (dailyGoal.value - stepsToday.value).clamp(0, 999999);
       _notificationService.showSmartStepsNotification(
         id: 80,
-        title: 'أنت قريـب جداً! 🔥',
-        body: 'فقط $remaining خطوة وتصل للقمة',
-        bigText: 'فقط $remaining خطوة وتصل للقمة! 💪\nهدفك اليوم ${dailyGoal.value} خطوة، أنت قريب من إنجازه!',
+        title: 'almost_there_title'.tr,
+        body: 'steps_remaining_msg'.trParams({'count': '$remaining'}),
+        bigText: '${'steps_remaining_msg'.trParams({'count': '$remaining'})} 💪\n${'goal_today_msg'.trParams({'goal': '${dailyGoal.value}'})}',
         largeIcon: 'walker',
       );
     }
@@ -727,9 +720,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       _hasNotifiedGoal = true;
       _notificationService.showSmartStepsNotification(
         id: 100,
-        title: 'بطل حقيقي! 🏆🎉',
-        body: 'لقد حطمت هدفك اليومي بنجاح!',
-        bigText: 'لقد حطمت هدفك اليومي بنجاح! 🎉\n${stepsToday.value} خطوة من ${dailyGoal.value}\nاحرص على الراحة والنوم الجيد الليلة 😴',
+        title: 'goal_complete_title'.tr,
+        body: 'goal_complete_body'.tr,
+        bigText: '${'goal_complete_body'.tr} 🎉\n${stepsToday.value} ${'step_unit'.tr} ${'of'.tr} ${dailyGoal.value}\n${'rest_well'.tr}',
         largeIcon: 'walker',
       );
     }

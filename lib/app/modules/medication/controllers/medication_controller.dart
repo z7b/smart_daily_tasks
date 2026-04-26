@@ -48,8 +48,8 @@ class MedicationController extends GetxController {
         }
       }
       
+      await _loadMedications(); // ✅ Fix: Load data BEFORE navigating back
       Get.back();
-      _loadMedications(); // Explicit refresh
       Get.snackbar('success'.tr, 'medication_added'.tr);
     } catch (e) {
       talker.error('🔴 Error adding medication: $e');
@@ -73,8 +73,8 @@ class MedicationController extends GetxController {
         _scheduleAllReminders(med);
       }
       
+      await _loadMedications(); // ✅ Fix: Load data BEFORE navigating back
       Get.back();
-      _loadMedications();
       Get.snackbar('success'.tr, 'medication_updated'.tr);
     } catch (e) {
       talker.error('🔴 Error updating medication: $e');
@@ -99,7 +99,8 @@ class MedicationController extends GetxController {
         
         // ✅ Phase 3: Sleep-Zone Clamping (Prevent doses during 00:00 - 05:00)
         // Shift midnight doses to 23:00 (before sleep) or 06:00 (upon waking) depending on proximity
-        if (hour >= 0 && hour <= 5) {
+        // ✅ Fix: hour == 0 (midnight) is valid for some medications
+        if (hour >= 1 && hour <= 5) {
           hour = hour < 3 ? 23 : 6;
         }
         
@@ -198,8 +199,9 @@ class MedicationController extends GetxController {
       if (todaysIntakes.isNotEmpty) {
         final lastIntake = todaysIntakes.last;
         // Debounce boosted to 30 mins to prevent spamming multiple doses accidentally
-        if (now.difference(lastIntake).inMinutes < 30) {
-          talker.warning('⚠️ Duplicate intake ignored (Debounce guard: < 30m).');
+        // ✅ Fix: Reduced from 30 to 5 min — some meds are taken every 15-20 min
+        if (now.difference(lastIntake).inMinutes < 5) {
+          talker.warning('⚠️ Duplicate intake ignored (Debounce guard: < 5m).');
           Get.snackbar('warning'.tr, 'duplicate_intake'.tr);
           return;
         }

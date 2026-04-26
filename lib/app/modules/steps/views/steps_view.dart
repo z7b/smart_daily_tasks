@@ -125,7 +125,7 @@ class StepsView extends GetView<StepsController> {
           ),
           Spacer(),
           Text(
-            'خطواتي',
+            'my_steps'.tr,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -140,8 +140,8 @@ class StepsView extends GetView<StepsController> {
                 onTap: () {
                   controller.calculateSmartGoal(30, 70, 'active');
                   Get.snackbar(
-                    'اقتراح ذكي',
-                    'تم تحديث هدفك بناءً على مستوى لياقتك!',
+                    'smart_suggestion'.tr,
+                    'goal_updated_smartly'.tr,
                     backgroundColor: _cardBg,
                     colorText: _text,
                   );
@@ -196,7 +196,7 @@ class StepsView extends GetView<StepsController> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'أدخل بياناتك للحصول على حساب دقيق للمسافة والسعرات',
+              'enter_biometrics_desc'.tr,
               style: TextStyle(
                 color: _orange,
                 fontSize: 13,
@@ -212,7 +212,7 @@ class StepsView extends GetView<StepsController> {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              'إدخال',
+              'enter'.tr,
               style: TextStyle(color: _orange, fontWeight: FontWeight.bold),
             ),
           ),
@@ -245,12 +245,12 @@ class StepsView extends GetView<StepsController> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'تحديث البيانات البيومترية',
+                    'update_biometrics'.tr,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'يساعدنا ذلك في حساب السعرات والمسافة بدقة تامة',
+                    'biometrics_help_desc'.tr,
                     style: TextStyle(color: _muted, fontSize: 13),
                   ),
                   SizedBox(height: 24),
@@ -276,7 +276,7 @@ class StepsView extends GetView<StepsController> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              'ذكر',
+                              'male'.tr,
                               style: TextStyle(
                                 color: selectedGender == 'male' ? _blue : _text,
                                 fontWeight: FontWeight.bold,
@@ -305,7 +305,7 @@ class StepsView extends GetView<StepsController> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              'أنثى',
+                              'female'.tr,
                               style: TextStyle(
                                 color: selectedGender == 'female'
                                     ? _purple
@@ -324,7 +324,7 @@ class StepsView extends GetView<StepsController> {
                     controller: controller.heightCtrl,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'الطول (سم)',
+                      labelText: 'height_cm'.tr,
                       filled: true,
                       fillColor: _bg,
                       border: OutlineInputBorder(
@@ -339,7 +339,7 @@ class StepsView extends GetView<StepsController> {
                     controller: controller.weightCtrl,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'الوزن (كجم)',
+                      labelText: 'weight_kg'.tr,
                       filled: true,
                       fillColor: _bg,
                       border: OutlineInputBorder(
@@ -362,8 +362,8 @@ class StepsView extends GetView<StepsController> {
                         );
                         Get.back();
                          Get.snackbar(
-                           'تم الحفظ',
-                           'تم تحديث بياناتك بنجاح وحساب السعرات والمسافة بدقة!',
+                           'saved'.tr,
+                           'biometrics_saved_success'.tr,
                            backgroundColor: _cardBg,
                            colorText: _text,
                          );
@@ -377,7 +377,7 @@ class StepsView extends GetView<StepsController> {
                       ),
                     ),
                     child: Text(
-                      'حفظ البيانات',
+                      'save_data'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -415,7 +415,7 @@ class StepsView extends GetView<StepsController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'تعديل هدف الخطوات اليومي',
+              'edit_daily_step_goal'.tr,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 24),
@@ -424,7 +424,7 @@ class StepsView extends GetView<StepsController> {
               keyboardType: TextInputType.number,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'الهدف اليومي (خطوة)',
+                labelText: 'daily_goal_steps'.tr,
                 filled: true,
                 fillColor: _bg,
                 border: OutlineInputBorder(
@@ -451,7 +451,7 @@ class StepsView extends GetView<StepsController> {
                 ),
               ),
               child: Text(
-                'حفظ الهدف الجديد',
+                'save_new_goal'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -474,12 +474,12 @@ class StepsView extends GetView<StepsController> {
     final progressPct = (progress * 100).toInt();
 
     // Motivation Logic
-    String messageText = 'باقي $stepsLeft خطوات فقط!';
+    String messageText = 'steps_left_msg'.trParams({'count': stepsLeft.toString()});
     Color progressColor = _green;
     if (progress >= 1.0) {
-      messageText = 'هدف اليوم اكتمل! 👏';
+      messageText = 'goal_achieved_msg'.tr;
     } else if (progress >= 0.8) {
-      messageText = 'قرّبت! باقي خطوات قليلة 👏';
+      messageText = 'almost_there_msg'.tr;
       progressColor = _orange;
     }
 
@@ -500,7 +500,7 @@ class StepsView extends GetView<StepsController> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          'أيام متتالية',
+                          'consecutive_days'.tr,
                           style: TextStyle(
                             fontSize: 12,
                             color: _muted,
@@ -524,7 +524,7 @@ class StepsView extends GetView<StepsController> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (i) {
-                        final letters = ['س', 'ج', 'خ', 'ر', 'ث', 'ن', 'ح'];
+                        final letters = ['S', 'F', 'T', 'W', 'T', 'M', 'S'];
                         // ✅ Fix: Show actual streak, no misleading placeholder
                         final filled =
                             i < controller.currentStreak.value.clamp(0, 7);
@@ -580,7 +580,7 @@ class StepsView extends GetView<StepsController> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: Text(
-                              '$progressPct% من الهدف',
+                              'of_goal'.trParams({'percent': progressPct.toString()}),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -618,7 +618,7 @@ class StepsView extends GetView<StepsController> {
                       children: [
                         Flexible(
                           child: Text(
-                            'نسبة الإنجاز: $progressPct%',
+                            'completion_percentage'.trParams({'percent': progressPct.toString()}),
                             style: TextStyle(fontSize: 10, color: _muted),
                             textAlign: TextAlign.right,
                             overflow: TextOverflow.ellipsis,
@@ -661,7 +661,7 @@ class StepsView extends GetView<StepsController> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'خطوة من ${goal.f}',
+                              'steps_of'.trParams({'goal': goal.f}),
                               style: TextStyle(fontSize: 10, color: _muted),
                             ),
                             SizedBox(width: 4),
@@ -679,7 +679,7 @@ class StepsView extends GetView<StepsController> {
                           ],
                         ),
                         Text(
-                          'من الهدف $progressPct%',
+                          'of_goal'.trParams({'percent': progressPct.toString()}),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -718,7 +718,7 @@ class StepsView extends GetView<StepsController> {
                           Icon(Icons.health_and_safety_outlined, size: 18),
                           SizedBox(width: 8),
                           Text(
-                            'ربط بيانات الصحة للتحقق من النشاط',
+                            'connect_health_data'.tr,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -761,9 +761,9 @@ class StepsView extends GetView<StepsController> {
           if (val != null) controller.setTimeFilter(val);
         },
         children: {
-          'weekly': _buildTabSegment('أسبوعي', 'weekly'),
-          'monthly': _buildTabSegment('شهري', 'monthly'),
-          'yearly': _buildTabSegment('سنوي', 'yearly'),
+          'weekly': _buildTabSegment('weekly'.tr, 'weekly'),
+          'monthly': _buildTabSegment('monthly'.tr, 'monthly'),
+          'yearly': _buildTabSegment('yearly'.tr, 'yearly'),
         },
       ),
     );
@@ -806,8 +806,8 @@ class StepsView extends GetView<StepsController> {
               Icon(Icons.bar_chart_rounded, size: 22, color: _blue),
               SizedBox(width: 8),
               Text(
-                controller.selectedTimeFilter.value == 'weekly' ? 'نشاط الأسبوع' : 
-                (controller.selectedTimeFilter.value == 'monthly' ? 'نشاط الشهر' : 'نشاط السنة'),
+                controller.selectedTimeFilter.value == 'weekly' ? 'activity_week'.tr : 
+                (controller.selectedTimeFilter.value == 'monthly' ? 'activity_month'.tr : 'activity_year'.tr),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -827,7 +827,7 @@ class StepsView extends GetView<StepsController> {
                             children: [
                               Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Text('اختر السنة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
+                                child: Text('select_year'.tr, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
                               ),
                               ...controller.availableYears.map((year) => ListTile(
                                 title: Text('$year', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: _text)),
@@ -877,11 +877,11 @@ class StepsView extends GetView<StepsController> {
                       final percent = avg > 0 ? ((val - avg) / avg * 100).round() : 0;
                       final sign = percent >= 0 ? '+' : '';
                       return BarTooltipItem(
-                        '${val.f} خطوة\n',
+                        'steps_count_nl'.trParams({'count': val.f}),
                         TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                         children: [
                           TextSpan(
-                            text: '$sign$percent% من المتوسط',
+                            text: 'percent_from_avg'.trParams({'sign': sign, 'percent': percent.toString()}),
                             style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.normal),
                           ),
                         ],
@@ -910,7 +910,7 @@ class StepsView extends GetView<StepsController> {
                         if (v == goalY) {
                           return Padding(
                             padding: EdgeInsets.only(right: 4),
-                            child: Text('هدفك\n${goalY.toInt().f}', style: TextStyle(fontSize: 9, color: _faint, height: 1.2), textAlign: TextAlign.center),
+                            child: Text('your_goal'.trParams({'goal': goalY.toInt().f}), style: TextStyle(fontSize: 9, color: _faint, height: 1.2), textAlign: TextAlign.center),
                           );
                         }
                         return SizedBox.shrink();
@@ -1023,8 +1023,8 @@ class StepsView extends GetView<StepsController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            controller.selectedTimeFilter.value == 'weekly' ? 'ملخص الأسبوع' : 
-            (controller.selectedTimeFilter.value == 'monthly' ? 'ملخص الشهر' : 'ملخص السنة'),
+            controller.selectedTimeFilter.value == 'weekly' ? 'summary_week'.tr : 
+            (controller.selectedTimeFilter.value == 'monthly' ? 'summary_month'.tr : 'summary_year'.tr),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _text),
           ),
@@ -1039,10 +1039,10 @@ class StepsView extends GetView<StepsController> {
               Expanded(
                 child: Column(
                   children: [
-                    Text('المتوسط اليومي', style: TextStyle(fontSize: 11, color: _muted)),
+                    Text('daily_avg'.tr, style: TextStyle(fontSize: 11, color: _muted)),
                     SizedBox(height: 8),
                     Text(avg.f, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _text)),
-                    Text('خطوة', style: TextStyle(fontSize: 11, color: _muted)),
+                    Text('step_unit'.tr, style: TextStyle(fontSize: 11, color: _muted)),
                   ],
                 ),
               ),
@@ -1135,8 +1135,8 @@ class StepsView extends GetView<StepsController> {
                 CupertinoIcons.flame_fill,
                 const Color(0xFFF87171),
                 calories.toInt().f,
-                'سعرة',
-                calories > 500 ? 'حرق ممتاز 🔥' : 'استمر في الحرق',
+                'calorie_unit'.tr,
+                calories > 500 ? 'burn_excellent'.tr : 'keep_burning'.tr,
                 calories > 500 ? Colors.orange : _muted,
               ),
             ),
@@ -1146,8 +1146,8 @@ class StepsView extends GetView<StepsController> {
                 CupertinoIcons.location_solid,
                 const Color(0xFF60A5FA),
                 distance.fd(2),
-                'كم',
-                distance > 5 ? 'مسافة رائعة 📍' : 'تحرك أكثر اليوم',
+                'km'.tr,
+                distance > 5 ? 'great_distance'.tr : 'move_more'.tr,
                 distance > 5 ? _blue : _muted,
               ),
             ),
@@ -1161,8 +1161,8 @@ class StepsView extends GetView<StepsController> {
                 CupertinoIcons.bolt_fill,
                 glowColor,
                 steps.f,
-                'خطوة',
-                steps >= controller.dailyGoal.value ? 'تم تحقيق الهدف ✅' : 'قريباً من الهدف',
+                'step_unit'.tr,
+                steps >= controller.dailyGoal.value ? 'goal_reached_check'.tr : 'close_to_goal'.tr,
                 steps >= controller.dailyGoal.value ? _greenDeep : _muted,
               ),
             ),
@@ -1172,8 +1172,8 @@ class StepsView extends GetView<StepsController> {
                 CupertinoIcons.timer_fill,
                 const Color(0xFF34D399),
                 activeTime.f,
-                'دقيقة',
-                activeTime > 30 ? 'نشاط صحي جداً ✨' : 'باقي القليل',
+                'minute_unit'.tr,
+                activeTime > 30 ? 'very_healthy_activity'.tr : 'little_left'.tr,
                 activeTime > 30 ? _greenDeep : _muted,
               ),
             ),
@@ -1192,15 +1192,15 @@ class StepsView extends GetView<StepsController> {
     String emoji = '';
     
     if (progress >= 1.0) {
-      title = 'بطل حقيقي! 🏆';
-      subtitle = 'لقد حطمت هدفك اليومي بنجاح.';
+      title = 'real_champion'.tr;
+      subtitle = 'goal_crushed'.tr;
       emoji = '🎉';
     } else if (progress >= 0.8) {
-      title = 'أنت قريـب جداً! 🔥';
-      subtitle = 'فقط ${remaining.f} خطوة وتصل للقمة.';
+      title = 'almost_there_fire'.tr;
+      subtitle = 'steps_to_top'.trParams({'remaining': remaining.f});
       emoji = '🏃‍♂️';
     } else if (progress >= 0.5) {
-      title = 'منتصف الطريق! ⚡';
+      title = 'halfway_there_flash'.tr;
       subtitle = 'باقي ${remaining.f} خطوة، لا تستسلم الآن.';
       emoji = '🚶‍♂️';
     } else if (progress > 0.0) {
