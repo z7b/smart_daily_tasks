@@ -298,7 +298,7 @@ class AddTaskView extends GetView<TaskFormController> {
       context: context,
       initialDate: controller.selectedDate.value,
       firstDate: DateTime(2015),
-      lastDate: DateTime(2121),
+      lastDate: DateTime(2100),
     );
     if (pickerDate != null) {
       controller.selectedDate.value = pickerDate;

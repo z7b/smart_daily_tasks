@@ -52,6 +52,12 @@ class JobController extends GetxController {
   // Statistical Summaries
   final statsSummary = <AttendanceStatus, int>{}.obs;
 
+  // ✅ Employment State Architecture
+  EmploymentStatus get employmentStatus => profile.value.employmentStatus;
+  bool get isEmployed => employmentStatus == EmploymentStatus.employed;
+  bool get isUnemployed => employmentStatus == EmploymentStatus.unemployed;
+  bool get isNotConfigured => employmentStatus == EmploymentStatus.notConfigured;
+
   @override
   void onInit() {
     super.onInit();
@@ -62,6 +68,20 @@ class JobController extends GetxController {
     try {
       isLoading.value = true;
       profile.value = await _repository.getWorkProfile();
+
+      // ✅ Auto-migration: Existing users with job data → upgrade to employed
+      if (isNotConfigured && _hasExistingJobData()) {
+        final migrated = profile.value.copyWith(employmentStatus: EmploymentStatus.employed);
+        await _repository.updateWorkProfile(migrated);
+        profile.value = migrated;
+        talker.info('🔄 Auto-migrated existing job profile to Employed status');
+      }
+
+      // ✅ Guard: Only run calculations for employed users
+      if (!isEmployed) {
+        _resetAllMetrics();
+        return;
+      }
 
       final now = DateTime.now();
       todayLog.value = await _repository.getLogForDate(now);
@@ -79,6 +99,54 @@ class JobController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  bool _hasExistingJobData() {
+    final p = profile.value;
+    return (p.jobTitle != null && p.jobTitle!.isNotEmpty) ||
+           (p.companyName != null && p.companyName!.isNotEmpty);
+  }
+
+  void _resetAllMetrics() {
+    todayLog.value = null;
+    weeklyStats.clear();
+    monthlyStats.clear();
+    yearlyStats.clear();
+    weeklyChartData.clear();
+    aggregatedChartData.clear();
+    statsSummary.clear();
+    daysUntilSalary.value = 0;
+    salaryProgress.value = 0.0;
+    attendanceRate.value = 0.0;
+    consistencyRate.value = 0.0;
+    avgCheckInTime.value = '--:--';
+    avgVarianceMinutes.value = 0;
+    totalWorkMinutes.value = 0;
+    totalActiveDays.value = 0;
+    totalMandatedDays.value = 0;
+    workBalanceMinutes.value = 0;
+    expectedCheckOut.value = '--:--';
+    performanceInsight.value = '';
+  }
+
+  /// Transition to Employed state
+  Future<void> setEmployed() async {
+    final updated = profile.value.copyWith(employmentStatus: EmploymentStatus.employed);
+    await _repository.updateWorkProfile(updated);
+    profile.value = updated;
+    talker.info('✅ Employment status → Employed');
+    refreshData();
+  }
+
+  /// Transition to Unemployed state
+  Future<void> setUnemployed() async {
+    final updated = profile.value.copyWith(employmentStatus: EmploymentStatus.unemployed);
+    await _repository.updateWorkProfile(updated);
+    profile.value = updated;
+    _cancelShiftReminders();
+    _resetAllMetrics();
+    talker.info('⚠️ Employment status → Unemployed');
+  }
+
 
   void _calculateSalaryCountdown() {
     final now = DateTime.now();
@@ -403,6 +471,12 @@ class JobController extends GetxController {
     String? note,
     bool isCheckOut = false,
   }) async {
+    // ✅ Employment Guard: Block attendance for non-employed users
+    if (!isEmployed) {
+      talker.warning('⚠️ Cannot log attendance: User is not employed.');
+      return;
+    }
+
     final targetDate = date ?? DateTime.now();
     final normalizedDate = DateTime(
       targetDate.year,
@@ -465,6 +539,7 @@ class JobController extends GetxController {
   }
 
   Future<void> updateJobSettings({
+    EmploymentStatus? employmentStatus,
     String? title,
     String? company,
     String? position,
@@ -477,6 +552,7 @@ class JobController extends GetxController {
     double? officialWorkHours,
   }) async {
     final updated = profile.value.copyWith(
+      employmentStatus: employmentStatus,
       jobTitle: title,
       companyName: company,
       jobPosition: position,

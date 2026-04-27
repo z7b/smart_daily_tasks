@@ -74,24 +74,34 @@ const TaskSchema = CollectionSchema(
       name: r'scheduledEnd',
       type: IsarType.dateTime,
     ),
-    r'status': PropertySchema(
+    r'seriesId': PropertySchema(
       id: 11,
+      name: r'seriesId',
+      type: IsarType.string,
+    ),
+    r'status': PropertySchema(
+      id: 12,
       name: r'status',
       type: IsarType.byte,
       enumMap: _TaskstatusEnumValueMap,
     ),
     r'tags': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'tags',
       type: IsarType.stringList,
     ),
+    r'templateId': PropertySchema(
+      id: 14,
+      name: r'templateId',
+      type: IsarType.long,
+    ),
     r'title': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'title',
       type: IsarType.string,
     ),
     r'titleLower': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'titleLower',
       type: IsarType.string,
     )
@@ -180,6 +190,32 @@ const TaskSchema = CollectionSchema(
         )
       ],
     ),
+    r'seriesId': IndexSchema(
+      id: -6366517829284187702,
+      name: r'seriesId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'seriesId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    ),
+    r'templateId': IndexSchema(
+      id: -5352721467389445085,
+      name: r'templateId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'templateId',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
     r'titleLower': IndexSchema(
       id: -2652193349673264940,
       name: r'titleLower',
@@ -216,6 +252,12 @@ int _taskEstimateSize(
   }
   bytesCount += 3 + object.priorityName.length * 3;
   bytesCount += 3 + object.recurrenceName.length * 3;
+  {
+    final value = object.seriesId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.tags.length * 3;
   {
     for (var i = 0; i < object.tags.length; i++) {
@@ -245,10 +287,12 @@ void _taskSerialize(
   writer.writeString(offsets[8], object.recurrenceName);
   writer.writeDateTime(offsets[9], object.scheduledAt);
   writer.writeDateTime(offsets[10], object.scheduledEnd);
-  writer.writeByte(offsets[11], object.status.index);
-  writer.writeStringList(offsets[12], object.tags);
-  writer.writeString(offsets[13], object.title);
-  writer.writeString(offsets[14], object.titleLower);
+  writer.writeString(offsets[11], object.seriesId);
+  writer.writeByte(offsets[12], object.status.index);
+  writer.writeStringList(offsets[13], object.tags);
+  writer.writeLong(offsets[14], object.templateId);
+  writer.writeString(offsets[15], object.title);
+  writer.writeString(offsets[16], object.titleLower);
 }
 
 Task _taskDeserialize(
@@ -271,10 +315,12 @@ Task _taskDeserialize(
             TaskRecurrence.none,
     scheduledAt: reader.readDateTime(offsets[9]),
     scheduledEnd: reader.readDateTimeOrNull(offsets[10]),
-    status: _TaskstatusValueEnumMap[reader.readByteOrNull(offsets[11])] ??
+    seriesId: reader.readStringOrNull(offsets[11]),
+    status: _TaskstatusValueEnumMap[reader.readByteOrNull(offsets[12])] ??
         TaskStatus.active,
-    tags: reader.readStringList(offsets[12]) ?? const [],
-    title: reader.readString(offsets[13]),
+    tags: reader.readStringList(offsets[13]) ?? const [],
+    templateId: reader.readLongOrNull(offsets[14]),
+    title: reader.readString(offsets[15]),
   );
   return object;
 }
@@ -311,13 +357,17 @@ P _taskDeserializeProp<P>(
     case 10:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
       return (_TaskstatusValueEnumMap[reader.readByteOrNull(offset)] ??
           TaskStatus.active) as P;
-    case 12:
-      return (reader.readStringList(offset) ?? const []) as P;
     case 13:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? const []) as P;
     case 14:
+      return (reader.readLongOrNull(offset)) as P;
+    case 15:
+      return (reader.readString(offset)) as P;
+    case 16:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -420,6 +470,14 @@ extension TaskQueryWhereSort on QueryBuilder<Task, Task, QWhere> {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'isNotificationEnabled'),
+      );
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhere> anyTemplateId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'templateId'),
       );
     });
   }
@@ -1028,6 +1086,181 @@ extension TaskQueryWhere on QueryBuilder<Task, Task, QWhereClause> {
               includeUpper: false,
             ));
       }
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> seriesIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'seriesId',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> seriesIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'seriesId',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> seriesIdEqualTo(
+      String? seriesId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'seriesId',
+        value: [seriesId],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> seriesIdNotEqualTo(
+      String? seriesId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'seriesId',
+              lower: [],
+              upper: [seriesId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'seriesId',
+              lower: [seriesId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'seriesId',
+              lower: [seriesId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'seriesId',
+              lower: [],
+              upper: [seriesId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'templateId',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'templateId',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdEqualTo(
+      int? templateId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'templateId',
+        value: [templateId],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdNotEqualTo(
+      int? templateId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'templateId',
+              lower: [],
+              upper: [templateId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'templateId',
+              lower: [templateId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'templateId',
+              lower: [templateId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'templateId',
+              lower: [],
+              upper: [templateId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdGreaterThan(
+    int? templateId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'templateId',
+        lower: [templateId],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdLessThan(
+    int? templateId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'templateId',
+        lower: [],
+        upper: [templateId],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterWhereClause> templateIdBetween(
+    int? lowerTemplateId,
+    int? upperTemplateId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'templateId',
+        lower: [lowerTemplateId],
+        includeLower: includeLower,
+        upper: [upperTemplateId],
+        includeUpper: includeUpper,
+      ));
     });
   }
 
@@ -2053,6 +2286,151 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'seriesId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'seriesId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'seriesId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdContains(String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'seriesId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'seriesId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'seriesId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> seriesIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'seriesId',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterFilterCondition> statusEqualTo(
       TaskStatus value) {
     return QueryBuilder.apply(this, (query) {
@@ -2317,6 +2695,75 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'templateId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'templateId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdEqualTo(
+      int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'templateId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'templateId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'templateId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> templateIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'templateId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
@@ -2716,6 +3163,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> sortBySeriesId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'seriesId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortBySeriesIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'seriesId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> sortByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
@@ -2725,6 +3184,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
   QueryBuilder<Task, Task, QAfterSortBy> sortByStatusDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByTemplateId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'templateId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByTemplateIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'templateId', Sort.desc);
     });
   }
 
@@ -2898,6 +3369,18 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> thenBySeriesId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'seriesId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenBySeriesIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'seriesId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> thenByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
@@ -2907,6 +3390,18 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
   QueryBuilder<Task, Task, QAfterSortBy> thenByStatusDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByTemplateId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'templateId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByTemplateIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'templateId', Sort.desc);
     });
   }
 
@@ -3006,6 +3501,13 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
     });
   }
 
+  QueryBuilder<Task, Task, QDistinct> distinctBySeriesId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'seriesId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Task, Task, QDistinct> distinctByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'status');
@@ -3015,6 +3517,12 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
   QueryBuilder<Task, Task, QDistinct> distinctByTags() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'tags');
+    });
+  }
+
+  QueryBuilder<Task, Task, QDistinct> distinctByTemplateId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'templateId');
     });
   }
 
@@ -3106,6 +3614,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Task, String?, QQueryOperations> seriesIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'seriesId');
+    });
+  }
+
   QueryBuilder<Task, TaskStatus, QQueryOperations> statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
@@ -3115,6 +3629,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
   QueryBuilder<Task, List<String>, QQueryOperations> tagsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'tags');
+    });
+  }
+
+  QueryBuilder<Task, int?, QQueryOperations> templateIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'templateId');
     });
   }
 

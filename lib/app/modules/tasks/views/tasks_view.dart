@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +10,7 @@ import '../../../data/models/task_model.dart';
 import '../controllers/task_list_controller.dart';
 import '../controllers/task_form_controller.dart';
 import 'widgets/task_tile.dart';
+import 'widgets/task_section_header.dart';
 import '../../../core/helpers/number_extension.dart';
 
 class TasksView extends GetView<TaskListController> {
@@ -31,7 +32,7 @@ class TasksView extends GetView<TaskListController> {
             // iOS-Style Large App Bar
             SliverAppBar(
               backgroundColor: theme.scaffoldBackgroundColor,
-              expandedHeight: 120.0,
+              expandedHeight: 100.0,
               floating: false,
               pinned: true,
               elevation: 0,
@@ -40,213 +41,250 @@ class TasksView extends GetView<TaskListController> {
                 icon: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   color: AppTheme.primary,
-                  size: 22,
+                  size: 20,
                 ),
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
                 title: Text(
-                  'my_daily_tasks'.tr,
+                  'tasks_timeline'.tr,
                   style: TextStyle(
                     color: theme.textTheme.titleLarge?.color,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.8,
                   ),
                 ),
               ),
               actions: [
                 IconButton(
                   icon: const Icon(
+                    CupertinoIcons.calendar,
+                    color: AppTheme.primary,
+                    size: 22,
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: controller.selectedDate.value,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      controller.selectedDate.value = picked;
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(
                     CupertinoIcons.add_circled_solid,
                     color: AppTheme.primary,
-                    size: 28,
+                    size: 26,
                   ),
                   onPressed: () => Get.toNamed('/add-task'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
               ],
             ),
 
-            // Search Bar
+            // Search & Date Navigation Strip
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                child: CupertinoSearchTextField(
-                  placeholder: 'search_tasks'.tr,
-                  style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                  onChanged: (val) => controller.searchQuery.value = val,
-                ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: CupertinoSearchTextField(
+                      placeholder: 'search_tasks'.tr,
+                      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                      onChanged: (val) => controller.searchQuery.value = val,
+                    ),
+                  ),
+                  Obx(() => Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(CupertinoIcons.chevron_left_circle, size: 24),
+                          onPressed: controller.previousDay,
+                          color: AppTheme.primary.withValues(alpha: 0.6),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: controller.resetToToday,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  DateFormat.yMMMMEEEEd(Get.locale?.languageCode).format(controller.selectedDate.value).f,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textTheme.titleMedium?.color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(CupertinoIcons.chevron_right_circle, size: 24),
+                          onPressed: controller.nextDay,
+                          color: AppTheme.primary.withValues(alpha: 0.6),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
               ),
             ),
 
-            // Smart Summary Strip
-            SliverToBoxAdapter(
-              child: Obx(() {
-                final total = controller.filteredTasks.length;
-                final completed = controller.filteredTasks
-                    .where((t) => t.status == TaskStatus.completed)
-                    .length;
-                final active = controller.filteredTasks
-                    .where((t) => t.status == TaskStatus.active)
-                    .length;
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      // Date
-                      Expanded(
-                        child: Text(
-                          DateFormat.yMMMMEEEEd(
-                            Get.locale?.languageCode,
-                          ).format(DateTime.now()).f,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textTheme.bodyMedium?.color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Smart Counters
-                      if (total > 0) ...[
-                        _buildMiniChip(
-                          icon: CupertinoIcons.flame_fill,
-                          label: active.f,
-                          color: const Color(0xFFFF9500),
-                          theme: theme,
-                        ),
-                        const SizedBox(width: 6),
-                        _buildMiniChip(
-                          icon: CupertinoIcons.checkmark_alt,
-                          label: '${completed.f}/${total.f}',
-                          color: const Color(0xFF34C759),
-                          theme: theme,
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              }),
-            ),
-
-            // Task List
+            // Timeline Sections
             Obx(() {
-              final tasks = controller.filteredTasks;
-              if (tasks.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.primary.withAlpha(15),
-                          ),
-                          child: Icon(
-                            CupertinoIcons.checkmark_seal_fill,
-                            size: 56,
-                            color: AppTheme.primary.withAlpha(80),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'no_tasks_today'.tr,
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: theme.textTheme.bodyMedium?.color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'add_task'.tr,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: theme.textTheme.bodyMedium?.color
-                                ?.withAlpha(120),
-                          ),
-                        ),
-                      ],
-                    ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.05),
-                  ),
-                );
+              final active = controller.activeTasks;
+              final upcoming = controller.upcomingTasks;
+              final overdue = controller.overdueTasks;
+              final completed = controller.completedTasks;
+
+              if (active.isEmpty && upcoming.isEmpty && overdue.isEmpty && completed.isEmpty) {
+                return _buildEmptyState(theme);
               }
 
-              return SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final task = tasks[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 6,
+              return SliverMainAxisGroup(
+                slivers: [
+                  // 🚨 Overdue Section
+                  if (overdue.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: TaskSectionHeader(
+                        title: 'tasks_overdue'.tr,
+                        icon: CupertinoIcons.exclamationmark_triangle_fill,
+                        color: const Color(0xFFEF4444),
+                        count: overdue.length,
+                      ),
                     ),
-                    child: TaskTile(
-                      task: task,
-                      onTap: () => _showTaskDetails(context, task),
-                      onEdit: () {
-                        Get.find<TaskFormController>().loadTaskIntoForm(task);
-                        Get.toNamed('/add-task', arguments: task);
-                      },
-                      onCompleted: (val) =>
-                          controller.markTaskCompleted(task),
-                      onCancel: () => controller.cancelTask(task),
-                      onDelete: () => controller.deleteTask(task),
-                    )
-                        .animate(key: ValueKey('anim_${task.id}'))
-                        .fadeIn(duration: const Duration(milliseconds: 300))
-                        .slideX(begin: 0.06),
-                  );
-                }, childCount: tasks.length),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildTaskTile(context, overdue[index]),
+                        childCount: overdue.length,
+                      ),
+                    ),
+                  ],
+
+                  // ⚡ Active Now Section
+                  if (active.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: TaskSectionHeader(
+                        title: 'tasks_active'.tr,
+                        icon: CupertinoIcons.play_circle_fill,
+                        color: const Color(0xFF3B82F6),
+                        count: active.length,
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildTaskTile(context, active[index]),
+                        childCount: active.length,
+                      ),
+                    ),
+                  ],
+
+                  // 📅 Upcoming Section
+                  if (upcoming.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: TaskSectionHeader(
+                        title: 'tasks_upcoming'.tr,
+                        icon: CupertinoIcons.clock_fill,
+                        color: const Color(0xFF6B7280),
+                        count: upcoming.length,
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildTaskTile(context, upcoming[index]),
+                        childCount: upcoming.length,
+                      ),
+                    ),
+                  ],
+
+                  // ✅ Completed Section
+                  if (completed.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: TaskSectionHeader(
+                        title: 'tasks_completed'.tr,
+                        icon: CupertinoIcons.check_mark_circled_solid,
+                        color: const Color(0xFF10B981),
+                        count: completed.length,
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildTaskTile(context, completed[index]),
+                        childCount: completed.length,
+                      ),
+                    ),
+                  ],
+                ],
               );
             }),
 
-            // Bottom Padding
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
     );
   }
 
-  /// Mini chip for the smart summary strip
-  Widget _buildMiniChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required ThemeData theme,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color,
+  Widget _buildTaskTile(BuildContext context, Task task) {
+    return TaskTile(
+      task: task,
+      onTap: () => _showTaskDetails(context, task),
+      onEdit: () {
+        Get.find<TaskFormController>().loadTaskIntoForm(task);
+        Get.toNamed('/add-task', arguments: task);
+      },
+      onCompleted: (val) => controller.markTaskCompleted(task),
+      onCancel: () => controller.cancelTask(task),
+      onDelete: () => controller.deleteTask(task),
+    ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.02);
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(CupertinoIcons.square_list, size: 64, color: AppTheme.primary.withValues(alpha: 0.3)),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              'no_tasks_today'.tr,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.textTheme.titleLarge?.color?.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'add_task_hint'.tr,
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)),
       ),
     );
   }
@@ -255,27 +293,8 @@ class TasksView extends GetView<TaskListController> {
     BottomSheetHelper.showSafeBottomSheet(
       builder: (context, setState) {
         final theme = Theme.of(context);
-        final isDark = theme.brightness == Brightness.dark;
         final isCompleted = task.status == TaskStatus.completed;
         final isCancelled = task.status == TaskStatus.cancelled;
-
-        // Priority color mapping
-        Color priorityColor;
-        String priorityLabel;
-        switch (task.priority) {
-          case TaskPriority.high:
-            priorityColor = const Color(0xFFFF3B30);
-            priorityLabel = 'High';
-            break;
-          case TaskPriority.medium:
-            priorityColor = const Color(0xFFFF9500);
-            priorityLabel = 'Medium';
-            break;
-          case TaskPriority.low:
-            priorityColor = const Color(0xFF34C759);
-            priorityLabel = 'Low';
-            break;
-        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -283,286 +302,79 @@ class TasksView extends GetView<TaskListController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drag Handle
               Center(
                 child: Container(
                   width: 40,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: theme.dividerColor,
+                    color: theme.dividerColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Status + Priority Row
-              Row(
-                children: [
-                  // Status pill
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isCompleted
-                          ? const Color(0xFF34C759).withAlpha(20)
-                          : isCancelled
-                              ? Colors.grey.withAlpha(20)
-                              : AppTheme.primary.withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isCompleted
-                          ? 'task_completed'.tr
-                          : isCancelled
-                              ? 'cancelled'.tr
-                              : 'active'.tr,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isCompleted
-                            ? const Color(0xFF34C759)
-                            : isCancelled
-                                ? Colors.grey
-                                : AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Priority pill
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: priorityColor.withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: priorityColor.withAlpha(40)),
-                    ),
-                    child: Text(
-                      priorityLabel,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: priorityColor,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  // Recurrence indicator
-                  if (task.recurrence != TaskRecurrence.none)
-                    Icon(CupertinoIcons.repeat,
-                        size: 18, color: AppTheme.primary),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Title
+              const SizedBox(height: 32),
               Text(
                 task.title,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: theme.textTheme.titleLarge?.color,
-                  decoration: (isCompleted || isCancelled)
-                      ? TextDecoration.lineThrough
-                      : null,
+                  letterSpacing: -0.5,
+                  decoration: (isCompleted || isCancelled) ? TextDecoration.lineThrough : null,
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Time Info Card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withAlpha(8)
-                      : AppTheme.primary.withAlpha(8),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withAlpha(10)
-                        : AppTheme.primary.withAlpha(15),
-                  ),
+              if (task.note?.isNotEmpty ?? false) ...[
+                Text(
+                  'notes'.tr,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      CupertinoIcons.clock_fill,
-                      size: 18,
-                      color: AppTheme.primary.withAlpha(180),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task.scheduledEnd != null
-                                ? '${DateFormat.jm().format(task.scheduledAt).f} → ${DateFormat.jm().format(task.scheduledEnd!).f}'
-                                : DateFormat.jm().format(task.scheduledAt).f,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            DateFormat.yMMMMd(Get.locale?.languageCode)
-                                .format(task.scheduledAt).f,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodyMedium?.color
-                                  ?.withAlpha(150),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Time left badge
-                    if (!isCompleted && !isCancelled)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withAlpha(15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          task.timeLeft,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Note Section
-              if (task.note != null && task.note!.trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.dividerColor.withAlpha(30),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(CupertinoIcons.doc_text,
-                              size: 14,
-                              color: theme.textTheme.bodyMedium?.color
-                                  ?.withAlpha(120)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'notes'.tr,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyMedium?.color
-                                  ?.withAlpha(120),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        task.note!,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.5,
-                          color: theme.textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 8),
+                Text(task.note!, style: const TextStyle(fontSize: 15, height: 1.5)),
+                const SizedBox(height: 24),
               ],
-
-              // Tags
-              if (task.tags.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: task.tags.map((tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withAlpha(12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '#$tag',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-
-              const SizedBox(height: 28),
-
-              // Action Buttons
+              _buildDetailItem(CupertinoIcons.time, 'time'.tr, 
+                "${DateFormat.jm().format(task.scheduledAt).f}${task.scheduledEnd != null ? ' - ${DateFormat.jm().format(task.scheduledEnd!).f}' : ''}"),
+              const SizedBox(height: 12),
+              _buildDetailItem(CupertinoIcons.calendar, 'date'.tr, 
+                DateFormat.yMMMMd(Get.locale?.languageCode).format(task.scheduledAt).f),
+              const SizedBox(height: 40),
               Row(
                 children: [
-                  // Complete Button
                   Expanded(
-                    child: _buildDetailButton(
-                      label: 'task_completed'.tr,
-                      icon: CupertinoIcons.checkmark_alt,
-                      color: isCompleted
-                          ? Colors.grey
-                          : const Color(0xFF34C759),
-                      onPressed: () {
+                    child: _buildActionButton(
+                      'complete'.tr, 
+                      CupertinoIcons.checkmark_alt, 
+                      isCompleted ? Colors.grey : const Color(0xFF10B981),
+                      () {
                         controller.markTaskCompleted(task);
-                        if (Get.isBottomSheetOpen ?? false) Get.back();
-                      },
+                        Get.back();
+                      }
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // Edit Button
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildDetailButton(
-                      label: 'edit'.tr,
-                      icon: CupertinoIcons.pencil,
-                      color: AppTheme.primary,
-                      onPressed: () {
-                        if (Get.isBottomSheetOpen ?? false) Get.back();
+                    child: _buildActionButton(
+                      'edit'.tr, 
+                      CupertinoIcons.pencil, 
+                      AppTheme.primary,
+                      () {
+                        Get.back();
                         Get.find<TaskFormController>().loadTaskIntoForm(task);
                         Get.toNamed('/add-task', arguments: task);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Delete Button
-                  Expanded(
-                    child: _buildDetailButton(
-                      label: 'delete'.tr,
-                      icon: CupertinoIcons.trash,
-                      color: const Color(0xFFFF3B30),
-                      onPressed: () {
-                        controller.deleteTask(task);
-                        Get.back();
-                      },
+                      }
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              _buildActionButton(
+                'delete'.tr, 
+                CupertinoIcons.trash, 
+                const Color(0xFFEF4444),
+                () {
+                  Get.back();
+                  controller.deleteTask(task);
+                }
               ),
               const SizedBox(height: 20),
             ],
@@ -572,39 +384,36 @@ class TasksView extends GetView<TaskListController> {
     );
   }
 
-  /// Premium action button
-  Widget _buildDetailButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color.withAlpha(20),
-        foregroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppTheme.primary.withValues(alpha: 0.6)),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          ],
         ),
-        elevation: 0,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+      ],
+    );
+  }
+
+  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color.withValues(alpha: 0.1),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
     );
   }

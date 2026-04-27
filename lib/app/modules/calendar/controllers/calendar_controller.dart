@@ -7,20 +7,29 @@ import '../../../data/models/calendar_event_model.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/models/medication_model.dart';
 
+import '../../../data/models/appointment_model.dart';
+
 import '../../../data/providers/calendar_repository.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../data/providers/medication_repository.dart';
+import '../../../data/providers/appointment_repository.dart';
 
 
 import '../../../core/helpers/log_helper.dart';
+import '../../../core/extensions/date_time_extensions.dart';
 import 'dart:async';
 
 class CalendarController extends GetxController {
   final CalendarRepository _calendarRepo = Get.find<CalendarRepository>();
   final TaskRepository _taskRepo = Get.find<TaskRepository>();
   final MedicationRepository _medRepo = Get.find<MedicationRepository>();
+  final AppointmentRepository _appointmentRepo = Get.find<AppointmentRepository>();
 
   final events = <CalendarEvent>[].obs;
+  final tasks = <Task>[].obs;
+  final recurringTemplates = <Task>[].obs;
+  final appointments = <Appointment>[].obs;
+
   final selectedDay = DateTime.now().obs;
   final focusedDay = DateTime.now().obs;
   final calendarFormat = CalendarFormat.month.obs;
@@ -32,23 +41,30 @@ class CalendarController extends GetxController {
   final selectedDate = DateTime.now().obs;
   final selectedEvents = <dynamic>[].obs; // Changed to dynamic for Harmony Sync
   final isLoading = false.obs;
-  StreamSubscription? _eventsSub;
+  
+  final List<StreamSubscription> _subs = [];
 
   @override
   void onInit() {
     super.onInit();
-    // Use explicit subscription to prevent memory leaks
-    _eventsSub = _calendarRepo.watchAllEvents()
-        .listen((data) => events.value = data);
-    talker.info('📅 CalendarController initialized');
+    
+    // Subscribe to all sources reactively
+    _subs.add(_calendarRepo.watchAllEvents().listen((data) => events.value = data));
+    _subs.add(_taskRepo.watchAllTasksData().listen((data) => tasks.value = data));
+    _subs.add(_taskRepo.watchRecurringTemplates().listen((data) => recurringTemplates.value = data));
+    _subs.add(_appointmentRepo.listenToAppointments().listen((data) => appointments.value = data));
+
+    talker.info('📅 CalendarController initialized with Harmony Sync');
     
     // Auto-update selected events when the main list or selected day changes
-    everAll([events, selectedDay], (_) => _updateSelectedEvents());
+    everAll([events, tasks, recurringTemplates, appointments, selectedDay], (_) => _updateSelectedEvents());
   }
 
   @override
   void onClose() {
-    _eventsSub?.cancel();
+    for (var sub in _subs) {
+      sub.cancel();
+    }
     titleController.dispose();
     descriptionController.dispose();
     titleFocusNode.dispose();
@@ -66,12 +82,14 @@ class CalendarController extends GetxController {
         _calendarRepo.getEventsForDate(date),
         _taskRepo.getTasksForDate(date),
         _medRepo.getActiveMedicationsForDate(date),
+        _appointmentRepo.getAppointmentsForDay(date),
       ]);
 
       final List<dynamic> combined = [];
       combined.addAll(results[0] as List<CalendarEvent>);
       combined.addAll(results[1] as List<Task>);
       combined.addAll(results[2] as List<Medication>);
+      combined.addAll(results[3] as List<Appointment>);
 
       selectedEvents.value = combined;
     } catch (e) {
@@ -81,13 +99,62 @@ class CalendarController extends GetxController {
     }
   }
 
-  List<CalendarEvent> getEventsForDay(DateTime day) {
-    return events
-        .where((e) =>
-            e.date.year == day.year &&
-            e.date.month == day.month &&
-            e.date.day == day.day)
-        .toList();
+  List<dynamic> getEventsForDay(DateTime day) {
+    final List<dynamic> markers = [];
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+
+    // 1. Regular Events
+    markers.addAll(events.where((e) =>
+        e.date.year == day.year &&
+        e.date.month == day.month &&
+        e.date.day == day.day));
+
+    // 2. Physical Tasks
+    markers.addAll(tasks.where((t) =>
+        t.scheduledAt.year == day.year &&
+        t.scheduledAt.month == day.month &&
+        t.scheduledAt.day == day.day));
+
+    // 3. Virtual Recurring Tasks (for future dates)
+    for (var template in recurringTemplates) {
+      // Only show virtual if physical doesn't exist for this series on this day
+      final hasPhysical = tasks.any((t) => 
+        t.seriesId == template.seriesId && 
+        t.scheduledAt.year == day.year &&
+        t.scheduledAt.month == day.month &&
+        t.scheduledAt.day == day.day
+      );
+
+      if (!hasPhysical && _shouldRunOnDay(template, normalizedDay)) {
+        markers.add(template);
+      }
+    }
+
+    // 4. Appointments
+    markers.addAll(appointments.where((a) =>
+        a.scheduledAt.year == day.year &&
+        a.scheduledAt.month == day.month &&
+        a.scheduledAt.day == day.day));
+
+    return markers;
+  }
+
+  bool _shouldRunOnDay(Task template, DateTime day) {
+    // Don't show before start date
+    if (day.isBefore(template.scheduledAt.normalized)) return false;
+
+    switch (template.recurrence) {
+      case TaskRecurrence.daily:
+        return true;
+      case TaskRecurrence.weekly:
+        return template.scheduledAt.weekday == day.weekday;
+      case TaskRecurrence.monthly:
+        final lastDayOfMonth = DateTime(day.year, day.month + 1, 0).day;
+        final targetDay = template.scheduledAt.day;
+        return (day.day == targetDay) || (targetDay > lastDayOfMonth && day.day == lastDayOfMonth);
+      default:
+        return false;
+    }
   }
 
   void onDaySelected(DateTime selected, DateTime focused) {

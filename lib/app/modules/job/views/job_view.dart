@@ -64,37 +64,39 @@ class JobView extends GetView<JobController> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // ✅ Glassy Job Title Badge Restored
-                      Flexible(
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 2),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppTheme.primary.withAlpha(40),
-                              width: 0.5,
+                      if (controller.isEmployed) ...[
+                        const SizedBox(width: 8),
+                        // ✅ Glassy Job Title Badge Restored
+                        Flexible(
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
                             ),
-                          ),
-                          child: Text(
-                            (controller.profile.value.jobTitle ??
-                                    'unnamed_job'.tr)
-                                .tr,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primary,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withAlpha(20),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppTheme.primary.withAlpha(40),
+                                width: 0.5,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            child: Text(
+                              (controller.profile.value.jobTitle ??
+                                      'unnamed_job'.tr)
+                                  .tr,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                       const SizedBox(width: 20), // Padding from right edge
                     ],
                   ),
@@ -112,7 +114,18 @@ class JobView extends GetView<JobController> {
                 ],
               ),
 
-              // ── Salary countdown card ──
+              if (controller.isNotConfigured)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildNotConfiguredState(context),
+                )
+              else if (controller.isUnemployed)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildUnemployedState(context),
+                )
+              else ...[
+                // ── Salary countdown card ──
               SliverToBoxAdapter(child: _buildSalaryCard(context)),
 
               // ── Today attendance card ──
@@ -191,9 +204,91 @@ class JobView extends GetView<JobController> {
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 120)),
+              ], // End of employed state slivers
             ],
           );
         }),
+      ),
+    );
+  }
+
+  // ─── Setup / Unemployed States ────────────────────────────────
+  Widget _buildNotConfiguredState(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(CupertinoIcons.briefcase_fill, size: 64, color: AppTheme.primary),
+          ),
+          const SizedBox(height: 24),
+          Text('setup_job_title'.tr, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(
+            'setup_job_desc'.tr, 
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Get.toNamed(Routes.JOB_SETTINGS),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text('i_have_job'.tr, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () => controller.setUnemployed(),
+            child: Text('i_am_unemployed'.tr, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnemployedState(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(CupertinoIcons.bed_double_fill, size: 64, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          Text('unemployed'.tr, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(
+            'unemployed_desc'.tr, 
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 32),
+          TextButton.icon(
+            onPressed: () => Get.toNamed(Routes.JOB_SETTINGS),
+            icon: const Icon(CupertinoIcons.add_circled, color: AppTheme.primary),
+            label: Text('switch_to_employed'.tr, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
@@ -776,7 +871,8 @@ class JobView extends GetView<JobController> {
                     maxLines: 2,
                     overflow: TextOverflow.visible,
                   ),
-                  ?subtitle,
+                  // ignore: use_null_aware_elements
+                  if (subtitle != null) subtitle,
                 ],
               ),
             ),

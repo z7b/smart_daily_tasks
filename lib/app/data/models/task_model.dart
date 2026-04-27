@@ -49,6 +49,14 @@ class Task {
   @Index()
   bool isNotificationEnabled = true;
 
+  /// Unique identifier for the recurrence series
+  @Index()
+  String? seriesId;
+
+  /// ID of the template task this instance was created from
+  @Index()
+  int? templateId;
+
   // --- Life OS Intelligence ---
 
   /// Total duration of the task
@@ -110,6 +118,8 @@ class Task {
     this.isNotificationEnabled = true,
     required this.createdAt,
     this.completedAt,
+    this.seriesId,
+    this.templateId,
   });
 
   Task copyWith({
@@ -126,6 +136,8 @@ class Task {
     bool? isNotificationEnabled,
     DateTime? createdAt,
     DateTime? completedAt,
+    String? seriesId,
+    int? templateId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -141,6 +153,8 @@ class Task {
       isNotificationEnabled: isNotificationEnabled ?? this.isNotificationEnabled,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
+      seriesId: seriesId ?? this.seriesId,
+      templateId: templateId ?? this.templateId,
     );
   }
 
@@ -169,6 +183,8 @@ class Task {
       completedAt: json['completedAt'] != null
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
+      seriesId: json['seriesId'] as String?,
+      templateId: json['templateId'] as int?,
     );
   }
 
@@ -188,6 +204,8 @@ class Task {
       'isNotificationEnabled': isNotificationEnabled,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
+      'seriesId': seriesId,
+      'templateId': templateId,
     };
   }
 

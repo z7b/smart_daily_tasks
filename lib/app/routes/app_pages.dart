@@ -17,6 +17,9 @@ import '../modules/bookmarks/views/bookmarks_view.dart';
 import '../modules/bookmarks/views/add_bookmark_view.dart';
 import '../modules/calendar/bindings/calendar_binding.dart';
 import '../modules/calendar/views/calendar_view.dart';
+import '../modules/appointments/bindings/appointments_binding.dart';
+import '../modules/appointments/views/appointments_view.dart';
+import '../modules/appointments/views/add_appointment_view.dart';
 import '../modules/assistant/bindings/assistant_binding.dart';
 import '../modules/assistant/views/assistant_view.dart';
 import '../modules/books/bindings/books_binding.dart';
@@ -91,6 +94,16 @@ class AppPages {
       name: Routes.CALENDAR,
       page: () => const CalendarView(),
       binding: CalendarBinding(),
+    ),
+    GetPage(
+      name: Routes.APPOINTMENTS,
+      page: () => const AppointmentsView(),
+      binding: AppointmentsBinding(),
+    ),
+    GetPage(
+      name: Routes.ADD_APPOINTMENT,
+      page: () => const AddAppointmentView(),
+      binding: AppointmentsBinding(),
     ),
     GetPage(
       name: Routes.ASSISTANT,

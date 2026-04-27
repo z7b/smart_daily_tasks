@@ -10,6 +10,7 @@ import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../../../data/models/calendar_event_model.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/models/medication_model.dart';
+import '../../../data/models/appointment_model.dart';
 import '../controllers/calendar_controller.dart';
 import '../../settings/controllers/settings_controller.dart';
 import '../../../core/helpers/number_extension.dart';
@@ -259,7 +260,34 @@ class CalendarView extends GetView<CalendarController> {
     if (item is CalendarEvent) return _buildEventCard(item, index, context);
     if (item is Task) return _buildTaskCard(item, index, context);
     if (item is Medication) return _buildMedicationCard(item, index, context);
+    if (item is Appointment) return _buildAppointmentCard(item, index, context);
     return const SizedBox.shrink();
+  }
+
+  Widget _buildAppointmentCard(Appointment appt, int index, BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
+      ),
+      child: ListTile(
+        onTap: () => Get.toNamed('/appointments'),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: const Icon(CupertinoIcons.doc_person_fill, color: AppTheme.primary, size: 20),
+        ),
+        title: Text(appt.doctorName, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('doctor_appointments'.tr, style: const TextStyle(fontSize: 12, color: AppTheme.primary)),
+        trailing: Text(
+          DateFormat.jm(Get.locale?.languageCode).format(appt.scheduledAt).f,
+          style: TextStyle(color: theme.disabledColor, fontSize: 12),
+        ),
+      ),
+    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).scale();
   }
 
   Widget _buildEventCard(CalendarEvent event, int index, BuildContext context) {

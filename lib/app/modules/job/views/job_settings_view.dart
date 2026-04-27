@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../controllers/job_controller.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../data/models/work_profile_model.dart';
 
 class JobSettingsView extends GetView<JobController> {
   const JobSettingsView({super.key});
@@ -30,7 +31,10 @@ class JobSettingsView extends GetView<JobController> {
         actions: [
           TextButton(
             onPressed: () {
+              // Get current status from the toggle state (using profile status for simplicity, 
+              // or just calling updateJobSettings with the employed status if they filled the form)
               controller.updateJobSettings(
+                employmentStatus: controller.isUnemployed ? EmploymentStatus.unemployed : EmploymentStatus.employed,
                 title: titleController.text,
                 company: companyController.text,
                 officialWorkHours: double.tryParse(hoursController.text),
@@ -42,22 +46,96 @@ class JobSettingsView extends GetView<JobController> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Section 1: Professional Identity
-            _buildSectionHeader(context, CupertinoIcons.briefcase_fill, 'job_title'.tr),
-            const SizedBox(height: 16),
-            _buildCard(context, [
-              _buildTextField(titleController, 'job_title'.tr, CupertinoIcons.tag),
-              const Divider(),
-              _buildTextField(companyController, 'company'.tr, CupertinoIcons.building_2_fill),
-            ]),
+      body: Obx(() {
+        final isUnemployed = controller.isUnemployed;
+        
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section 0: Employment Status
+              _buildSectionHeader(context, CupertinoIcons.person_crop_circle_fill, 'employment_status'.tr),
+              const SizedBox(height: 16),
+              _buildCard(context, [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => controller.setEmployed(),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: !isUnemployed ? AppTheme.primary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'employed'.tr,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: !isUnemployed ? Colors.white : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            // Show confirmation before marking as unemployed
+                            Get.defaultDialog(
+                              title: 'unemployed'.tr,
+                              middleText: 'confirm_unemployed'.tr,
+                              textConfirm: 'yes'.tr,
+                              textCancel: 'cancel'.tr,
+                              confirmTextColor: Colors.white,
+                              onConfirm: () {
+                                controller.setUnemployed();
+                                Get.back();
+                              },
+                            );
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isUnemployed ? Colors.grey.withAlpha(50) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'unemployed'.tr,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isUnemployed ? theme.textTheme.bodyMedium?.color : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+              
+              if (!isUnemployed) ...[
+                const SizedBox(height: 32),
+                // Section 1: Professional Identity
+                _buildSectionHeader(context, CupertinoIcons.briefcase_fill, 'job_title'.tr),
+                const SizedBox(height: 16),
+                _buildCard(context, [
+                  _buildTextField(titleController, 'job_title'.tr, CupertinoIcons.tag),
+                  const Divider(),
+                  _buildTextField(companyController, 'company'.tr, CupertinoIcons.building_2_fill),
+                ]),
+                const SizedBox(height: 32),
 
-            const SizedBox(height: 32),
 
             // Section 2: Shift Schedule
             _buildSectionHeader(context, CupertinoIcons.clock_fill, 'working_days'.tr),
@@ -115,10 +193,11 @@ class JobSettingsView extends GetView<JobController> {
               )),
             ]),
 
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+              ], // End of employed settings block
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -398,9 +477,15 @@ class JobSettingsView extends GetView<JobController> {
                             borderRadius: BorderRadius.circular(20),
                             onTap: () {
                               final newShifts = List<Map<String, dynamic>>.from(shifts);
-                              final lastEnd = newShifts.last['end'] as int;
-                              final newStart = (lastEnd + 60) % (24 * 60); // Default 1 hour break
-                              final newEnd = (newStart + 4 * 60) % (24 * 60); // Default 4 hour shift addition
+                              int newStart = 480; // Default 8:00 AM
+                              int newEnd = 1020; // Default 5:00 PM
+                              
+                              if (newShifts.isNotEmpty) {
+                                final lastEnd = newShifts.last['end'] as int;
+                                newStart = (lastEnd + 60) % (24 * 60); // Default 1 hour break
+                                newEnd = (newStart + 4 * 60) % (24 * 60); // Default 4 hour shift addition
+                              }
+                              
                               newShifts.add({'start': newStart, 'end': newEnd});
                               controller.setCustomShifts(day, newShifts, isHoliday: false);
                             },

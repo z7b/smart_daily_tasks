@@ -3,28 +3,51 @@ import 'package:isar/isar.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../models/task_model.dart';
+import '../../core/helpers/result.dart';
+import '../../core/extensions/date_time_extensions.dart';
 
 class TaskRepository {
   final Isar _isar;
+  final _storage = GetStorage();
 
   TaskRepository(this._isar) {
     talker.info('📋 TaskRepository initialized');
   }
 
   /// Create a new task with success result
-  Future<bool> addTask(Task task) async {
+  Future<Result<int>> addTask(Task task) async {
     try {
-      await _isar.writeTxn(() async {
-        await _isar.tasks.put(task);
+      final id = await _isar.writeTxn(() async {
+        return await _isar.tasks.put(task);
       });
-      return true;
+      return Result.success(id);
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Add): $e');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Add Task)');
-      return false;
+      return Result.failure(e.toString());
     }
+  }
+
+  // ✅ Used for Tasks Module Timeline
+  Stream<List<Task>> watchTimeline(DateTime viewDate) {
+    final startOfDay = DateTime(viewDate.year, viewDate.month, viewDate.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return _isar.tasks
+        .filter()
+        .statusEqualTo(TaskStatus.active) // Fetch all uncompleted (Overdue, Now, Future)
+        .or()
+        .group((q) => q
+            .scheduledAtBetween(startOfDay, endOfDay, includeLower: true, includeUpper: false)
+            .and()
+            .group((q2) => q2
+                .statusEqualTo(TaskStatus.completed)
+                .or()
+                .statusEqualTo(TaskStatus.cancelled)))
+        .sortByScheduledAt()
+        .watch(fireImmediately: true);
   }
 
   // ✅ Phase 2: Memory Over-fetching fix
@@ -64,6 +87,20 @@ class TaskRepository {
     return _isar.tasks.watchLazy();
   }
 
+  /// ✅ Reactive stream of all tasks for calendar markers
+  Stream<List<Task>> watchAllTasksData() {
+    return _isar.tasks.where().watch(fireImmediately: true);
+  }
+
+  /// ✅ Reactive stream of recurring templates for "Virtual" calendar display
+  Stream<List<Task>> watchRecurringTemplates() {
+    return _isar.tasks
+        .filter()
+        .not()
+        .recurrenceEqualTo(TaskRecurrence.none)
+        .watch(fireImmediately: true);
+  }
+
   /// Get all tasks (Future) with error handling
   Future<List<Task>> getAllTasks() async {
     try {
@@ -75,23 +112,23 @@ class TaskRepository {
   }
 
   /// Update an existing task with success result
-  Future<bool> updateTask(Task task) async {
+  Future<Result<void>> updateTask(Task task) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.tasks.put(task);
       });
-      return true;
+      return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Update): $e');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Update Task)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
   /// ✅ Phase 2: Atomicity Failure fix - Completes task and spawns recurrence in one transaction
-  Future<bool> completeAndSpawnRecurringTask(Task currentTask, Task? nextTask) async {
+  Future<Result<void>> completeAndSpawnRecurringTask(Task currentTask, Task? nextTask) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.tasks.put(currentTask);
@@ -99,13 +136,13 @@ class TaskRepository {
           await _isar.tasks.put(nextTask);
         }
       });
-      return true;
+      return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Complete & Spawn): $e');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Complete & Spawn)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
@@ -123,15 +160,14 @@ class TaskRepository {
   }
 
   /// ✅ Phase 6: Delete task and stop recurrence series (Zombie Fix)
-  Future<void> deleteTaskAndStopRecurrence(Task task) async {
+  /// Sprint 1 Fix: Now uses seriesId instead of title
+  Future<Result<void>> deleteTaskAndStopRecurrence(Task task) async {
     try {
       await _isar.writeTxn(() async {
-        // 1. If it's a recurring task, stop the recurrence for all past/future instances
-        if (task.recurrence != TaskRecurrence.none) {
-          final siblings = await _isar.tasks
-              .filter()
-              .titleEqualTo(task.title)
-              .findAll();
+        // 1. If it's a recurring task, stop the recurrence for all past/future instances in this series
+        if (task.seriesId != null) {
+          final allTasks = await _isar.tasks.where().findAll();
+          final siblings = allTasks.where((t) => t.seriesId == task.seriesId).toList();
               
           for (var sibling in siblings) {
             sibling.recurrence = TaskRecurrence.none;
@@ -142,24 +178,25 @@ class TaskRepository {
         // 2. Delete the actual instance the user selected
         await _isar.tasks.delete(task.id);
         
-        // ✅ Architecture Fix: Deletion Guard
-        // Save to GetStorage that this task title was explicitly deleted today
-        // to prevent the Recurrence Engine from re-creating it 1 second later.
-        if (task.recurrence != TaskRecurrence.none) {
+        // ✅ Architecture Fix: Deletion Guard (Now uses seriesId)
+        if (task.seriesId != null) {
           final storage = GetStorage();
           final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-          final key = 'deleted_tasks_$todayStr';
-          final List deletedTitles = storage.read(key) ?? [];
-          if (!deletedTitles.contains(task.title)) {
-            deletedTitles.add(task.title);
-            storage.write(key, deletedTitles);
+          final key = 'deleted_series_$todayStr';
+          final List deletedSeries = storage.read(key) ?? [];
+          if (!deletedSeries.contains(task.seriesId)) {
+            deletedSeries.add(task.seriesId);
+            storage.write(key, deletedSeries);
           }
         }
       });
+      return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Delete & Stop Recurrence): $e');
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete & Stop Recurrence)');
+      return Result.failure(e.toString());
     }
   }
 
@@ -192,69 +229,122 @@ class TaskRepository {
   }
 
   /// ✅ Phase 4: Intelligence - Automatic Recurrence Instantiation
-  /// This ensures that daily/weekly/monthly tasks appear for 'today' if they don't exist yet.
+  /// Sprint 1 Fix: Now uses seriesId/templateId for robust deduplication
   Future<void> instantiateRecurringTasks() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
     talker.info('♻️ Running Recurrence Engine...');
     
-    // 1. Get all tasks that are recurring (Candidates)
-    final recurringTemplates = await _isar.tasks
-        .filter()
-        .not()
-        .recurrenceEqualTo(TaskRecurrence.none)
-        .findAll();
+    try {
+      talker.info('[TRACE: 0] Entering function');
+      final now = DateTime.now();
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+      talker.info('[TRACE: 1] Querying recurring templates');
+      // Principal Architect: Fetch all tasks that are templates (have recurrence)
+      final recurringTemplates = await _isar.tasks
+          .filter()
+          .not()
+          .recurrenceEqualTo(TaskRecurrence.none)
+          .findAll();
+      
+      talker.info('[TRACE: 2] Found ${recurringTemplates.length} templates');
+
+      if (recurringTemplates.isEmpty) {
+        talker.info('[TRACE: 2.1] No templates to process');
+        return;
+      }
+
+      for (int i = 0; i < recurringTemplates.length; i++) {
+        final template = recurringTemplates[i];
+        talker.info('[TRACE: 3.$i] Processing template ID: ${template.id} Title: ${template.title}');
         
-    if (recurringTemplates.isEmpty) return;
-
-    await _isar.writeTxn(() async {
-      for (final template in recurringTemplates) {
-        // Calculate if it's due today
-        bool isDue = false;
-        if (template.recurrence == TaskRecurrence.daily) isDue = true;
-        if (template.recurrence == TaskRecurrence.weekly) {
-          isDue = template.scheduledAt.weekday == now.weekday;
-        }
-        if (template.recurrence == TaskRecurrence.monthly) {
-          final lastDayOfMonth = DateTime(now.year, now.month + 1, 0).day;
-          final effectiveDay = template.scheduledAt.day.clamp(1, lastDayOfMonth);
-          isDue = effectiveDay == now.day;
+        // 1. Ensure seriesId exists (SSOT linkage)
+        if (template.seriesId == null || template.seriesId!.isEmpty) {
+          final timestamp = template.createdAt.millisecondsSinceEpoch;
+          template.seriesId = 'series_${template.id}_$timestamp';
+          talker.info('[TRACE: 4.$i] Generated seriesId: ${template.seriesId}');
+          await _isar.writeTxn(() async {
+            await _isar.tasks.put(template);
+          });
         }
 
-        if (!isDue) continue;
+        final String sId = template.seriesId!;
 
-        // ✅ Architecture Fix: Check Deletion Guard
-        final todayStr = DateFormat('yyyy-MM-dd').format(now);
-        final List deletedTitles = GetStorage().read('deleted_tasks_$todayStr') ?? [];
-        if (deletedTitles.contains(template.title)) {
-          // talker.info('🛡️ Recurrence Guard: Skipping re-creation of deleted task "${template.title}"');
+        // 2. Check if should run today based on recurrence type
+        final today = DateTime(now.year, now.month, now.day);
+        final templateDateOnly = template.scheduledAt.normalized;
+
+        // Boundary Check: Don't spawn instances BEFORE the start date
+        if (today.isBefore(templateDateOnly)) {
+          talker.info('[TRACE: 4.1.$i] Template scheduled for future (${template.scheduledAt}). Skipping.');
           continue;
         }
 
-        // Check if an instance already exists for today with the same title
-        final existing = await _isar.tasks
-            .filter()
-            .titleEqualTo(template.title)
-            .scheduledAtBetween(today, today.add(const Duration(days: 1)), includeLower: true, includeUpper: false)
-            .findFirst();
+        bool shouldRunToday = false;
+        talker.info('[TRACE: 5.$i] Checking recurrence: ${template.recurrence}');
+        switch (template.recurrence) {
+          case TaskRecurrence.daily:
+            shouldRunToday = true;
+            break;
+          case TaskRecurrence.weekly:
+            shouldRunToday = template.scheduledAt.weekday == today.weekday;
+            break;
+          case TaskRecurrence.monthly:
+            final lastDayOfMonth = DateTime(today.year, today.month + 1, 0).day;
+            final targetDay = template.scheduledAt.day;
+            shouldRunToday = (today.day == targetDay) || (targetDay > lastDayOfMonth && today.day == lastDayOfMonth);
+            break;
+          case TaskRecurrence.none:
+            shouldRunToday = false;
+            break;
+        }
 
-        if (existing == null) {
-          // Create new instance for today
+        talker.info('[TRACE: 6.$i] Should run today: $shouldRunToday');
+        if (!shouldRunToday) continue;
+
+        // 3. Security Guard: Prevent "Zombie Tasks" (Don't recreate if deleted today)
+        final deletedSeries = _storage.read<List>('deleted_series_$todayStr') ?? [];
+        talker.info('[TRACE: 7.$i] Deleted series today count: ${deletedSeries.length}');
+        if (deletedSeries.contains(sId)) {
+          talker.info('[TRACE: 8.$i] Series $sId was deleted today. Skipping.');
+          continue;
+        }
+
+        // 4. Instance Check: Don't duplicate if already exists
+        talker.info('[TRACE: 9.$i] Querying for existing instances today');
+        // Note: seriesIdEqualTo might show error if .g.dart is stale. Run build_runner!
+        final instancesToday = await _isar.tasks
+            .filter()
+            .seriesIdEqualTo(sId)
+            .scheduledAtBetween(today, today.add(const Duration(days: 1)), includeUpper: false)
+            .findAll();
+        
+        talker.info('[TRACE: 10.$i] Found ${instancesToday.length} instances today');
+
+        if (instancesToday.isEmpty) {
+          talker.info('[TRACE: 11.$i] Creating new instance');
           final instance = template.copyWith(
             id: Isar.autoIncrement,
+            status: TaskStatus.active,
             scheduledAt: DateTime(today.year, today.month, today.day, template.scheduledAt.hour, template.scheduledAt.minute),
             scheduledEnd: template.scheduledEnd != null 
                 ? DateTime(today.year, today.month, today.day, template.scheduledEnd!.hour, template.scheduledEnd!.minute)
                 : null,
-            status: TaskStatus.active,
-            completedAt: null,
             createdAt: now,
+            // Recurrence on the instance is None to avoid it becoming a template itself
+            recurrence: TaskRecurrence.none, 
+            templateId: template.id,
           );
-          await _isar.tasks.put(instance);
-          talker.info('✨ Instantiated recurring task: ${template.title}');
+
+          await _isar.writeTxn(() async {
+            await _isar.tasks.put(instance);
+          });
+          talker.info('[TRACE: 12.$i] Instance created: ${instance.title}');
         }
       }
-    });
+      talker.info('[TRACE: 13] All templates processed');
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 CRITICAL: Recurrence Engine Failed');
+      rethrow; 
+    }
   }
 }

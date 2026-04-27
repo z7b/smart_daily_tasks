@@ -104,12 +104,14 @@ class TaskFormController extends GetxController {
         isNotificationEnabled: isNotificationEnabled.value,
       );
 
-      final success = await _repository.addTask(task);
+      final result = await _repository.addTask(task);
       
-      if (success) {
+      if (result.isSuccess) {
         talker.info('📝 Task created: ${task.title}');
         Get.back(); // close modal
         resetForm();
+      } else {
+        Get.snackbar('error'.tr, result.error ?? 'failed_to_save'.tr, backgroundColor: Get.theme.colorScheme.errorContainer);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Failed to create task');
@@ -151,12 +153,14 @@ class TaskFormController extends GetxController {
         isNotificationEnabled: isNotificationEnabled.value,
       );
 
-      final success = await _repository.updateTask(updatedTask);
+      final result = await _repository.updateTask(updatedTask);
       
-      if (success) {
+      if (result.isSuccess) {
         talker.info('📝 Task updated: ${updatedTask.title}');
         Get.back();
         resetForm();
+      } else {
+        Get.snackbar('error'.tr, result.error ?? 'failed_to_save'.tr, backgroundColor: Get.theme.colorScheme.errorContainer);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Failed to update task');

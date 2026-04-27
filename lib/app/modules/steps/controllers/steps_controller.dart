@@ -10,12 +10,14 @@ import 'package:flutter/cupertino.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/time_service.dart';
 
 class StepsController extends GetxController with WidgetsBindingObserver {
   final StepRepository _repository = Get.find<StepRepository>();
   final HealthService _healthService = Get.find<HealthService>();
   final _storage = GetStorage();
   NotificationService get _notificationService => Get.find<NotificationService>();
+  final TimeService _timeService = Get.find<TimeService>();
 
   // ✅ Rule 3: Single Source of Truth (No competing local state)
   final todayLog = Rxn<StepLog>();
@@ -130,13 +132,26 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     // ✅ Sprint 1: SSOT - Bind directly to repository stream
     _listenToTodayStepLog();
 
+    // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
+    _timeService.dayChangedStream.listen((newToday) {
+      talker.info('🌅 StepsController: Day rotated to $newToday. Re-binding streams.');
+      _listenToTodayStepLog();
+      _syncAndRefreshAll();
+    });
+
     // ✅ Architecture Fix: Ensure yearly data updates when user changes the year
     ever(selectedYear, (_) => _loadHistoricalStats());
   }
 
+  void _syncAndRefreshAll() {
+    syncData();
+    _loadHistoricalStats();
+  }
+
   void _listenToTodayStepLog() {
     _stepLogSub?.cancel();
-    final today = DateTime.now();
+    // Use TimeService.today instead of DateTime.now() to ensure consistency
+    final today = _timeService.today;
     _stepLogSub = _repository.watchStepLog(today).listen((log) {
       // Direct binding! The UI will react to `todayLog.value` changing
       todayLog.value = log;

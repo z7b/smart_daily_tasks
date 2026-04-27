@@ -4,7 +4,8 @@ import '../../../data/models/step_log_model.dart';
 import '../../../data/models/book_model.dart';
 import '../../../data/providers/step_repository.dart';
 import '../../../data/providers/journal_repository.dart';
-import 'package:isar/isar.dart'; // We still need Isar for book/journal queries if not in repo, but wait! User said "Don't access Isar directly".
+import 'package:isar/isar.dart';
+import '../../../core/services/time_service.dart';
 
 class HomeHealthStats {
   final int currentStreak;
@@ -29,7 +30,8 @@ class HomeHealthStats {
 class HomeHealthService extends GetxService {
   final StepRepository _stepRepository;
   final JournalRepository _journalRepository;
-  final Isar _isar; // Temporary fallback for Books until BookRepository is injected, wait let's use BookRepository.
+  final Isar _isar;
+  final TimeService _timeService = Get.find<TimeService>();
 
   HomeHealthService(this._stepRepository, this._journalRepository, this._isar);
 
@@ -63,7 +65,7 @@ class HomeHealthService extends GetxService {
 
   Future<int> _calculateActivityStreak() async {
     int streak = 0;
-    final now = DateTime.now();
+    final now = _timeService.now;
     
     final startRange = now.subtract(const Duration(days: 60));
     final allLogs = await _stepRepository.getLogsInRange(startRange, now);
@@ -74,7 +76,7 @@ class HomeHealthService extends GetxService {
       logMap[key] = log;
     }
     
-    DateTime cursor = DateTime(now.year, now.month, now.day);
+    DateTime cursor = _timeService.today;
     
     // 1. Check Today (Live data)
     final todayKey = '${cursor.year}-${cursor.month}-${cursor.day}';

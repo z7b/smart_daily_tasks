@@ -14,15 +14,13 @@ import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart'
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
-import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
-import 'package:smart_daily_tasks/app/data/models/note_model.dart';
 import 'package:smart_daily_tasks/app/data/models/journal_model.dart';
 import 'package:smart_daily_tasks/app/data/models/bookmark_model.dart';
-import 'package:smart_daily_tasks/app/data/models/calendar_event_model.dart';
 import 'package:smart_daily_tasks/app/data/models/book_model.dart';
 import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
 import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
+import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
@@ -32,9 +30,12 @@ import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/appointment_repository.dart';
 
 import '../services/home_medication_service.dart';
 import '../services/home_task_service.dart';
+import '../../../core/services/time_service.dart';
+import '../services/home_pillar_service.dart';
 import '../services/home_health_service.dart';
 
 class HomeController extends GetxController with WidgetsBindingObserver {
@@ -45,6 +46,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   late final HomeMedicationService _medicationService;
   late final HomeTaskService _taskService;
   late final HomeHealthService _healthServiceStats;
+  late final HomePillarService _pillarService;
+  final TimeService _timeService = Get.find<TimeService>();
 
   // Streams
   StreamSubscription? _taskSub;
@@ -54,6 +57,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   StreamSubscription? _stepLogSub;
   StreamSubscription? _attendanceSub;
   StreamSubscription? _medicationSub;
+  StreamSubscription? _appointmentSub;
   Timer? _pulseTimer;
 
   // UI State
@@ -94,15 +98,13 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final currentBookTitle = 'No active book'.obs;
   final currentBookProgress = 0.0.obs;
 
+  // Next Appointment
+  final nextAppointment = Rxn<Appointment>();
+
   // Activity & Stats
   final completedDays = <DateTime>{}.obs;
   final weeklyData = <int>[0, 0, 0, 0, 0, 0, 0].obs;
   
-  // Job & Salary
-  final daysUntilSalary = 0.obs;
-  final workCompany = ''.obs;
-  final workPosition = ''.obs;
-
   // Health Stats
   final stepsCount = 0.obs;
   final stepsGoal = 10000.obs;
@@ -130,7 +132,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   final weeklyLabels = <String>[].obs;
 
-  DateTime _lastRefreshDay = DateTime.now();
 
   @override
   void onInit() {
@@ -145,12 +146,22 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       Get.find<JournalRepository>(),
       _isar,
     );
+    _pillarService = HomePillarService(_isar);
 
     _updateGreeting();
     _setupStaticListeners(); 
     _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
+    _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
     _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
     
+    // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
+    _timeService.dayChangedStream.listen((newToday) {
+      talker.info('🌅 Home: Day rotated to $newToday. Refreshing Dashboard.');
+      selectedDate.value = newToday;
+      _bindTaskStream();
+      _loadRealData();
+    });
+
     // ✅ Architecture Fix: Re-bind dashboard when user changes the date
     ever(selectedDate, (_) {
       _bindTaskStream();
@@ -191,22 +202,19 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     _stepLogSub?.cancel();
     _attendanceSub?.cancel();
     _medicationSub?.cancel();
+    _appointmentSub?.cancel();
     _pulseTimer?.cancel();
     super.onClose();
   }
 
-  /// ✅ Midnight Bug Fix: Full Date Comparison
+  /// ✅ Midnight Bug Fix: Handled via TimeService
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      final now = DateTime.now();
-      // Compare Full Date (Year/Month/Day) instead of just Day
-      if (now.year != _lastRefreshDay.year || now.month != _lastRefreshDay.month || now.day != _lastRefreshDay.day) {
-        talker.info('🌙 Midnight transition detected! Refreshing Dashboard.');
-        _lastRefreshDay = now;
-        selectedDate.value = now;
-        _loadRealData();
-      }
+      // TimeService will automatically handle the check when resumed if we trigger it
+      // but for now, the Timer in TimeService is sufficient.
+      // We can manually trigger a check if we want extra safety.
+      _loadRealData();
     }
   }
 
@@ -245,6 +253,22 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
       
       _updateTotalProgress();
+    });
+  }
+
+  void _bindAppointmentStream() {
+    _appointmentSub?.cancel();
+    _appointmentSub = Get.find<AppointmentRepository>().listenToAppointments().listen((list) {
+      final upcoming = list
+          .where((a) => a.scheduledAt.isAfter(DateTime.now()) && a.status == AppointmentStatus.active)
+          .toList();
+      
+      if (upcoming.isNotEmpty) {
+        // Sort already handled by repository, but safe to double check or just take first
+        nextAppointment.value = upcoming.first;
+      } else {
+        nextAppointment.value = null;
+      }
     });
   }
 
@@ -338,6 +362,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       final results = await Future.wait([
         _medicationService.getDailyStats(viewDate),
         _healthServiceStats.getHealthStats(viewDate),
+        _pillarService.getGlobalCounts(),
       ]);
       
       if (currentToken != _loadToken.value) return;
@@ -345,20 +370,15 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       final medStats = results[0] as MedicationDailyStats;
       // Task stats removed from here - now handled by dedicated reactive stream
       final healthStats = results[1] as HomeHealthStats;
+      final pillarStats = results[2] as PillarCounts;
 
       // Update Non-Task Counts
-      noteCount.value = await _isar.notes.count();
-      journalCount.value = await _isar.journals.count();
-      bookmarkCount.value = await _isar.bookmarks.count();
-      medicationCount.value = await _isar.medications.count();
-      calendarEventCount.value = await _isar.calendarEvents.count();
-      bookCount.value = await _isar.books.count();
-
-      // Update Work Profile (Non-reactive, pull-based)
-      final profile = await _isar.workProfiles.get(0) ?? WorkProfile();
-      workCompany.value = profile.companyName ?? '';
-      workPosition.value = profile.jobPosition ?? '';
-      _updateSalaryCountdown(profile);
+      noteCount.value = pillarStats.notes;
+      journalCount.value = pillarStats.journals;
+      bookmarkCount.value = pillarStats.bookmarks;
+      medicationCount.value = pillarStats.medications;
+      calendarEventCount.value = pillarStats.calendarEvents;
+      bookCount.value = pillarStats.books;
 
       // Update Medications
       medTakenDoses.value = medStats.taken;
@@ -410,12 +430,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
   }
 
-  void _updateSalaryCountdown(WorkProfile profile) {
-    final contextDate = selectedDate.value; // ✅ Rule 2: Time Context
-    final salDay = profile.salaryDay;
-    final nextSalary = contextDate.nextOccurrenceOfMonthDay(salDay);
-    daysUntilSalary.value = nextSalary.normalized.difference(contextDate.normalized).inDays;
-  }
 
   void onDateSelected(DateTime date) {
     selectedDate.value = date;

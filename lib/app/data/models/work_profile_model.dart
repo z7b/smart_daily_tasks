@@ -2,9 +2,14 @@ import 'package:isar/isar.dart';
 
 part 'work_profile_model.g.dart';
 
+enum EmploymentStatus { notConfigured, employed, unemployed }
+
 @collection
 class WorkProfile {
   Id id = 0; // Singleton pattern for settings
+
+  @enumerated
+  EmploymentStatus employmentStatus;
 
   String? jobTitle;
   String? jobPosition;
@@ -29,6 +34,7 @@ class WorkProfile {
 
   WorkProfile({
     this.id = 0,
+    this.employmentStatus = EmploymentStatus.notConfigured,
     this.jobTitle,
     this.jobPosition,
     this.companyName,
@@ -44,6 +50,7 @@ class WorkProfile {
 
   WorkProfile copyWith({
     Id? id,
+    EmploymentStatus? employmentStatus,
     String? jobTitle,
     String? jobPosition,
     String? companyName,
@@ -58,6 +65,7 @@ class WorkProfile {
   }) {
     return WorkProfile(
       id: id ?? this.id,
+      employmentStatus: employmentStatus ?? this.employmentStatus,
       jobTitle: jobTitle ?? this.jobTitle,
       jobPosition: jobPosition ?? this.jobPosition,
       companyName: companyName ?? this.companyName,
@@ -75,6 +83,7 @@ class WorkProfile {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'employmentStatus': employmentStatus.index,
       'jobTitle': jobTitle,
       'jobPosition': jobPosition,
       'companyName': companyName,

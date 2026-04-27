@@ -27,48 +27,54 @@ const WorkProfileSchema = CollectionSchema(
       name: r'customSchedulesJson',
       type: IsarType.string,
     ),
-    r'endMinutes': PropertySchema(
+    r'employmentStatus': PropertySchema(
       id: 2,
+      name: r'employmentStatus',
+      type: IsarType.byte,
+      enumMap: _WorkProfileemploymentStatusEnumValueMap,
+    ),
+    r'endMinutes': PropertySchema(
+      id: 3,
       name: r'endMinutes',
       type: IsarType.long,
     ),
     r'jobPosition': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'jobPosition',
       type: IsarType.string,
     ),
     r'jobTitle': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'jobTitle',
       type: IsarType.string,
     ),
     r'monthlySalary': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'monthlySalary',
       type: IsarType.double,
     ),
     r'officialWorkHours': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'officialWorkHours',
       type: IsarType.double,
     ),
     r'remindersEnabled': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'remindersEnabled',
       type: IsarType.bool,
     ),
     r'salaryDay': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'salaryDay',
       type: IsarType.long,
     ),
     r'startMinutes': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'startMinutes',
       type: IsarType.long,
     ),
     r'workingDays': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'workingDays',
       type: IsarType.longList,
     )
@@ -129,15 +135,16 @@ void _workProfileSerialize(
 ) {
   writer.writeString(offsets[0], object.companyName);
   writer.writeString(offsets[1], object.customSchedulesJson);
-  writer.writeLong(offsets[2], object.endMinutes);
-  writer.writeString(offsets[3], object.jobPosition);
-  writer.writeString(offsets[4], object.jobTitle);
-  writer.writeDouble(offsets[5], object.monthlySalary);
-  writer.writeDouble(offsets[6], object.officialWorkHours);
-  writer.writeBool(offsets[7], object.remindersEnabled);
-  writer.writeLong(offsets[8], object.salaryDay);
-  writer.writeLong(offsets[9], object.startMinutes);
-  writer.writeLongList(offsets[10], object.workingDays);
+  writer.writeByte(offsets[2], object.employmentStatus.index);
+  writer.writeLong(offsets[3], object.endMinutes);
+  writer.writeString(offsets[4], object.jobPosition);
+  writer.writeString(offsets[5], object.jobTitle);
+  writer.writeDouble(offsets[6], object.monthlySalary);
+  writer.writeDouble(offsets[7], object.officialWorkHours);
+  writer.writeBool(offsets[8], object.remindersEnabled);
+  writer.writeLong(offsets[9], object.salaryDay);
+  writer.writeLong(offsets[10], object.startMinutes);
+  writer.writeLongList(offsets[11], object.workingDays);
 }
 
 WorkProfile _workProfileDeserialize(
@@ -149,16 +156,19 @@ WorkProfile _workProfileDeserialize(
   final object = WorkProfile(
     companyName: reader.readStringOrNull(offsets[0]),
     customSchedulesJson: reader.readStringOrNull(offsets[1]),
-    endMinutes: reader.readLongOrNull(offsets[2]) ?? 1020,
+    employmentStatus: _WorkProfileemploymentStatusValueEnumMap[
+            reader.readByteOrNull(offsets[2])] ??
+        EmploymentStatus.notConfigured,
+    endMinutes: reader.readLongOrNull(offsets[3]) ?? 1020,
     id: id,
-    jobPosition: reader.readStringOrNull(offsets[3]),
-    jobTitle: reader.readStringOrNull(offsets[4]),
-    monthlySalary: reader.readDoubleOrNull(offsets[5]),
-    officialWorkHours: reader.readDoubleOrNull(offsets[6]),
-    remindersEnabled: reader.readBoolOrNull(offsets[7]) ?? true,
-    salaryDay: reader.readLongOrNull(offsets[8]) ?? 25,
-    startMinutes: reader.readLongOrNull(offsets[9]) ?? 540,
-    workingDays: reader.readLongList(offsets[10]) ?? const [1, 2, 3, 4, 5],
+    jobPosition: reader.readStringOrNull(offsets[4]),
+    jobTitle: reader.readStringOrNull(offsets[5]),
+    monthlySalary: reader.readDoubleOrNull(offsets[6]),
+    officialWorkHours: reader.readDoubleOrNull(offsets[7]),
+    remindersEnabled: reader.readBoolOrNull(offsets[8]) ?? true,
+    salaryDay: reader.readLongOrNull(offsets[9]) ?? 25,
+    startMinutes: reader.readLongOrNull(offsets[10]) ?? 540,
+    workingDays: reader.readLongList(offsets[11]) ?? const [1, 2, 3, 4, 5],
   );
   return object;
 }
@@ -175,27 +185,42 @@ P _workProfileDeserializeProp<P>(
     case 1:
       return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readLongOrNull(offset) ?? 1020) as P;
+      return (_WorkProfileemploymentStatusValueEnumMap[
+              reader.readByteOrNull(offset)] ??
+          EmploymentStatus.notConfigured) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset) ?? 1020) as P;
     case 4:
       return (reader.readStringOrNull(offset)) as P;
     case 5:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 6:
       return (reader.readDoubleOrNull(offset)) as P;
     case 7:
-      return (reader.readBoolOrNull(offset) ?? true) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 8:
-      return (reader.readLongOrNull(offset) ?? 25) as P;
+      return (reader.readBoolOrNull(offset) ?? true) as P;
     case 9:
-      return (reader.readLongOrNull(offset) ?? 540) as P;
+      return (reader.readLongOrNull(offset) ?? 25) as P;
     case 10:
+      return (reader.readLongOrNull(offset) ?? 540) as P;
+    case 11:
       return (reader.readLongList(offset) ?? const [1, 2, 3, 4, 5]) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _WorkProfileemploymentStatusEnumValueMap = {
+  'notConfigured': 0,
+  'employed': 1,
+  'unemployed': 2,
+};
+const _WorkProfileemploymentStatusValueEnumMap = {
+  0: EmploymentStatus.notConfigured,
+  1: EmploymentStatus.employed,
+  2: EmploymentStatus.unemployed,
+};
 
 Id _workProfileGetId(WorkProfile object) {
   return object.id;
@@ -594,6 +619,62 @@ extension WorkProfileQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'customSchedulesJson',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      employmentStatusEqualTo(EmploymentStatus value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'employmentStatus',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      employmentStatusGreaterThan(
+    EmploymentStatus value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'employmentStatus',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      employmentStatusLessThan(
+    EmploymentStatus value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'employmentStatus',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterFilterCondition>
+      employmentStatusBetween(
+    EmploymentStatus lower,
+    EmploymentStatus upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'employmentStatus',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -1484,6 +1565,20 @@ extension WorkProfileQuerySortBy
     });
   }
 
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      sortByEmploymentStatus() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'employmentStatus', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      sortByEmploymentStatusDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'employmentStatus', Sort.desc);
+    });
+  }
+
   QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy> sortByEndMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'endMinutes', Sort.asc);
@@ -1612,6 +1707,20 @@ extension WorkProfileQuerySortThenBy
       thenByCustomSchedulesJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'customSchedulesJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      thenByEmploymentStatus() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'employmentStatus', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WorkProfile, WorkProfile, QAfterSortBy>
+      thenByEmploymentStatusDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'employmentStatus', Sort.desc);
     });
   }
 
@@ -1747,6 +1856,13 @@ extension WorkProfileQueryWhereDistinct
     });
   }
 
+  QueryBuilder<WorkProfile, WorkProfile, QDistinct>
+      distinctByEmploymentStatus() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'employmentStatus');
+    });
+  }
+
   QueryBuilder<WorkProfile, WorkProfile, QDistinct> distinctByEndMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'endMinutes');
@@ -1824,6 +1940,13 @@ extension WorkProfileQueryProperty
       customSchedulesJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'customSchedulesJson');
+    });
+  }
+
+  QueryBuilder<WorkProfile, EmploymentStatus, QQueryOperations>
+      employmentStatusProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'employmentStatus');
     });
   }
 

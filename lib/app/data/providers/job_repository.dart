@@ -8,13 +8,12 @@ class JobRepository {
 
   JobRepository(this._isar);
 
-  /// Get the singleton WorkProfile, creating a default one if it doesn't exist
+  /// Get the singleton WorkProfile. If it doesn't exist, returns a transient
+  /// default instance (notConfigured) without saving it to Isar.
   Future<WorkProfile> getWorkProfile() async {
     final profile = await _isar.workProfiles.get(0);
     if (profile == null) {
-      final defaultProfile = WorkProfile();
-      await _isar.writeTxn(() => _isar.workProfiles.put(defaultProfile));
-      return defaultProfile;
+      return WorkProfile(); // Transient in-memory default
     }
     return profile;
   }

@@ -16,6 +16,8 @@ import 'package:smart_daily_tasks/app/core/services/security_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
+import 'package:smart_daily_tasks/app/core/services/task_time_service.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
@@ -28,6 +30,7 @@ import 'package:smart_daily_tasks/app/data/models/medication_model.dart';
 import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
+import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
@@ -37,8 +40,9 @@ import 'package:smart_daily_tasks/app/data/providers/bookmark_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/job_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/appointment_repository.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
-
+import 'package:smart_daily_tasks/app/core/services/time_service.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
 
@@ -64,6 +68,7 @@ void callbackDispatcher() {
         StepLogSchema,
         WorkProfileSchema,
         AttendanceLogSchema,
+        AppointmentSchema,
       ], directory: dir.path, inspector: false);
 
       // ✅ Inject StepRepository for SSOT writes in background
@@ -135,6 +140,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       await Get.putAsync(() => ThemeService().init(), permanent: true);
       await Get.putAsync(() => SecurityService().init(), permanent: true);
       await Get.putAsync(() => AppLockService().init(), permanent: true);
+      await Get.putAsync(() => TimeService().init(), permanent: true);
 
       final dir = await getApplicationDocumentsDirectory();
 
@@ -157,6 +163,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
               StepLogSchema,
               WorkProfileSchema,
               AttendanceLogSchema,
+              AppointmentSchema,
             ], directory: dir.path);
             talker.info(
               '📦 Isar successfully initialized (Attempt ${retryCount + 1})',
@@ -220,6 +227,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(StepRepository(isar), permanent: true);
 
       Get.put(JobRepository(isar), permanent: true);
+      Get.put(AppointmentRepository(isar), permanent: true);
 
       // ✅ Step 3: Initialize Health & Pedometer
       talker.info('🏥 Initializing Health Services...');
@@ -228,6 +236,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       // ✅ Step 4: Initialize Features
       talker.info('🔔 Initializing Notifications...');
       Get.put(NotificationService(), permanent: true);
+      Get.put(AppointmentTimeService(), permanent: true);
+      Get.put(TaskTimeService(), permanent: true);
 
       final appLockObserver = AppLockObserver();
       WidgetsBinding.instance.addObserver(appLockObserver);

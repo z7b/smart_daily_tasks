@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
+import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 
 import 'package:smart_daily_tasks/app/modules/settings/views/settings_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/controllers/home_controller.dart';
@@ -114,6 +115,13 @@ class HomeView extends GetView<HomeController> {
             child: _buildTaskHomeCard(context),
           ),
         ),
+        
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: _buildAppointmentHomeCard(context),
+          ),
+        ),
 
         SliverToBoxAdapter(
           child: Padding(
@@ -176,8 +184,14 @@ class HomeView extends GetView<HomeController> {
                   ),
                 ),
 
-
-
+                _buildBentoItem(
+                  context,
+                  'doctor_appointments'.tr,
+                  '',
+                  CupertinoIcons.doc_person_fill,
+                  const Color(0xFF007AFF),
+                  Routes.APPOINTMENTS,
+                ),
               ],
             ),
           ),
@@ -501,77 +515,104 @@ class HomeView extends GetView<HomeController> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final moodColor = Theme.of(context).primaryColor;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.03)
-            : moodColor.withValues(alpha: 0.05),
+    return Material(
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.03)
+          : moodColor.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(32),
+      child: InkWell(
+        onTap: () => Get.toNamed(Routes.JOURNAL),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : moodColor.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: moodColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Obx(
-              () => Text(
-                controller.moodEmoji.value,
-                style: const TextStyle(fontSize: 24),
-              ),
+        splashColor: moodColor.withValues(alpha: 0.1),
+        highlightColor: moodColor.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : moodColor.withValues(alpha: 0.1),
+              width: 1,
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'mood_tracker'.tr,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    letterSpacing: -0.5,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: moodColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Obx(
+                child: Obx(
                   () => Text(
-                    '${'dominant_mood'.tr}: ${controller.weeklyMoodTrend.value.tr}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.4)
-                          : Colors.black.withValues(alpha: 0.4),
-                    ),
+                    controller.moodEmoji.value,
+                    style: const TextStyle(fontSize: 24),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'mood_tracker'.tr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Obx(
+                      () => Text(
+                        '${'dominant_mood'.tr}: ${controller.weeklyMoodTrend.value.tr}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_graph_rounded,
+                    size: 20,
+                    color: moodColor.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: isDark 
+                        ? Colors.white.withValues(alpha: 0.2) 
+                        : Colors.black.withValues(alpha: 0.2),
+                  ),
+                ],
+              ),
+            ],
           ),
-          Icon(
-            Icons.auto_graph_rounded,
-            size: 20,
-            color: moodColor.withValues(alpha: 0.3),
-          ),
-        ],
+        ),
       ),
     ).animate().fadeIn();
   }
 
   Widget _buildSalaryHomeCard(BuildContext context) {
+    if (!Get.isRegistered<JobController>()) return const SizedBox();
+    final jobCtrl = Get.find<JobController>();
+    
     return Obx(() {
-      final days = controller.daysUntilSalary.value;
+      if (!jobCtrl.isEmployed) return const SizedBox();
+      
+      final days = jobCtrl.daysUntilSalary.value;
       final now = DateTime.now();
       final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1037,6 +1078,65 @@ class HomeView extends GetView<HomeController> {
 
     return Obx(() {
       try {
+        if (!jobCtrl.isEmployed) {
+          return GestureDetector(
+            onTap: () => Get.toNamed(Routes.JOB),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : jobColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : jobColor.withValues(alpha: 0.1),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: jobCtrl.isUnemployed ? Colors.grey.withAlpha(20) : jobColor.withAlpha(20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      jobCtrl.isUnemployed ? CupertinoIcons.bed_double_fill : CupertinoIcons.briefcase_fill,
+                      color: jobCtrl.isUnemployed ? Colors.grey : jobColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          jobCtrl.isUnemployed ? 'unemployed'.tr : 'setup_job_title'.tr,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          jobCtrl.isUnemployed ? 'unemployed_desc'.tr : 'setup_job_desc'.tr,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(CupertinoIcons.chevron_right, color: Colors.grey, size: 16),
+                ],
+              ),
+            ),
+          );
+        }
+
         final shiftDetails = jobCtrl.getNextShiftDetails();
         if (shiftDetails == null && jobCtrl.totalMandatedDays.value == 0) {
           return const SizedBox();
@@ -1789,5 +1889,274 @@ class HomeView extends GetView<HomeController> {
         ),
       ],
     );
+  }
+
+  Widget _buildAppointmentHomeCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accentColor = Color(0xFF007AFF);
+
+    return Obx(() {
+      final appt = controller.nextAppointment.value;
+
+      // ✅ Empty state: show "add appointment" prompt
+      if (appt == null) {
+        return GestureDetector(
+          onTap: () => Get.toNamed(Routes.APPOINTMENTS),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : accentColor.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : accentColor.withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(CupertinoIcons.doc_person_fill,
+                      color: accentColor, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'doctor_appointments'.tr,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.textTheme.titleLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'no_appointments'.tr,
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.3)
+                              : Colors.black.withValues(alpha: 0.3),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(CupertinoIcons.add, color: accentColor, size: 16),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // ✅ Active appointment card (Premium Medical Design)
+      final medicalBlue = const Color(0xFF4A90E2);
+      
+      return GestureDetector(
+        onTap: () => Get.toNamed(Routes.APPOINTMENTS),
+        child: Stack(
+          children: [
+            // Card Container
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : medicalBlue.withValues(alpha: 0.1),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isDark ? Colors.black : medicalBlue).withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // Decorative Background Icon
+                  Positioned(
+                    right: -20,
+                    bottom: -20,
+                    child: Icon(
+                      CupertinoIcons.heart_circle_fill,
+                      size: 120,
+                      color: medicalBlue.withValues(alpha: isDark ? 0.03 : 0.05),
+                    ),
+                  ),
+                  
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Section
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: medicalBlue.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(CupertinoIcons.doc_person_fill,
+                                  color: medicalBlue, size: 18),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'next_appointment'.tr,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                letterSpacing: 0.5,
+                                color: medicalBlue.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 14, color: medicalBlue),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Doctor Info Section
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (appt.patientName.isNotEmpty) ...[
+                                    Text(
+                                      '${'patient'.tr}: ${appt.patientName}',
+                                      style: TextStyle(
+                                        color: medicalBlue.withValues(alpha: 0.6),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  Text(
+                                    appt.doctorName,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  if (appt.clinicName?.isNotEmpty ?? false) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Icon(CupertinoIcons.building_2_fill,
+                                            size: 14, color: theme.disabledColor),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            appt.clinicName!,
+                                            style: TextStyle(
+                                              color: theme.disabledColor,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 24),
+
+                        // Time & Date Section
+                        Builder(
+                          builder: (context) {
+                            final timeService = Get.find<AppointmentTimeService>();
+                            final badgeColor = timeService.getBadgeColor(appt.scheduledAt, appt.status, theme);
+                            final smartLabel = timeService.getSmartTimeLabel(appt.scheduledAt, appt.status);
+                            
+                            return Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: badgeColor.withValues(alpha: 0.15),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(CupertinoIcons.time_solid, size: 16, color: badgeColor),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      smartLabel,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: badgeColor,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  if (appt.alarmEnabled)
+                                    Icon(CupertinoIcons.alarm_fill, size: 16, color: badgeColor),
+                                ],
+                              ),
+                            );
+                          }
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.05, curve: Curves.easeOutBack);
+    });
   }
 }

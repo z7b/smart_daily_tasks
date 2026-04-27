@@ -46,9 +46,9 @@ class FloatingNavigationBar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(0, Icons.grid_view_rounded, 'home'.tr),
-                _buildNavItem(1, Icons.space_dashboard_rounded, 'spaces'.tr),
-                _buildNavItem(2, Icons.settings_rounded, 'settings'.tr),
+                _buildNavItem(0, Icons.home_rounded, Icons.home_outlined, 'home'.tr),
+                _buildNavItem(1, Icons.space_dashboard_rounded, Icons.space_dashboard_outlined, 'spaces'.tr),
+                _buildNavItem(2, Icons.settings_rounded, Icons.settings_outlined, 'settings'.tr),
               ],
             ),
           ),
@@ -58,7 +58,7 @@ class FloatingNavigationBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(int index, IconData activeIcon, IconData inactiveIcon, String label) {
     final controller = Get.find<HomeController>();
     
     return Obx(() {
@@ -66,6 +66,7 @@ class FloatingNavigationBar extends StatelessWidget {
       final color = isSelected 
           ? const Color(0xFF007AFF)
           : Colors.grey.withValues(alpha: 0.6);
+      final currentIcon = isSelected ? activeIcon : inactiveIcon;
           
       return GestureDetector(
         onTap: () => controller.changePage(index),
@@ -86,7 +87,7 @@ class FloatingNavigationBar extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 26),
+              Icon(currentIcon, color: color, size: 26),
               if (isSelected) ...[
                 const SizedBox(width: 8),
                 Text(

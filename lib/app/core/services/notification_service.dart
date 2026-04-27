@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../helpers/log_helper.dart';
 
 class NotificationService extends GetxService {
@@ -19,6 +20,7 @@ class NotificationService extends GetxService {
   static const int shiftOffset = 300000000;
   static const int calendarOffset = 400000000;
   static const int stepsOffset = 500000000;
+  static const int appointmentOffset = 600000000;
 
   /// ✅ Phase 4: Deterministic ID Strategy
   /// Ensures notifications are consistent across app installs/restores.
@@ -182,6 +184,11 @@ class NotificationService extends GetxService {
     bool htmlFormatTitle = false,
     bool htmlFormatBigText = false,
     List<AndroidNotificationAction>? actions,
+    String? channelId,
+    String? channelName,
+    Importance? importance,
+    Priority? priority,
+    bool playSound = true,
   }) async {
     // Safety check for initialization
     if (!isInitialized.value) {
@@ -219,11 +226,12 @@ class NotificationService extends GetxService {
         tzTime,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            'daily_tasks_channel',
-            'Smart Daily Tasks',
+            channelId ?? 'daily_tasks_channel',
+            channelName ?? 'Smart Daily Tasks',
             channelDescription: 'Notifications for scheduled tasks',
-            importance: Importance.max,
-            priority: Priority.high,
+            importance: importance ?? Importance.max,
+            priority: priority ?? Priority.high,
+            playSound: playSound,
             showWhen: true,
             subText: 'Life OS',
             largeIcon: largeIcon != null ? DrawableResourceAndroidBitmap(largeIcon) : null,
@@ -605,5 +613,80 @@ class NotificationService extends GetxService {
       return '${(number / 1000).toStringAsFixed(number % 1000 == 0 ? 0 : 1)},${(number % 1000).toString().padLeft(3, '0').substring(0, 3)}';
     }
     return number.toString();
+  }
+
+  /// ✅ Appointment Reminders (Staged)
+  Future<void> scheduleStagedAppointmentReminders({
+    required int appointmentId,
+    String patientName = '',
+    required String doctorName,
+    String clinicName = '',
+    required String clinicLocation,
+    required DateTime scheduledTime,
+    required bool alarmEnabled,
+  }) async {
+    final now = DateTime.now();
+    final timeFormatted = DateFormat.jm(Get.locale?.languageCode ?? 'en').format(scheduledTime);
+    final locationText = clinicName.isNotEmpty
+        ? ' @ $clinicName'
+        : (clinicLocation.isNotEmpty ? ' @ $clinicLocation' : '');
+    
+    final patientPrefix = patientName.isNotEmpty ? '$patientName - ' : '';
+
+    Future<void> scheduleStage({
+      required DateTime time,
+      required int stageIndex,
+      required String titleKey,
+      required bool isAlarm,
+    }) async {
+      if (time.isBefore(now)) return;
+
+      final id = appointmentOffset + (appointmentId * 10) + stageIndex;
+      final title = '🩺 $patientPrefix${titleKey.tr}';
+      
+      await scheduleNotification(
+        id: id,
+        title: title,
+        body: 'appointment_notif_body'.trParams({'doctor': doctorName, 'location': locationText}),
+        bigText: 'appointment_notif_detail'.trParams({
+          'doctor': doctorName,
+          'location': clinicLocation.isNotEmpty ? clinicLocation : (clinicName.isNotEmpty ? clinicName : ''),
+          'time': timeFormatted,
+        }),
+        htmlFormatBigText: true,
+        scheduledTime: time,
+        // High priority if it's the exact time alarm
+        channelId: isAlarm ? 'appointment_alarm_channel' : 'reminders_channel',
+        channelName: isAlarm ? 'Appointment Alarms' : 'Reminders',
+        importance: isAlarm ? Importance.max : Importance.high,
+        priority: isAlarm ? Priority.max : Priority.high,
+        playSound: true,
+      );
+    }
+
+    // Stage 1: 1 Day before (24 hours)
+    await scheduleStage(
+      time: scheduledTime.subtract(const Duration(days: 1)),
+      stageIndex: 0,
+      titleKey: 'appointment_tomorrow',
+      isAlarm: false,
+    );
+
+    // Stage 2: Same day, 4 hours before (if 4 hours before is still today)
+    // To ensure it's "today", we just use 4 hours before.
+    await scheduleStage(
+      time: scheduledTime.subtract(const Duration(hours: 4)),
+      stageIndex: 1,
+      titleKey: 'appointment_today',
+      isAlarm: false,
+    );
+
+    // Stage 3: Exact time (either normal reminder or alarm)
+    await scheduleStage(
+      time: scheduledTime,
+      stageIndex: 2,
+      titleKey: 'appointment_now_notif',
+      isAlarm: alarmEnabled,
+    );
   }
 }
