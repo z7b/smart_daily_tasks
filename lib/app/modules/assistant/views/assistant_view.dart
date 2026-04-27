@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/assistant/assistant_response.dart';
 import '../controllers/assistant_controller.dart';
+import 'widgets/response_card.dart';
 
 class AssistantView extends GetView<AssistantController> {
   const AssistantView({super.key});
@@ -16,11 +19,32 @@ class AssistantView extends GetView<AssistantController> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('assistant'.tr),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.primary, size: 20),
+          onPressed: () => Get.back(),
+        ),
+        title: Column(
+          children: [
+            Text('assistant'.tr, style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: theme.textTheme.titleLarge?.color,
+            )),
+            Obx(() => Text(
+              controller.aiMode == 'url' ? 'custom_url'.tr : 'local_intelligence'.tr,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.primary.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+              ),
+            )),
+          ],
+        ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(CupertinoIcons.refresh, color: AppTheme.primary, size: 20),
             onPressed: () => _showClearDialog(context),
           ),
         ],
@@ -42,6 +66,7 @@ class AssistantView extends GetView<AssistantController> {
     Get.dialog(
       AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('clear_chat'.tr),
         content: Text('start_fresh_message'.tr),
         actions: [
@@ -54,6 +79,7 @@ class AssistantView extends GetView<AssistantController> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('confirm'.tr),
           ),
@@ -87,24 +113,29 @@ class AssistantView extends GetView<AssistantController> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: theme.cardColor,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.dividerColor.withValues(alpha: 0.1),
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primary.withValues(alpha: 0.1),
+                  AppTheme.primary.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              shape: BoxShape.circle,
             ),
-            child: Icon(Icons.auto_awesome, size: 48, color: AppTheme.primary),
-          ).animate().fadeIn(duration: const Duration(milliseconds: 600)).scale(),
+            child: Icon(CupertinoIcons.sparkles, size: 48, color: AppTheme.primary),
+          ).animate().fadeIn(duration: 600.ms).scale(),
           const SizedBox(height: 24),
           Text(
             'assistant_greeting'.tr,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
             ),
-          ).animate().fadeIn(delay: const Duration(milliseconds: 200)),
+          ).animate().fadeIn(delay: 200.ms),
           const SizedBox(height: 8),
           Text(
             'assistant_description'.tr,
@@ -112,7 +143,7 @@ class AssistantView extends GetView<AssistantController> {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
-          ).animate().fadeIn(delay: const Duration(milliseconds: 300)),
+          ).animate().fadeIn(delay: 300.ms),
         ],
       ),
     );
@@ -120,64 +151,83 @@ class AssistantView extends GetView<AssistantController> {
 
   Widget _buildMessageBubble(Message message, int index, ThemeData theme) {
     final isUser = message.isUser;
+    final hasCards = !isUser &&
+        message.response != null &&
+        message.response!.cards.isNotEmpty;
 
     return Align(
-          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            constraints: BoxConstraints(maxWidth: Get.width * 0.8),
-            decoration: BoxDecoration(
-              color: isUser ? AppTheme.primary : theme.cardColor,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: isUser
-                    ? const Radius.circular(20)
-                    : const Radius.circular(4),
-                bottomRight: isUser
-                    ? const Radius.circular(4)
-                    : const Radius.circular(20),
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        constraints: BoxConstraints(maxWidth: Get.width * 0.85),
+        child: Column(
+          crossAxisAlignment:
+              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            // Text Bubble
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: isUser ? AppTheme.primary : theme.cardColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: isUser
+                      ? const Radius.circular(20)
+                      : const Radius.circular(4),
+                  bottomRight: isUser
+                      ? const Radius.circular(4)
+                      : const Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isUser ? AppTheme.primary : Colors.black)
+                        .withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message.text,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: isUser
-                        ? Colors.white
-                        : theme.textTheme.bodyLarge?.color,
-                    height: 1.4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.text,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isUser
+                          ? Colors.white
+                          : theme.textTheme.bodyMedium?.color,
+                      height: 1.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _formatTime(message.timestamp),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: isUser
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : theme.textTheme.bodySmall?.color?.withValues(
-                            alpha: 0.7,
-                          ),
-                    fontSize: 10,
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTime(message.timestamp),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isUser
+                          ? Colors.white.withValues(alpha: 0.6)
+                          : theme.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        )
-        .animate(delay: Duration(milliseconds: index * 50))
-        .fadeIn(duration: const Duration(milliseconds: 300))
-        .slideY(begin: 0.1, end: 0);
+
+            // Rich Cards (below the bubble)
+            if (hasCards) ...[
+              const SizedBox(height: 6),
+              ...message.response!.cards
+                  .map((card) => ResponseCardWidget(card: card))
+                  .toList(),
+            ],
+          ],
+        ),
+      ),
+    ).animate(delay: Duration(milliseconds: (index * 30).clamp(0, 300)))
+        .fadeIn(duration: 250.ms)
+        .slideY(begin: 0.05);
   }
 
   Widget _buildTypingIndicator(ThemeData theme) {
@@ -185,7 +235,7 @@ class AssistantView extends GetView<AssistantController> {
       if (!controller.isTyping.value) return const SizedBox.shrink();
 
       return Padding(
-        padding: const EdgeInsets.only(left: 20, bottom: 20),
+        padding: const EdgeInsets.only(left: 20, bottom: 16),
         child: Row(
           children: [
             Container(
@@ -196,34 +246,29 @@ class AssistantView extends GetView<AssistantController> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildDot(0),
-                  const SizedBox(width: 4),
-                  _buildDot(1),
-                  const SizedBox(width: 4),
-                  _buildDot(2),
-                ],
+                children: List.generate(3, (i) => Padding(
+                  padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                      .animate(onPlay: (c) => c.repeat())
+                      .fadeIn(
+                          delay: Duration(milliseconds: i * 150),
+                          duration: 300.ms)
+                      .then()
+                      .fadeOut(duration: 300.ms),
+                )),
               ),
             ),
           ],
         ),
       );
     });
-  }
-
-  Widget _buildDot(int index) {
-    return Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-            color: AppTheme.primary,
-            shape: BoxShape.circle,
-          ),
-        )
-        .animate(onPlay: (controller) => controller.repeat())
-        .fadeIn(delay: Duration(milliseconds: index * 150), duration: const Duration(milliseconds: 300))
-        .then()
-        .fadeOut(duration: const Duration(milliseconds: 300));
   }
 
   Widget _buildQuickActions(TextEditingController messageController) {
@@ -237,37 +282,55 @@ class AssistantView extends GetView<AssistantController> {
         ];
       } else {
         actions = [
+          {'label': 'assistant_qa_tasks'.tr, 'text': 'ما هي مهامي اليوم؟'},
+          {'label': 'assistant_qa_next_appt'.tr, 'text': 'الموعد القادم'},
+          {'label': 'assistant_qa_overview'.tr, 'text': 'ملخص يومي'},
+          {'label': 'assistant_qa_next_med'.tr, 'text': 'هل عندي علاج؟'},
           {'label': 'quick_action_task'.tr, 'text': 'أضف مهمة '},
           {'label': 'quick_action_note'.tr, 'text': 'أضف ملاحظة '},
-          {'label': 'quick_action_journal'.tr, 'text': 'سجل تدوينة '},
-          {'label': 'goal'.tr, 'text': 'هدفي اليومي 10000 خطوة'},
-          {'label': 'calendar'.tr, 'text': 'افتح التقويم'},
         ];
       }
 
-      return SizedBox(
-        height: 40,
+      return Container(
+        height: 42,
+        margin: const EdgeInsets.only(bottom: 4),
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
           itemCount: actions.length,
-          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final action = actions[index];
+            final isQuery = action['text']!.contains('؟') ||
+                action['text']!.contains('ملخص') ||
+                action['text']!.contains('القادم');
+
             return ActionChip(
-              label: Text(action['label']!),
+              label: Text(
+                action['label']!,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isQuery ? AppTheme.primary : null,
+                ),
+              ),
               onPressed: () {
-                messageController.text = action['text']!;
-                messageController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: messageController.text.length),
-                );
-                // Auto-submit if it's a specific action or handle manually
                 if (action['text'] == 'الغاء') {
                   controller.sendMessage(action['text']!);
                   messageController.clear();
+                } else if (isQuery) {
+                  // Auto-submit queries
+                  controller.sendMessage(action['text']!);
+                } else {
+                  messageController.text = action['text']!;
+                  messageController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: messageController.text.length),
+                  );
                 }
               },
-              backgroundColor: Theme.of(context).cardColor,
+              backgroundColor: isQuery
+                  ? AppTheme.primary.withValues(alpha: 0.08)
+                  : Theme.of(context).cardColor,
               side: BorderSide.none,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -286,7 +349,7 @@ class AssistantView extends GetView<AssistantController> {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
       child: Row(
         children: [
@@ -304,9 +367,8 @@ class AssistantView extends GetView<AssistantController> {
                 decoration: InputDecoration(
                   hintText: 'type_message_hint'.tr,
                   hintStyle: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
-                      alpha: 0.5,
-                    ),
+                    color: theme.textTheme.bodyMedium?.color
+                        ?.withValues(alpha: 0.4),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -322,15 +384,28 @@ class AssistantView extends GetView<AssistantController> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          FloatingActionButton(
-            onPressed: () {
-              controller.sendMessage(messageController.text);
-              messageController.clear();
-            },
-            mini: true,
-            elevation: 0,
-            child: const Icon(Icons.arrow_upward, size: 20),
+          const SizedBox(width: 10),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.8)],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              onPressed: () {
+                controller.sendMessage(messageController.text);
+                messageController.clear();
+              },
+              icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+            ),
           ),
         ],
       ),

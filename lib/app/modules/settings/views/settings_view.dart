@@ -168,6 +168,51 @@ class SettingsView extends GetView<SettingsController> {
             ),
           ],
         ),
+        const SizedBox(height: 24),
+
+        // ─── Smart Assistant Group ──────────────────────
+        _groupTitle(context, 'smart_assistant'.tr),
+        const SizedBox(height: 8),
+        _buildGroupedContainer(
+          context,
+          children: [
+            _buildNavigationTile(
+              context,
+              title: 'ai_mode'.tr,
+              icon: CupertinoIcons.sparkles,
+              iconBgColor: const Color(0xFFAF52DE),
+              valueBuilder: () => controller.aiMode.value == 'url' ? 'custom_url'.tr : 'local_intelligence'.tr,
+              onTap: () => controller.toggleAiMode(),
+              isAr: isAr,
+            ),
+            Obx(() {
+              if (controller.aiMode.value != 'url') return const SizedBox.shrink();
+              return Column(
+                children: [
+                  _divider(context),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'ai_endpoint_hint'.tr,
+                        prefixIcon: const Icon(CupertinoIcons.link, size: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        isDense: true,
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                      controller: TextEditingController(text: controller.aiEndpointUrl.value),
+                      onSubmitted: (url) => controller.saveAiEndpoint(url),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
 
         const SizedBox(height: 120),
       ],

@@ -31,6 +31,10 @@ class SettingsController extends GetxController {
    RxBool appLock = false.obs;
   RxBool useArabicNumbers = false.obs;
   
+  // ✅ Smart Assistant AI Mode
+  RxString aiMode = 'local'.obs;
+  RxString aiEndpointUrl = ''.obs;
+  
   // ✅ Notification Stability Governance
   RxString notificationStatus = 'pending'.obs; // pending, amazing, error
   
@@ -69,6 +73,8 @@ class SettingsController extends GetxController {
       
       startScreen.value = _box.read(StorageKeys.startScreen) ?? 'home';
       firstDayOfWeek.value = _box.read('firstDayOfWeek') ?? 'sunday';
+      aiMode.value = _box.read<String>('ai_mode') ?? 'local';
+      aiEndpointUrl.value = _box.read<String>('ai_endpoint_url') ?? '';
     } catch (e) {
       talker.error('⚠️ Settings Load Error: $e');
     }
@@ -162,6 +168,22 @@ class SettingsController extends GetxController {
         _box.write('firstDayOfWeek', value);
       },
     );
+  }
+
+  // ─── Smart Assistant AI Mode ─────────────────────
+  void toggleAiMode() {
+    final newMode = aiMode.value == 'local' ? 'url' : 'local';
+    aiMode.value = newMode;
+    _box.write('ai_mode', newMode);
+    talker.info('🤖 AI Mode switched to: $newMode');
+    _showSnackbar('smart_assistant'.tr, newMode == 'url' ? 'custom_url'.tr : 'local_intelligence'.tr);
+  }
+
+  void saveAiEndpoint(String url) {
+    aiEndpointUrl.value = url.trim();
+    _box.write('ai_endpoint_url', url.trim());
+    talker.info('🤖 AI Endpoint saved: $url');
+    _showSnackbar('success'.tr, 'ai_endpoint_saved'.tr);
   }
 
   /// ✅ Notification Stability Check: Verifies and requests necessary background permissions
