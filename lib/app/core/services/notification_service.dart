@@ -100,8 +100,14 @@ class NotificationService extends GetxService {
           ?.createNotificationChannel(stepsChannel);
           
       // ✅ Defer permissions explicitly to prevent racing with Health Service during boot
-      Future.delayed(const Duration(seconds: 5), () {
-        requestFullPermissions();
+      Future.delayed(const Duration(seconds: 12), () async {
+        try {
+          await requestFullPermissions();
+        } on PlatformException catch (e) {
+          talker.warning('⚠️ Notification permission race condition (PlatformException): $e');
+        } catch (e) {
+          talker.warning('⚠️ Error requesting notification permissions: $e');
+        }
       });
       
       isInitialized.value = true;

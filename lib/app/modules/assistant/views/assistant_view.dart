@@ -31,14 +31,14 @@ class AssistantView extends GetView<AssistantController> {
               fontWeight: FontWeight.bold,
               color: theme.textTheme.titleLarge?.color,
             )),
-            Obx(() => Text(
+            Text(
               controller.aiMode == 'url' ? 'custom_url'.tr : 'local_intelligence'.tr,
               style: TextStyle(
                 fontSize: 11,
                 color: AppTheme.primary.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
               ),
-            )),
+            ),
           ],
         ),
         centerTitle: true,
@@ -126,7 +126,7 @@ class AssistantView extends GetView<AssistantController> {
               shape: BoxShape.circle,
             ),
             child: Icon(CupertinoIcons.sparkles, size: 48, color: AppTheme.primary),
-          ).animate().fadeIn(duration: 600.ms).scale(),
+          ).animate().fadeIn(duration: 600.ms).scale(duration: 600.ms),
           const SizedBox(height: 24),
           Text(
             'assistant_greeting'.tr,
@@ -135,7 +135,7 @@ class AssistantView extends GetView<AssistantController> {
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
             ),
-          ).animate().fadeIn(delay: 200.ms),
+          ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
           const SizedBox(height: 8),
           Text(
             'assistant_description'.tr,
@@ -143,7 +143,7 @@ class AssistantView extends GetView<AssistantController> {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
-          ).animate().fadeIn(delay: 300.ms),
+          ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
         ],
       ),
     );
@@ -226,7 +226,7 @@ class AssistantView extends GetView<AssistantController> {
       ),
     ).animate(delay: Duration(milliseconds: (index * 30).clamp(0, 300)))
         .fadeIn(duration: 250.ms)
-        .slideY(begin: 0.05);
+        .slideY(begin: 0.05, duration: 250.ms);
   }
 
   Widget _buildTypingIndicator(ThemeData theme) {
