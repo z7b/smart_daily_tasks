@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/services/assistant/assistant_response.dart';
+
 import '../controllers/assistant_controller.dart';
 import 'widgets/response_card.dart';
 
@@ -219,8 +219,7 @@ class AssistantView extends GetView<AssistantController> {
             if (hasCards) ...[
               const SizedBox(height: 6),
               ...message.response!.cards
-                  .map((card) => ResponseCardWidget(card: card))
-                  .toList(),
+                  .map((card) => ResponseCardWidget(card: card)),
             ],
           ],
         ),
@@ -298,7 +297,7 @@ class AssistantView extends GetView<AssistantController> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
           itemCount: actions.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final action = actions[index];
             final isQuery = action['text']!.contains('؟') ||

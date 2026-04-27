@@ -13,7 +13,7 @@ import '../../../core/services/task_time_service.dart';
 import '../../../core/services/appointment_time_service.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/helpers/number_extension.dart';
-import '../../../core/extensions/date_time_extensions.dart';
+
 import 'assistant_response.dart';
 
 /// Centralized data retrieval layer for the Smart Assistant.
@@ -23,6 +23,7 @@ class QueryEngine {
   final MedicationRepository _medRepo;
   final AppointmentRepository _appointmentRepo;
   final TaskTimeService _taskTimeService;
+  // ignore: unused_field
   final AppointmentTimeService _appointmentTimeService;
   final TimeService _timeService;
 
@@ -283,7 +284,7 @@ class QueryEngine {
     final countdown = diff.isNegative ? 'overdue'.tr : _formatDiff(diff);
 
     return ResponseCard(
-      title: '${appointment.doctorName}',
+      title: appointment.doctorName,
       subtitle: (appointment.clinicName != null && appointment.clinicName!.isNotEmpty) ? appointment.clinicName : null,
       timeInfo: '$dateStr • $timeStr',
       countdown: countdown,

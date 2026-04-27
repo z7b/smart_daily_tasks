@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../../../core/helpers/ai_command_helper.dart';
+
 import '../../../core/helpers/log_helper.dart';
 import 'ai_client.dart';
 import 'assistant_response.dart';
