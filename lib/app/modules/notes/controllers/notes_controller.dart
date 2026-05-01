@@ -94,9 +94,9 @@ class NotesController extends GetxController {
       );
 
       // 3. Save with result-driven repository
-      final success = await _repository.addNote(note);
+      final result = await _repository.addNote(note);
 
-      if (success) {
+      if (result.isSuccess) {
         Get.back();
         _clearForm();
         _showSnackbar('success'.tr, 'note_added'.tr);
@@ -131,9 +131,9 @@ class NotesController extends GetxController {
         color: selectedColor.value,
       );
 
-      final success = await _repository.updateNote(updatedNote);
+      final result = await _repository.updateNote(updatedNote);
 
-      if (success) {
+      if (result.isSuccess) {
         Get.back();
         _clearForm();
         _showSnackbar('success'.tr, 'note_updated'.tr);

@@ -1,5 +1,6 @@
 import 'package:isar/isar.dart';
 import '../../core/helpers/log_helper.dart';
+import '../../core/helpers/result.dart';
 import '../models/medication_model.dart';
 
 class MedicationRepository {
@@ -17,43 +18,46 @@ class MedicationRepository {
     return await _isar.medications.where().sortByCreatedAtDesc().findAll();
   }
 
-  Future<void> addMedication(Medication medication) async {
+  Future<Result<void>> addMedication(Medication medication) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.medications.put(medication);
       });
       talker.info('✅ Medication added: ${medication.name}');
+      return Result.successVoid();
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Error adding medication');
-      rethrow;
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> updateMedication(Medication medication) async {
+  Future<Result<void>> updateMedication(Medication medication) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.medications.put(medication);
       });
       talker.info('✅ Medication updated: ${medication.name}');
+      return Result.successVoid();
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Error updating medication');
-      rethrow;
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> deleteMedication(int id) async {
+  Future<Result<void>> deleteMedication(int id) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.medications.delete(id);
       });
       talker.info('🗑️ Medication deleted: ID $id');
+      return Result.successVoid();
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Error deleting medication');
-      rethrow;
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> toggleMedicationStatus(int id) async {
+  Future<Result<void>> toggleMedicationStatus(int id) async {
     try {
       await _isar.writeTxn(() async {
         final med = await _isar.medications.get(id);
@@ -62,12 +66,14 @@ class MedicationRepository {
           await _isar.medications.put(med);
         }
       });
+      return Result.successVoid();
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Error toggling medication status');
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> logIntake(int id) async {
+  Future<Result<void>> logIntake(int id) async {
     try {
       await _isar.writeTxn(() async {
         final med = await _isar.medications.get(id);
@@ -79,8 +85,10 @@ class MedicationRepository {
         }
       });
       talker.info('🕒 Medication intake logged for ID $id');
+      return Result.successVoid();
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Error logging medication intake');
+      return Result.failure(e.toString());
     }
   }
 

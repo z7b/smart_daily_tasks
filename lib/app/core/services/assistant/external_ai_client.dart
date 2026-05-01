@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import '../../../core/helpers/log_helper.dart';
+import 'ai_client_manager.dart';
 import 'ai_client.dart';
 import 'assistant_response.dart';
 import 'ai_provider_config.dart';
@@ -11,6 +12,7 @@ import 'ai_health_tracker.dart';
 import 'command_executor.dart';
 import 'query_engine.dart';
 import 'message_model.dart';
+
 
 class ExternalAiClient implements AiClient {
   final AiProviderConfig config;
@@ -72,27 +74,25 @@ class ExternalAiClient implements AiClient {
     },
   ];
 
-  /// ✅ Expert Feature: Automatically discovers available models for the given API key
   static Future<List<String>> listAvailableModels({
     required AiProviderConfig config,
     required String apiKey,
   }) async {
     if (config.type != AiProviderType.gemini) return [];
 
-    final client = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final reqFuture = client.get(
+      final res = await manager.getWithRetry(
         Uri.parse('https://generativelanguage.googleapis.com/v1beta/models'),
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey,
         },
+        timeout: const Duration(seconds: 10),
       );
-      reqFuture.ignore();
-      final response = await reqFuture.timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final data = jsonDecode(res.data!.body);
         final List models = data['models'] ?? [];
         return models
             .where((m) => m['supportedGenerationMethods'].contains('generateContent'))
@@ -102,8 +102,6 @@ class ExternalAiClient implements AiClient {
       return [];
     } catch (e) {
       return [];
-    } finally {
-      client.close();
     }
   }
 
@@ -196,21 +194,17 @@ class ExternalAiClient implements AiClient {
       if (isReasoningModel) 'max_completion_tokens': 2048 else 'max_tokens': 1024,
     };
 
-    final clientReq = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final timer = Timer(timeout, () {
-        clientReq.close();
-      });
-
-      final response = await clientReq.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: headers,
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      timer.cancel();
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
         final choice = json['choices'][0]['message'];
         
         // Handle Tool Calls (OpenAI Format)
@@ -223,33 +217,12 @@ class ExternalAiClient implements AiClient {
         }
         return AssistantResponse.error('🤖 OpenAI returned an empty response.');
       } else {
-        final errorBody = response.body;
-        talker.error('🔴 OpenAI API Error [${response.statusCode}]: $errorBody');
-        
-        String errorMessage;
-        switch (response.statusCode) {
-          case 401:
-            errorMessage = '🔑 Unauthorized: Your API Key is invalid or expired.';
-            break;
-          case 404:
-            errorMessage = '🔍 Model not found. Check the model name in settings.';
-            break;
-          case 429:
-            errorMessage = '⏳ Rate limit reached. Check your OpenAI quota.';
-            break;
-          case 500:
-            errorMessage = '☁️ OpenAI servers are busy. Please try again in a few seconds.';
-            break;
-          default:
-            errorMessage = 'OpenAI Error: ${response.statusCode}';
-        }
-        return AssistantResponse.error(errorMessage);
+        return AssistantResponse.error(res.error ?? 'Unknown error');
       }
     } catch (e) {
        rethrow;
-    } finally {
-      clientReq.close();
     }
+
   }
 
   Future<AssistantResponse> _handleOpenAiToolCalls(Uri uri, List toolCalls) async {
@@ -292,28 +265,25 @@ class ExternalAiClient implements AiClient {
       'messages': messages,
     };
 
-    final toolClient = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final reqFuture = toolClient.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      reqFuture.ignore();
-      final response = await reqFuture.timeout(timeout);
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
         return AssistantResponse.text(json['choices'][0]['message']['content'].toString().trim());
       }
-      return AssistantResponse.error('Failed to resolve tools');
+      return AssistantResponse.error(res.error ?? 'Failed to resolve tools');
     } catch (e) {
       return AssistantResponse.error('Tool resolution error: $e');
-    } finally {
-      toolClient.close();
     }
   }
 
@@ -377,68 +347,43 @@ class ExternalAiClient implements AiClient {
       ],
     };
 
-    final clientReq = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final timer = Timer(timeout, () {
-        clientReq.close();
-      });
-
-      final response = await clientReq.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: headers,
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      timer.cancel();
 
-      if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['candidates'] != null && (json['candidates'] as List).isNotEmpty) {
-        final candidate = json['candidates'][0];
-        final parts = candidate['content']['parts'] as List;
-        
-        // Handle Gemini Tool Calls
-        final toolCalls = parts.where((p) => p['functionCall'] != null).toList();
-        if (toolCalls.isNotEmpty) {
-          return await _handleGeminiToolCalls(uri, toolCalls);
-        }
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
+        if (json['candidates'] != null && (json['candidates'] as List).isNotEmpty) {
+          final candidate = json['candidates'][0];
+          final parts = candidate['content']['parts'] as List;
+          
+          // Handle Gemini Tool Calls
+          final toolCalls = parts.where((p) => p['functionCall'] != null).toList();
+          if (toolCalls.isNotEmpty) {
+            return await _handleGeminiToolCalls(uri, toolCalls);
+          }
 
-        final textPart = parts.firstWhere((p) => p['text'] != null, orElse: () => null);
-        if (textPart != null) {
-           return AssistantResponse.text(textPart['text'].toString().trim());
+          final textPart = parts.firstWhere((p) => p['text'] != null, orElse: () => null);
+          if (textPart != null) {
+             return AssistantResponse.text(textPart['text'].toString().trim());
+          }
         }
-      }
-      return AssistantResponse.error('🤖 Gemini returned an empty response.');
-    } else {
-      final errorBody = response.body;
-      talker.error('🔴 Gemini API Error [${response.statusCode}]: $errorBody');
-      
-      String errorMessage;
-      switch (response.statusCode) {
-        case 400:
-          errorMessage = errorBody.contains('API key not valid') 
-            ? 'invalid_api_key'.tr 
-            : '⚠️ Bad Request: Check your settings.';
-          break;
-        case 404:
-          errorMessage = '🔍 Model not found. Try switching to a standard model like "gemini-1.5-flash".';
-          break;
-        case 429:
+        return AssistantResponse.error('🤖 Gemini returned an empty response.');
+      } else {
+        if (res.error!.contains('429')) {
           AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(minutes: 2));
-          errorMessage = '⏳ Too many requests. Please wait a moment and try again.';
-          break;
-        case 500:
+        } else if (res.error!.contains('500')) {
           AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(seconds: 30));
-          errorMessage = '☁️ Google AI Server is currently busy. Try again later.';
-          break;
-        default:
-          errorMessage = 'Gemini Error: ${response.statusCode}';
+        }
+        return AssistantResponse.error(res.error ?? 'Unknown error');
       }
-      return AssistantResponse.error(errorMessage);
-    }
     } catch (e) {
       rethrow;
-    } finally {
-      clientReq.close();
     }
   }
 
@@ -482,29 +427,26 @@ class ExternalAiClient implements AiClient {
       'generationConfig': {'maxOutputTokens': 1024},
     };
 
-    final toolClient = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final reqFuture = toolClient.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey,
         },
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      reqFuture.ignore();
-      final response = await reqFuture.timeout(timeout);
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
         final text = json['candidates'][0]['content']['parts'][0]['text'];
         return AssistantResponse.text(text.toString().trim());
       }
-      return AssistantResponse.error('Failed to resolve Gemini tools');
+      return AssistantResponse.error(res.error ?? 'Failed to resolve Gemini tools');
     } catch (e) {
       return AssistantResponse.error('Tool resolution error: $e');
-    } finally {
-      toolClient.close();
     }
   }
 
@@ -553,52 +495,32 @@ class ExternalAiClient implements AiClient {
       'temperature': 0.7,
     };
 
-    final clientReq = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final timer = Timer(timeout, () {
-        clientReq.close();
-      });
-
-      final response = await clientReq.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: headers,
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      timer.cancel();
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
         if (json['content'] != null && (json['content'] as List).isNotEmpty) {
           final content = json['content'][0]['text'] as String;
           return AssistantResponse.text(content.trim());
         }
         return AssistantResponse.error('🤖 Anthropic returned an empty response.');
       } else {
-        final errorBody = response.body;
-        talker.error('🔴 Anthropic API Error [${response.statusCode}]: $errorBody');
-        
-        String errorMessage;
-        switch (response.statusCode) {
-          case 401:
-            errorMessage = '🔑 Unauthorized: Your Anthropic API Key is invalid or expired.';
-            break;
-          case 429:
-            AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(minutes: 2));
-            errorMessage = '⏳ Rate limit reached. Please wait a moment and try again.';
-            break;
-          case 500:
-            AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(seconds: 30));
-            errorMessage = '☁️ Anthropic servers are busy. Try again later.';
-            break;
-          default:
-            errorMessage = 'Anthropic Error: ${response.statusCode}';
+        if (res.error!.contains('429')) {
+          AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(minutes: 2));
+        } else if (res.error!.contains('500')) {
+          AiHealthTracker.markDegraded(config.type.name, model, cooldown: const Duration(seconds: 30));
         }
-        return AssistantResponse.error(errorMessage);
+        return AssistantResponse.error(res.error ?? 'Unknown error');
       }
     } catch (e) {
       rethrow;
-    } finally {
-      clientReq.close();
     }
   }
 
@@ -624,33 +546,26 @@ class ExternalAiClient implements AiClient {
       'stream': false,
     };
 
-    final clientReq = http.Client();
+    final manager = Get.find<AiClientManager>();
     try {
-      final timer = Timer(timeout, () {
-        clientReq.close();
-      });
-
-      final response = await clientReq.post(
+      final res = await manager.postWithRetry(
         uri,
         headers: headers,
         body: jsonEncode(body),
+        timeout: timeout,
       );
-      timer.cancel();
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+      if (res.isSuccess) {
+        final json = jsonDecode(res.data!.body);
         if (json['message'] != null && json['message']['content'] != null) {
           return AssistantResponse.text((json['message']['content'] as String).trim());
         }
-        return AssistantResponse.text(response.body);
+        return AssistantResponse.text(res.data!.body);
       } else {
-        talker.error('🔴 Ollama API Error [${response.statusCode}]: ${response.body}');
-        return AssistantResponse.error('Ollama Error: ${response.statusCode}');
+        return AssistantResponse.error(res.error ?? 'Unknown error');
       }
     } catch (e) {
       rethrow;
-    } finally {
-      clientReq.close();
     }
   }
 }

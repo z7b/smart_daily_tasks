@@ -16,9 +16,6 @@ class AssistantController extends GetxController {
   // Intelligence Core
   final _orchestrator = AiOrchestrator();
 
-  // 🛡️ Debounce guard
-  DateTime? _lastActionTime;
-
   @override
   void onInit() {
     super.onInit();
@@ -44,27 +41,38 @@ class AssistantController extends GetxController {
 
   bool get isConfigured => settingsController.isAiConfigured;
 
-  Future<void> sendMessage(String text) async {
+  final _messageQueue = <String>[];
+  bool _isProcessingQueue = false;
+
+  void sendMessage(String text) {
     if (text.trim().isEmpty) return;
     if (!isConfigured) {
       talker.warning('⚠️ Attempted to send message without AI configuration');
       return;
     }
 
-    // 🛡️ 2-second cooldown
-    final now = DateTime.now();
-    if (_lastActionTime != null &&
-        now.difference(_lastActionTime!) < const Duration(seconds: 2)) {
+    // Add to UI immediately
+    messages.add(Message(text: text, isUser: true));
+    
+    // Enqueue for processing
+    _messageQueue.add(text);
+    
+    if (!_isProcessingQueue) {
+      _processQueue();
+    }
+  }
+
+  Future<void> _processQueue() async {
+    if (_messageQueue.isEmpty) {
+      _isProcessingQueue = false;
+      isTyping.value = false;
       return;
     }
-    
-    // 🛡️ Concurrency Guard
-    if (isTyping.value) return;
 
-    _lastActionTime = now;
-
-    messages.add(Message(text: text, isUser: true));
+    _isProcessingQueue = true;
     isTyping.value = true;
+
+    final text = _messageQueue.removeAt(0);
 
     try {
       final response = await _orchestrator.processMessage(text, messages.toList());
@@ -77,7 +85,9 @@ class AssistantController extends GetxController {
       ));
     }
 
-    isTyping.value = false;
+    // Delay slightly to ensure UI updates and cooldown
+    await Future.delayed(const Duration(milliseconds: 300));
+    _processQueue();
   }
 
   void refreshInsights() {

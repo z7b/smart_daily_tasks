@@ -19,6 +19,7 @@ import '../../../core/config/storage_keys.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/assistant/ai_provider_config.dart';
 import '../../../core/services/assistant/external_ai_client.dart';
+import '../../../core/services/assistant/ai_client_manager.dart';
 
 class SettingsController extends GetxController {
   late final ThemeService _themeService;
@@ -260,6 +261,15 @@ class SettingsController extends GetxController {
       return false;
     }
 
+    if (useCustomUrl) {
+      final apiUrl = customUrl.trim();
+      final baseUri = Uri.tryParse(apiUrl);
+      if (apiUrl.isEmpty || baseUri == null || !baseUri.hasScheme || (baseUri.scheme != 'http' && baseUri.scheme != 'https') || baseUri.host.isEmpty) {
+        _showSnackbar('error'.tr, 'invalid_url'.tr, isError: true);
+        return false;
+      }
+    }
+
     // Update Reactive State
     aiApiKey.value = apiKey.trim();
     aiModel.value = model.trim();
@@ -419,29 +429,28 @@ class SettingsController extends GetxController {
 
       talker.info('📡 Dispatching request to: $requestUri');
 
-      // ⏱️ Phase 4: Secure Request Execution
-      final response = await http
-          .post(requestUri, headers: headers, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 15));
+      // ⏱️ Phase 4: Secure Request Execution using AiClientManager
+      final manager = Get.find<AiClientManager>();
+      final res = await manager.postWithRetry(
+        requestUri,
+        headers: headers,
+        body: jsonEncode(body),
+        timeout: const Duration(seconds: 15),
+      );
 
       // ✅ Phase 5: Response Interpretation
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (res.isSuccess) {
         _showSnackbar('success'.tr, 'connection_successful'.tr);
         talker.info('✅ AI Connection Test Passed: ${provider.type.name}');
       } else {
-        String errorMsg = 'HTTP ${response.statusCode}';
-        try {
-          final errorJson = jsonDecode(response.body);
-          errorMsg =
-              errorJson['error']?['message'] ??
-              errorJson['message'] ??
-              errorMsg;
-        } catch (_) {}
+        // Simple string cleanup for Snackbar display
+        String errorMsg = res.error ?? 'Unknown error';
+        if (errorMsg.length > 200) {
+          errorMsg = errorMsg.substring(0, 200) + '...';
+        }
 
         _showSnackbar('error'.tr, errorMsg, isError: true);
-        talker.error(
-          '🔴 AI Test Failed [${response.statusCode}]: ${response.body}',
-        );
+        talker.error('🔴 AI Test Failed: ${res.error}');
       }
     } on SocketException catch (e) {
       talker.error('🔴 Socket Error (DNS/Offline): $e');

@@ -33,6 +33,7 @@ class AssistantSettingsFormController extends GetxController {
   }
 
   void _syncFieldsWithSettings() {
+    if (isClosed) return;
     apiKeyController.text = settingsController.aiApiKey.value;
     modelController.text = settingsController.aiModel.value;
     urlController.text = settingsController.aiCustomUrl.value;

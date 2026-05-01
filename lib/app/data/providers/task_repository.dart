@@ -147,18 +147,18 @@ class TaskRepository {
   }
 
   // Delete with error handling
-  Future<bool> deleteTask(Id id) async {
+  Future<Result<void>> deleteTask(Id id) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.tasks.delete(id);
       });
-      return true;
+      return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Delete): $e');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete Task)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
@@ -204,11 +204,20 @@ class TaskRepository {
   }
 
   /// Mark a task as cancelled
-  Future<void> cancelTask(Task task) async {
-    await _isar.writeTxn(() async {
-      task.status = TaskStatus.cancelled;
-      await _isar.tasks.put(task);
-    });
+  Future<Result<void>> cancelTask(Task task) async {
+    try {
+      await _isar.writeTxn(() async {
+        task.status = TaskStatus.cancelled;
+        await _isar.tasks.put(task);
+      });
+      return Result.successVoid();
+    } on IsarError catch (e) {
+      talker.error('🔴 Isar Database Error (Cancel): $e');
+      return Result.failure(e.toString());
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Unknown Database Error (Cancel Task)');
+      return Result.failure(e.toString());
+    }
   }
 
   // Search

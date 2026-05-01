@@ -48,6 +48,7 @@ import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
 import 'package:smart_daily_tasks/app/core/services/assistant/command_executor.dart';
 import 'package:smart_daily_tasks/app/core/services/assistant/query_engine.dart';
+import 'package:smart_daily_tasks/app/core/services/assistant/ai_client_manager.dart';
 
 import 'package:workmanager/workmanager.dart';
 
@@ -242,11 +243,13 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(AppointmentTimeService(), permanent: true);
       Get.put(TaskTimeService(), permanent: true);
 
-      // ✅ Step 4.5: Register AI Assistant Services (Tool Execution)
+      // ✅ Step 4.5: Register AI Assistant Services (Tool Execution & Networking)
+      Get.put(AiClientManager(), permanent: true);
       Get.put(CommandExecutor(
         taskRepo: Get.find<TaskRepository>(),
         noteRepo: Get.find<NoteRepository>(),
         medRepo: Get.find<MedicationRepository>(),
+        journalRepo: Get.find<JournalRepository>(),
         isar: isar,
       ), permanent: true);
       Get.put(QueryEngine(
