@@ -44,11 +44,11 @@ class AppLockObserver extends WidgetsBindingObserver {
         break;
 
       case AppLifecycleState.resumed:
-        if (_isInBackground && service.isAppLockEnabled.value) {
+        if ((_isInBackground || service.isOverlayVisible.value) && service.isAppLockEnabled.value) {
           _isInBackground = false;
-          debugPrint('🔒 App Resumed - Triggering Native Auth');
+          debugPrint('🔒 App Resumed/Overlay Active - Triggering Native Auth');
           
-          // Show overlay immediately if it's not already visible
+          // Ensure overlay is visible if we are in lock mode
           service.showPrivacyOverlay();
 
           _lifecycleThrottle.throttle(

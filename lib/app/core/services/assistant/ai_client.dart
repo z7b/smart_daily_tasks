@@ -1,7 +1,7 @@
+import 'message_model.dart';
 import 'assistant_response.dart';
 
 /// Abstract interface for AI processing.
-/// Both Local and URL implementations conform to this contract.
 abstract class AiClient {
-  Future<AssistantResponse> process(String userMessage);
+  Future<AssistantResponse> process(List<Message> history, {String? systemContext});
 }

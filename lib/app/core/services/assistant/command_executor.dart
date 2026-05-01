@@ -10,11 +10,10 @@ import '../../../data/providers/note_repository.dart';
 import '../../../data/providers/medication_repository.dart';
 import '../../../core/helpers/ai_command_helper.dart';
 import '../../../core/helpers/log_helper.dart';
-import '../../../core/extensions/date_time_extensions.dart';
 import 'assistant_response.dart';
 
-/// Handles all write operations (add, complete, delete) for the Smart Assistant.
-/// Extracted from the old monolithic AssistantController.
+/// Handles database write operations for the Smart Assistant.
+/// Refactored to be a "Dumb Executor" — no local parsing, just execution.
 class CommandExecutor {
   final TaskRepository _taskRepo;
   final NoteRepository _noteRepo;
@@ -31,19 +30,18 @@ class CommandExecutor {
         _medRepo = medRepo,
         _isar = isar;
 
-  // ─── Task Commands ─────────────────────────────────
+  // ─── Task Operations ───────────────────────────────
 
-  Future<AssistantResponse> addTask(String rawTitle) async {
-    final targetDate = AiCommandHelper.parseDate(rawTitle);
-    final priority = AiCommandHelper.parsePriority(rawTitle);
-
-    String cleanTitle = rawTitle
-        .replaceAll(
-            RegExp(r'(بكرة|بكره|tomorrow|اليوم|today|عالي|high|مهم|عاجل)',
-                caseSensitive: false),
-            '')
-        .trim();
-    if (cleanTitle.isEmpty) cleanTitle = rawTitle;
+  Future<AssistantResponse> executeCreateTask({
+    required String title,
+    DateTime? scheduledAt,
+    int? priority,
+    String? description,
+  }) async {
+    final targetDate = scheduledAt ?? DateTime.now();
+    final taskPriority = priority == 3 
+        ? TaskPriority.high 
+        : (priority == 1 ? TaskPriority.low : TaskPriority.medium);
 
     // Collision Prevention
     final startOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
@@ -55,113 +53,81 @@ class CommandExecutor {
 
     final isDuplicate = existing.any((t) =>
         AiCommandHelper.normalizeArabic(t.title) ==
-        AiCommandHelper.normalizeArabic(cleanTitle));
+        AiCommandHelper.normalizeArabic(title));
 
     if (isDuplicate) {
       return AssistantResponse.text(
-        'task_already_exists'.trParams({'title': cleanTitle}),
+        'task_already_exists'.trParams({'title': title}),
       );
     }
 
     final task = Task(
-      title: cleanTitle,
+      title: title,
+      note: description,
       scheduledAt: targetDate,
-      priority: priority,
+      priority: taskPriority,
       createdAt: DateTime.now(),
     );
-    await _taskRepo.addTask(task);
-    talker.info('🤖 Assistant created task: $cleanTitle');
 
-    return AssistantResponse.text(
-      'task_added_success'.trParams({'title': cleanTitle}),
-    );
-  }
-
-  Future<AssistantResponse> completeTask(String query) async {
-    final normalizedQuery = AiCommandHelper.normalizeArabic(query);
-    final allTasks = await _taskRepo.getAllTasks();
-
-    final matching = allTasks.where((t) {
-      final normTitle = AiCommandHelper.normalizeArabic(t.title);
-      return normTitle.contains(normalizedQuery) &&
-          t.status != TaskStatus.completed;
-    }).toList();
-
-    if (matching.isEmpty) {
-      return AssistantResponse.text('no_matching_task'.tr);
+    final result = await _taskRepo.addTask(task);
+    if (!result.isSuccess) {
+      talker.error('🔴 CommandExecutor failed to add task: ${result.error}');
+      return AssistantResponse.error('error'.tr);
     }
 
-    final taskToComplete = matching.first;
-    taskToComplete.status = TaskStatus.completed;
-    taskToComplete.completedAt = DateTime.now();
-    await _taskRepo.updateTask(taskToComplete);
-    talker.info('🤖 Assistant completed task: ${taskToComplete.title}');
-
+    talker.info('🤖 Task created: $title');
     return AssistantResponse.text(
-      'task_completed_success'.trParams({'title': taskToComplete.title}),
+      'task_added_success'.trParams({'title': title}),
     );
   }
 
-  Future<AssistantResponse> completeAllTasks() async {
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    final todayTasks = await _isar.tasks
-        .filter()
-        .scheduledAtBetween(startOfDay, endOfDay)
-        .statusEqualTo(TaskStatus.active)
-        .findAll();
-
-    if (todayTasks.isEmpty) {
-      return AssistantResponse.text('no_active_tasks_today'.tr);
-    }
-
-    await _isar.writeTxn(() async {
-      for (var task in todayTasks) {
-        task.status = TaskStatus.completed;
-        task.completedAt = DateTime.now();
-        await _isar.tasks.put(task);
-      }
-    });
-    talker.info('🤖 Assistant completed ${todayTasks.length} tasks');
-
-    return AssistantResponse.text(
-      'all_tasks_completed'.trParams({'count': todayTasks.length.toString()}),
-    );
+  Future<AssistantResponse> executeDeleteTask(int taskId) async {
+    final result = await _taskRepo.deleteTask(taskId);
+    if (!result) return AssistantResponse.error('task_delete_error'.tr);
+    
+    talker.info('🤖 Task deleted: $taskId');
+    return AssistantResponse.text('task_deleted'.tr);
   }
 
-  // ─── Note Commands ─────────────────────────────────
+  Future<AssistantResponse> executeCompleteTask(int taskId) async {
+    final task = await _isar.tasks.get(taskId);
+    if (task == null) return AssistantResponse.error('no_matching_task'.tr);
 
-  Future<AssistantResponse> addNote(String content) async {
+    task.status = TaskStatus.completed;
+    task.completedAt = DateTime.now();
+    
+    final result = await _taskRepo.updateTask(task);
+    if (!result.isSuccess) return AssistantResponse.error('error'.tr);
+    
+    talker.info('🤖 Task completed: ${task.title}');
+    return AssistantResponse.text('task_completed_success'.trParams({'title': task.title}));
+  }
+
+  // ─── Note Operations ───────────────────────────────
+
+  Future<AssistantResponse> executeCreateNote(String content, {String? title}) async {
     final note = Note(
-      title: 'add_note'.tr,
+      title: title ?? 'add_note'.tr,
       content: content,
       createdAt: DateTime.now(),
     );
     await _noteRepo.addNote(note);
-    talker.info('🤖 Assistant created note');
+    talker.info('🤖 Note created');
     return AssistantResponse.text('note_added_success'.tr);
   }
 
-  // ─── Journal Commands ──────────────────────────────
+  // ─── Journal Operations ────────────────────────────
 
-  Future<AssistantResponse> addJournal(String content) async {
+  Future<AssistantResponse> executeCreateJournal(String content) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Upsert: append to existing or create new
-    final existing = await _isar.journals
-        .filter()
-        .dateEqualTo(today)
-        .findFirst();
+    final existing = await _isar.journals.filter().dateEqualTo(today).findFirst();
 
     if (existing != null) {
       existing.note = '${existing.note}\n- (AI): ${content.trim()}';
-      await _isar.writeTxn(() async {
-        await _isar.journals.put(existing);
-      });
-      talker.info('🤖 Assistant updated journal entry');
+      await _isar.writeTxn(() => _isar.journals.put(existing));
+      talker.info('🤖 Journal updated');
     } else {
       final journal = Journal(
         date: today,
@@ -169,52 +135,27 @@ class CommandExecutor {
         note: content.trim(),
         createdAt: now,
       );
-      await _isar.writeTxn(() async {
-        await _isar.journals.put(journal);
-      });
-      talker.info('🤖 Assistant created new journal entry');
+      await _isar.writeTxn(() => _isar.journals.put(journal));
+      talker.info('🤖 Journal created');
     }
 
     return AssistantResponse.text('journal_added_success'.tr);
   }
 
-  // ─── Medication Commands ───────────────────────────
+  // ─── Medication Operations ─────────────────────────
 
-  Future<AssistantResponse> logMedication() async {
-    final meds = await _medRepo.getAllMedications();
-    final active = meds.where((m) => m.isActive).toList();
-
-    if (active.isEmpty) {
-      return AssistantResponse.text('no_active_meds'.tr);
-    }
-
-    final now = DateTime.now();
-    for (var med in active) {
-      final todayIntakes = med.intakeHistory
-          .where((dt) => dt.isSameDay(now))
-          .length;
-
-      if (todayIntakes < med.reminderTimes.length) {
-        await _medRepo.logIntake(med.id);
-        talker.info('🤖 Assistant logged medication intake: ${med.name}');
-        return AssistantResponse.text(
-          'med_logged_success'.trParams({'name': med.name}),
-        );
-      }
-    }
-
-    return AssistantResponse.text('all_meds_taken_today'.tr);
+  Future<AssistantResponse> executeLogMedication(int medicationId) async {
+    await _medRepo.logIntake(medicationId);
+    talker.info('🤖 Medication intake logged: $medicationId');
+    return AssistantResponse.text('med_logged_success'.tr);
   }
 
-  // ─── Goal Commands ─────────────────────────────────
+  // ─── Goal Operations ───────────────────────────────
 
-  Future<AssistantResponse> setStepGoal(int goal) async {
-    if (goal <= 0) {
-      return AssistantResponse.text('error'.tr);
-    }
-    final storage = GetStorage();
-    storage.write('daily_step_goal', goal);
-    talker.info('🤖 Assistant updated step goal to $goal');
+  Future<AssistantResponse> executeSetStepGoal(int goal) async {
+    if (goal <= 0) return AssistantResponse.error('invalid_goal'.tr);
+    GetStorage().write('daily_step_goal', goal);
+    talker.info('🤖 Step goal updated to $goal');
     return AssistantResponse.text('goal_updated'.tr);
   }
 }

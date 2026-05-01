@@ -19,11 +19,11 @@ class AppointmentRepository {
   }
 
   /// ✅ Fetch upcoming appointments for a specific range
-  Future<List<Appointment>> getUpcomingAppointments({int limit = 10}) async {
+  Future<List<Appointment>> getUpcomingAppointments(DateTime now, {int limit = 10}) async {
     return await isar.appointments
         .where()
         .filter()
-        .scheduledAtGreaterThan(DateTime.now())
+        .scheduledAtGreaterThan(now)
         .and()
         .statusEqualTo(AppointmentStatus.active)
         .sortByScheduledAt()

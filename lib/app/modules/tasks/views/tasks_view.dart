@@ -333,7 +333,7 @@ class TasksView extends GetView<TaskListController> {
                 const SizedBox(height: 24),
               ],
               _buildDetailItem(CupertinoIcons.time, 'time'.tr, 
-                "${DateFormat.jm().format(task.scheduledAt).f}${task.scheduledEnd != null ? ' - ${DateFormat.jm().format(task.scheduledEnd!).f}' : ''}"),
+                "${DateFormat.jm(Get.locale?.languageCode).format(task.scheduledAt).f}${task.scheduledEnd != null ? ' - ${DateFormat.jm(Get.locale?.languageCode).format(task.scheduledEnd!).f}' : ''}"),
               const SizedBox(height: 12),
               _buildDetailItem(CupertinoIcons.calendar, 'date'.tr, 
                 DateFormat.yMMMMd(Get.locale?.languageCode).format(task.scheduledAt).f),

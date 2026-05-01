@@ -147,15 +147,18 @@ class TaskRepository {
   }
 
   // Delete with error handling
-  Future<void> deleteTask(Id id) async {
+  Future<bool> deleteTask(Id id) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.tasks.delete(id);
       });
+      return true;
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Delete): $e');
+      return false;
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete Task)');
+      return false;
     }
   }
 

@@ -10,7 +10,6 @@ import '../../../data/providers/task_repository.dart';
 import '../../../data/providers/medication_repository.dart';
 import '../../../data/providers/appointment_repository.dart';
 import '../../../core/services/task_time_service.dart';
-import '../../../core/services/appointment_time_service.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/helpers/number_extension.dart';
 
@@ -23,8 +22,6 @@ class QueryEngine {
   final MedicationRepository _medRepo;
   final AppointmentRepository _appointmentRepo;
   final TaskTimeService _taskTimeService;
-  // ignore: unused_field
-  final AppointmentTimeService _appointmentTimeService;
   final TimeService _timeService;
 
   QueryEngine({
@@ -32,13 +29,11 @@ class QueryEngine {
     required MedicationRepository medRepo,
     required AppointmentRepository appointmentRepo,
     required TaskTimeService taskTimeService,
-    required AppointmentTimeService appointmentTimeService,
     required TimeService timeService,
   })  : _taskRepo = taskRepo,
         _medRepo = medRepo,
         _appointmentRepo = appointmentRepo,
         _taskTimeService = taskTimeService,
-        _appointmentTimeService = appointmentTimeService,
         _timeService = timeService;
 
   String get _locale => Get.locale?.languageCode ?? 'en';
@@ -98,7 +93,7 @@ class QueryEngine {
   /// Returns all upcoming appointments
   Future<AssistantResponse> queryAppointments() async {
     final now = _timeService.now;
-    final appointments = await _appointmentRepo.getUpcomingAppointments();
+    final appointments = await _appointmentRepo.getUpcomingAppointments(now);
     
     final upcoming = appointments
         .where((a) => a.scheduledAt.isAfter(now) && a.status == AppointmentStatus.active)
@@ -124,7 +119,7 @@ class QueryEngine {
   /// Returns the next upcoming appointment
   Future<AssistantResponse> queryNextAppointment() async {
     final now = _timeService.now;
-    final appointments = await _appointmentRepo.getUpcomingAppointments();
+    final appointments = await _appointmentRepo.getUpcomingAppointments(now);
     
     final upcoming = appointments
         .where((a) => a.scheduledAt.isAfter(now) && a.status == AppointmentStatus.active)
@@ -230,7 +225,7 @@ class QueryEngine {
     final activeTasks = tasks.where((t) => t.status == TaskStatus.active).length;
     final completedTasks = tasks.where((t) => t.status == TaskStatus.completed).length;
 
-    final appointments = await _appointmentRepo.getUpcomingAppointments();
+    final appointments = await _appointmentRepo.getUpcomingAppointments(now);
     final upcomingAppointments = appointments
         .where((a) => a.scheduledAt.isAfter(now) && a.status == AppointmentStatus.active)
         .length;

@@ -32,6 +32,7 @@ import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 
+
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
@@ -45,6 +46,8 @@ import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/core/services/time_service.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
+import 'package:smart_daily_tasks/app/core/services/assistant/command_executor.dart';
+import 'package:smart_daily_tasks/app/core/services/assistant/query_engine.dart';
 
 import 'package:workmanager/workmanager.dart';
 
@@ -164,9 +167,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
               WorkProfileSchema,
               AttendanceLogSchema,
               AppointmentSchema,
-            ], directory: dir.path);
+            ], directory: dir.path, inspector: false); // 🛡️ Disable inspector to prevent debug hang
             talker.info(
-              '📦 Isar successfully initialized (Attempt ${retryCount + 1})',
+              '📦 Isar successfully initialized',
             );
             break;
           } catch (e) {
@@ -239,6 +242,21 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(AppointmentTimeService(), permanent: true);
       Get.put(TaskTimeService(), permanent: true);
 
+      // ✅ Step 4.5: Register AI Assistant Services (Tool Execution)
+      Get.put(CommandExecutor(
+        taskRepo: Get.find<TaskRepository>(),
+        noteRepo: Get.find<NoteRepository>(),
+        medRepo: Get.find<MedicationRepository>(),
+        isar: isar,
+      ), permanent: true);
+      Get.put(QueryEngine(
+        taskRepo: Get.find<TaskRepository>(),
+        medRepo: Get.find<MedicationRepository>(),
+        appointmentRepo: Get.find<AppointmentRepository>(),
+        taskTimeService: Get.find<TaskTimeService>(),
+        timeService: Get.find<TimeService>(),
+      ), permanent: true);
+      
       final appLockObserver = AppLockObserver();
       WidgetsBinding.instance.addObserver(appLockObserver);
       Get.put<AppLockObserver>(appLockObserver, permanent: true);
@@ -307,181 +325,47 @@ class MainApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [Locale('en'), Locale('ar')],
         builder: (context, child) {
-          final isDark = themeService.isDarkModeRx.value;
-          final bgColor = isDark ? const Color(0xFF050505) : const Color(0xFFE5E5E5);
-          
-          return Container(
-            color: bgColor,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 550),
-                child: ClipRect( // Ensures overlay doesn't bleed outside the 550px constraint
-                  child: Stack(
-                    children: [
-                      child!,
-                      Obx(() {
-                        if (!appLockService.isOverlayVisible.value) {
-                          return const SizedBox.shrink();
-                        }
+          return Stack(
+            children: [
+              if (child != null) Positioned.fill(child: child),
+              // 🛡️ Global App Lock Overlay
+              Obx(() {
+                if (!appLockService.isOverlayVisible.value) {
+                  return const SizedBox.shrink();
+                }
 
-                        return Positioned.fill(
-                          child: GestureDetector(
-                            onTap: () => appLockService.authenticate(),
-                            child: Stack(
-                              children: [
-                                // 🌈 Layer 1: Mesh Gradient Blobs (Animated)
-                                Positioned.fill(
-                                  child: Container(color: Colors.black),
-                                ),
-                                Positioned(
-                                  top: -100,
-                                  right: -100,
-                                  child: Container(
-                                    width: 300,
-                                    height: 300,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF5E5CE6).withAlpha(100),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ).animate(onPlay: (c) => c.repeat(reverse: true))
-                                   .move(duration: const Duration(seconds: 5), begin: const Offset(-20, -20), end: const Offset(20, 20))
-                                   .blur(begin: const Offset(80, 80), end: const Offset(100, 100)),
-                                ),
-                                Positioned(
-                                  bottom: -50,
-                                  left: -50,
-                                  child: Container(
-                                    width: 250,
-                                    height: 250,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF007AFF).withAlpha(100),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ).animate(onPlay: (c) => c.repeat(reverse: true))
-                                   .move(duration: const Duration(seconds: 7), begin: const Offset(10, 10), end: const Offset(-10, -10))
-                                   .blur(begin: const Offset(80, 80), end: const Offset(100, 100)),
-                                ),
-
-                                // 🪟 Layer 2: Global Frosted Glass Effect
-                                BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                                  child: Container(
-                                    color: Colors.black.withAlpha(80),
-                                  ),
-                                ),
-
-                                // 🛡️ Layer 3: Central Professional Lock Card
-                                Center(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 40),
-                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(15),
-                                      borderRadius: BorderRadius.circular(40),
-                                      border: Border.all(
-                                        color: Colors.white.withAlpha(30),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Pulsing Security Icon
-                                        Container(
-                                          padding: const EdgeInsets.all(24),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withAlpha(20),
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.white.withAlpha(10),
-                                                blurRadius: 20,
-                                                spreadRadius: 5,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            appLockService.isBiometricEnabled.value 
-                                              ? Icons.fingerprint_rounded 
-                                              : Icons.lock_outline_rounded,
-                                            color: Colors.white,
-                                            size: 56,
-                                          ),
-                                        ).animate(onPlay: (c) => c.repeat(reverse: true))
-                                         .scale(duration: const Duration(seconds: 2), begin: const Offset(1, 1), end: const Offset(1.1, 1.1))
-                                         .shimmer(duration: const Duration(seconds: 3), delay: const Duration(seconds: 1)),
-                                        
-                                        const SizedBox(height: 32),
-                                        
-                                        // Header Text
-                                        Text(
-                                          'identity_verification'.tr,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            decoration: TextDecoration.none,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                        
-                                        const SizedBox(height: 12),
-                                        
-                                        // Description Text
-                                        Text(
-                                          'security_locked_desc'.tr,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withAlpha(160),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w400,
-                                            decoration: TextDecoration.none,
-                                            height: 1.5,
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 48),
-
-                                        // Action Hint
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.security_rounded, color: Colors.blue, size: 18),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'tap_to_unlock'.tr,
-                                                style: const TextStyle(
-                                                  color: Colors.blue,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  decoration: TextDecoration.none,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ).animate().fadeIn(duration: const Duration(milliseconds: 400)).scale(begin: const Offset(0.9, 0.9)),
-                                ),
-                              ],
+                return Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => appLockService.authenticate(),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.95),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 64)
+                                .animate(onPlay: (c) => c.repeat())
+                                .shimmer(duration: const Duration(seconds: 2)),
+                            const SizedBox(height: 24),
+                            Text(
+                              'tap_to_unlock'.tr,
+                              style: const TextStyle(
+                                color: Colors.white, 
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 18,
+                                letterSpacing: 1.1,
+                                decoration: TextDecoration.none,
+                              ),
                             ),
-                          ),
-                        );
-                      }),
-                    ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                );
+              }),
+            ],
           );
         },
       ),

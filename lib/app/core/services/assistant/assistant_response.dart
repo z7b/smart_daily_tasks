@@ -11,20 +11,34 @@ enum ResponseType {
   error,
 }
 
+/// Semantic hint for the controller to enter a follow-up state.
+/// Eliminates fragile string-matching for state transitions (H-3).
+enum StateHint {
+  none,
+  awaitingTaskTitle,
+  awaitingNoteContent,
+  awaitingJournalContent,
+  awaitingDeleteTarget,
+  awaitingEditTarget,
+  guessAddTask,
+}
+
 /// A structured response from the assistant
 class AssistantResponse {
   final String text;
   final ResponseType type;
   final List<ResponseCard> cards;
+  final StateHint stateHint;
 
   const AssistantResponse({
     required this.text,
     this.type = ResponseType.text,
     this.cards = const [],
+    this.stateHint = StateHint.none,
   });
 
-  factory AssistantResponse.text(String text) =>
-      AssistantResponse(text: text);
+  factory AssistantResponse.text(String text, {StateHint stateHint = StateHint.none}) =>
+      AssistantResponse(text: text, stateHint: stateHint);
 
   factory AssistantResponse.error(String text) =>
       AssistantResponse(text: text, type: ResponseType.error);
