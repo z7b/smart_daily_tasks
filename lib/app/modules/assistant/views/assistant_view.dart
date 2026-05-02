@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -9,7 +8,6 @@ import '../../../core/services/assistant/message_model.dart';
 import 'widgets/response_card.dart';
 import 'widgets/assistant_status_header.dart';
 import 'widgets/assistant_dashboard.dart';
-import 'assistant_settings_view.dart';
 
 class AssistantView extends GetView<AssistantController> {
   const AssistantView({super.key});
@@ -22,27 +20,20 @@ class AssistantView extends GetView<AssistantController> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(theme),
       body: SafeArea(
-        child: Obx(() {
-          if (!controller.isConfigured) {
-            return _buildSetupRequired(theme);
-          }
-
-          return Column(
-            children: [
-              const AssistantStatusHeader(),
-              Expanded(
-                child: CustomScrollView(
-                  slivers: [
-                    const SliverToBoxAdapter(child: AssistantDashboard()),
-                    const _ChatSliverList(),
-                  ],
-                ),
+        child: Column(
+          children: [
+            const AssistantStatusHeader(),
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  const SliverToBoxAdapter(child: AssistantDashboard()),
+                  const _ChatSliverList(),
+                ],
               ),
-              const _QuickActionsArea(),
-              const _AssistantInputArea(),
-            ],
-          );
-        }),
+            ),
+            const _QuickActionsArea(),
+          ],
+        ),
       ),
     );
   }
@@ -61,97 +52,13 @@ class AssistantView extends GetView<AssistantController> {
       )),
       centerTitle: true,
       actions: [
-        IconButton(
-          icon: Icon(CupertinoIcons.settings, color: AppTheme.primary, size: 20),
-          onPressed: () => Get.to(() => const AssistantSettingsView()),
-        ),
-        Obx(() => controller.isConfigured 
+        Obx(() => controller.messages.length > 1
           ? IconButton(
-              icon: Icon(CupertinoIcons.refresh, color: AppTheme.primary, size: 20),
+              icon: Icon(Icons.delete_sweep_outlined, color: AppTheme.primary, size: 22),
               onPressed: () => _showClearDialog(Get.context!),
             )
           : const SizedBox.shrink()),
       ],
-    );
-  }
-
-  Widget _buildSetupRequired(ThemeData theme) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 140,
-              width: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.auto_awesome_rounded, size: 64, color: Colors.white),
-            ).animate().scale(duration: const Duration(milliseconds: 600), curve: Curves.easeOutBack).shimmer(delay: const Duration(seconds: 1), duration: const Duration(seconds: 2)),
-            
-            const SizedBox(height: 48),
-            
-            Text(
-              'ai_setup_required_title'.tr,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-              ),
-            ).animate().fadeIn(duration: const Duration(milliseconds: 200)).slideY(begin: 0.2, end: 0),
-            
-            const SizedBox(height: 16),
-            
-            Text(
-              'ai_setup_required_desc'.tr,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                height: 1.6,
-              ),
-            ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: 0.2, end: 0),
-            
-            const SizedBox(height: 48),
-            
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Get.to(() => const AssistantSettingsView()),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  elevation: 8,
-                  shadowColor: AppTheme.primary.withValues(alpha: 0.4),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.settings_suggest_rounded),
-                    const SizedBox(width: 12),
-                    Text('go_to_settings'.tr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
-                ),
-              ),
-            ).animate().fadeIn(duration: const Duration(milliseconds: 600)).slideY(begin: 0.3, end: 0),
-          ],
-        ),
-      ),
     );
   }
 
@@ -182,6 +89,8 @@ class AssistantView extends GetView<AssistantController> {
   }
 }
 
+// ─── Chat List ─────────────────────────────────────────
+
 class _ChatSliverList extends GetWidget<AssistantController> {
   const _ChatSliverList();
 
@@ -206,6 +115,8 @@ class _ChatSliverList extends GetWidget<AssistantController> {
   }
 }
 
+// ─── Message Bubble ────────────────────────────────────
+
 class _MessageBubble extends StatelessWidget {
   final Message message;
   const _MessageBubble({required this.message});
@@ -216,9 +127,8 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.isUser;
     final hasCards = !isUser && message.response != null && message.response!.cards.isNotEmpty;
 
-    // 🔄 Pending / Processing state — use StatefulWidget to safely manage AnimationController
-    if (message.isPending || message.isRetrying) {
-      return _PendingBubble(isRetrying: message.isRetrying);
+    if (message.isPending) {
+      return _PendingBubble(isRetrying: false);
     }
 
     return Align(
@@ -246,30 +156,14 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.text,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isUser ? Colors.white : (message.isFailed ? Colors.red.shade300 : theme.textTheme.bodyMedium?.color),
-                      height: 1.5,
-                    ),
-                  ),
-                  // 🔴 Failed message: show retry button
-                  if (message.isFailed) ...[
-                    const SizedBox(height: 8),
-                    _buildRetryButton(context),
-                  ],
-                ],
+              child: Text(
+                message.text,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isUser ? Colors.white : (message.isFailed ? Colors.red.shade300 : theme.textTheme.bodyMedium?.color),
+                  height: 1.5,
+                ),
               ),
             ),
-            // Status indicator for non-user messages
-            if (!isUser && !message.isFailed)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, left: 4),
-                child: _buildStatusIcon(),
-              ),
             if (hasCards) ...[
               const SizedBox(height: 6),
               ...message.response!.cards.map((card) => ResponseCardWidget(card: card)),
@@ -284,49 +178,12 @@ class _MessageBubble extends StatelessWidget {
     if (isFailed) return Colors.red.withValues(alpha: 0.1);
     return isUser ? AppTheme.primary : theme.cardColor;
   }
-
-  Widget _buildStatusIcon() {
-    switch (message.status) {
-      case MessageStatus.success:
-        return const SizedBox.shrink();
-      case MessageStatus.failed:
-        return Icon(Icons.error_outline, size: 14, color: Colors.red.shade400);
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Widget _buildRetryButton(BuildContext context) {
-    final controller = Get.find<AssistantController>();
-    return GestureDetector(
-      onTap: () => controller.retryMessage(message.traceId),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.refresh_rounded, size: 14, color: Colors.orange.shade400),
-          const SizedBox(width: 4),
-          Text(
-            'retry'.tr,
-            style: TextStyle(fontSize: 11, color: Colors.orange.shade400, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-/// 🛡️ CRASH FIX: Proper StatefulWidget for the pending animation bubble.
-///
-/// Root cause of the crash:
-/// `flutter_animate`'s `onPlay: (c) => c.repeat()` schedules repeating
-/// animations via `Future.delayed` timers internally. When the pending
-/// message is replaced (processing done), `_MessageBubble` is rebuilt
-/// with new data and the old widget subtree is unmounted. However, the
-/// `Future.delayed` timer is still alive and fires after unmount, calling
-/// `AnimationController.forward()` on a disposed controller → `_AssertionError`.
-///
-/// The fix: manage the `AnimationController` manually with `dispose()`,
-/// which cancels the ticker before the timer can fire.
+// ─── Pending Bubble (StatefulWidget — lifecycle-safe animation) ──────
+
+/// Uses AnimationController directly to avoid flutter_animate onPlay+repeat
+/// causing _AssertionError when widget is disposed mid-animation.
 class _PendingBubble extends StatefulWidget {
   final bool isRetrying;
   const _PendingBubble({required this.isRetrying});
@@ -343,11 +200,8 @@ class _PendingBubbleState extends State<_PendingBubble>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this, // ← Tied to widget lifecycle
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))
+      ..repeat(reverse: true);
     _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
@@ -355,7 +209,7 @@ class _PendingBubbleState extends State<_PendingBubble>
 
   @override
   void dispose() {
-    _controller.dispose(); // ← Kills the ticker, prevents the crash
+    _controller.dispose();
     super.dispose();
   }
 
@@ -383,18 +237,12 @@ class _PendingBubbleState extends State<_PendingBubble>
             children: [
               SizedBox(
                 width: 14, height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: widget.isRetrying ? Colors.orange : AppTheme.primary,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
               ),
               const SizedBox(width: 10),
               Text(
-                widget.isRetrying ? 'retrying'.tr : 'thinking'.tr,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                ),
+                'thinking'.tr,
+                style: TextStyle(fontSize: 13, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
               ),
             ],
           ),
@@ -404,20 +252,22 @@ class _PendingBubbleState extends State<_PendingBubble>
   }
 }
 
+// ─── Quick Actions (الأوامر السريعة) ───────────────────
+
 class _QuickActionsArea extends GetWidget<AssistantController> {
   const _QuickActionsArea();
 
   @override
   Widget build(BuildContext context) {
     final actions = [
-      {'label': 'assistant_qa_tasks'.tr, 'text': 'ما هي مهامي اليوم؟'},
-      {'label': 'assistant_qa_next_appt'.tr, 'text': 'الموعد القادم'},
-      {'label': 'assistant_qa_overview'.tr, 'text': 'ملخص يومي'},
+      {'label': 'assistant_qa_tasks'.tr,      'text': 'ما هي مهامي اليوم؟'},
+      {'label': 'assistant_qa_next_appt'.tr,  'text': 'الموعد القادم'},
+      {'label': 'assistant_qa_overview'.tr,   'text': 'ملخص يومي'},
     ];
 
     return Container(
-      height: 42,
-      margin: const EdgeInsets.only(bottom: 4),
+      height: 52,
+      margin: const EdgeInsets.only(bottom: 8),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -433,70 +283,6 @@ class _QuickActionsArea extends GetWidget<AssistantController> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           );
         },
-      ),
-    );
-  }
-}
-
-class _AssistantInputArea extends GetWidget<AssistantController> {
-  const _AssistantInputArea();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
-              ),
-              child: TextField(
-                controller: controller.messageController,
-                decoration: InputDecoration(
-                  hintText: 'type_message_hint'.tr,
-                  hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                ),
-                onSubmitted: (text) {
-                  controller.sendMessage(text);
-                  controller.messageController.clear();
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          _SendButton(controller: controller),
-        ],
-      ),
-    );
-  }
-}
-
-class _SendButton extends StatelessWidget {
-  final AssistantController controller;
-  const _SendButton({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.8)]),
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: IconButton(
-        onPressed: () {
-          controller.sendMessage(controller.messageController.text);
-          controller.messageController.clear();
-        },
-        icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
       ),
     );
   }
