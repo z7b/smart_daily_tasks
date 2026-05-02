@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
@@ -32,7 +33,6 @@ import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 
-
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/journal_repository.dart';
@@ -59,29 +59,33 @@ void callbackDispatcher() {
     try {
       // Background isolate has its own memory; we must re-init essential services
       final dir = await getApplicationDocumentsDirectory();
-      
+
       // Open Isar (Background Instance)
-      final isar = await Isar.open([
-        TaskSchema,
-        NoteSchema,
-        JournalSchema,
-        CalendarEventSchema,
-        BookmarkSchema,
-        BookSchema,
-        MedicationSchema,
-        StepLogSchema,
-        WorkProfileSchema,
-        AttendanceLogSchema,
-        AppointmentSchema,
-      ], directory: dir.path, inspector: false);
+      final isar = await Isar.open(
+        [
+          TaskSchema,
+          NoteSchema,
+          JournalSchema,
+          CalendarEventSchema,
+          BookmarkSchema,
+          BookSchema,
+          MedicationSchema,
+          StepLogSchema,
+          WorkProfileSchema,
+          AttendanceLogSchema,
+          AppointmentSchema,
+        ],
+        directory: dir.path,
+        inspector: false,
+      );
 
       // ✅ Inject StepRepository for SSOT writes in background
       Get.put(StepRepository(isar));
 
       // Trigger the specialized background sync pulse
       final healthService = HealthService();
-      await healthService.init(); 
-      
+      await healthService.init();
+
       if (healthService.isAuthorized.value == true) {
         // ✅ Rule: Background tasks MUST have a timeout to prevent persistent DB locks
         await healthService.fetchAndPersistSteps().timeout(
@@ -99,26 +103,32 @@ void callbackDispatcher() {
   });
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  FlutterError.onError = (details) =>
-      talker.handle(details.exception, details.stack);
-  PlatformDispatcher.instance.onError = (error, stack) {
-    talker.handle(error, stack);
-    return true;
-  };
+      FlutterError.onError = (details) =>
+          talker.handle(details.exception, details.stack);
+      PlatformDispatcher.instance.onError = (error, stack) {
+        talker.handle(error, stack);
+        return true;
+      };
 
-  talker.info('🚀 Life OS Initializing...');
-  
-  // ✅ Initialize Background Synchronization
-  Workmanager().initialize(
-    callbackDispatcher,
+      talker.info('🚀 Life OS Initializing...');
+
+      // ✅ Initialize Background Synchronization
+      Workmanager().initialize(callbackDispatcher);
+
+      tz.initializeTimeZones();
+      await GetStorage.init();
+
+      runApp(const AppBootstrapper());
+    },
+    (error, stack) {
+      talker.handle(error, stack, '🔥 Global Unhandled Error');
+    },
   );
-
-  tz.initializeTimeZones();
-  await GetStorage.init();
-  runApp(const AppBootstrapper());
 }
 
 class AppBootstrapper extends StatefulWidget {
@@ -139,16 +149,23 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 
   Future<void> _initApp() async {
+    final masterSw = Stopwatch()..start();
+    final phaseSw = Stopwatch()..start();
+
     try {
-      talker.info('🛠️ Initializing Core Services...');
+      talker.info('🛠️ Phase 1: Initializing Core Services...');
       await Get.putAsync(() => ThemeService().init(), permanent: true);
       await Get.putAsync(() => SecurityService().init(), permanent: true);
       await Get.putAsync(() => AppLockService().init(), permanent: true);
       await Get.putAsync(() => TimeService().init(), permanent: true);
+      
+      talker.info('⏱️ [Trace] Phase 1 (Core Services) completed in ${phaseSw.elapsedMilliseconds}ms');
+      phaseSw.reset();
 
       final dir = await getApplicationDocumentsDirectory();
 
-      // ✅ Phase 4: Expert Isar Initialization (Singleton-Aware + Lock Recovery)
+      talker.info('🛠️ Phase 2: Expert Isar Initialization...');
+      // ✅ Phase 2: Expert Isar Initialization (Singleton-Aware + Lock Recovery)
       Isar? isar = Isar.getInstance();
 
       if (isar == null) {
@@ -156,22 +173,24 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
         const int maxRetries = 5;
         while (retryCount < maxRetries) {
           try {
-            isar = await Isar.open([
-              TaskSchema,
-              NoteSchema,
-              JournalSchema,
-              CalendarEventSchema,
-              BookmarkSchema,
-              BookSchema,
-              MedicationSchema,
-              StepLogSchema,
-              WorkProfileSchema,
-              AttendanceLogSchema,
-              AppointmentSchema,
-            ], directory: dir.path, inspector: false); // 🛡️ Disable inspector to prevent debug hang
-            talker.info(
-              '📦 Isar successfully initialized',
-            );
+            isar = await Isar.open(
+              [
+                TaskSchema,
+                NoteSchema,
+                JournalSchema,
+                CalendarEventSchema,
+                BookmarkSchema,
+                BookSchema,
+                MedicationSchema,
+                StepLogSchema,
+                WorkProfileSchema,
+                AttendanceLogSchema,
+                AppointmentSchema,
+              ],
+              directory: dir.path,
+              inspector: false,
+            ); // 🛡️ Disable inspector to prevent debug hang
+            talker.info('📦 Isar successfully initialized');
             break;
           } catch (e) {
             retryCount++;
@@ -218,9 +237,11 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
         throw Exception('Failed to initialize database after retries');
       }
       Get.put<Isar>(isar, permanent: true);
+      talker.info('⏱️ [Trace] Phase 2 (Isar DB) completed in ${phaseSw.elapsedMilliseconds}ms');
+      phaseSw.reset();
 
-      // ✅ Step 2: Register Repositories
-      talker.info('📚 Registering Repositories...');
+      // ✅ Phase 3: Register Repositories
+      talker.info('📚 Phase 3: Registering Repositories...');
       Get.put(TaskRepository(isar), permanent: true);
       Get.put(NoteRepository(isar), permanent: true);
       Get.put(JournalRepository(isar), permanent: true);
@@ -232,42 +253,58 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       Get.put(JobRepository(isar), permanent: true);
       Get.put(AppointmentRepository(isar), permanent: true);
+      
+      talker.info('⏱️ [Trace] Phase 3 (Repositories) completed in ${phaseSw.elapsedMilliseconds}ms');
+      phaseSw.reset();
 
-      // ✅ Step 3: Initialize Health & Pedometer
-      talker.info('🏥 Initializing Health Services...');
+      // ✅ Phase 4: Initialize Health & Pedometer
+      talker.info('🏥 Phase 4: Initializing Health Services...');
       await Get.putAsync(() => HealthService().init(), permanent: true);
+      
+      talker.info('⏱️ [Trace] Phase 4 (Health) completed in ${phaseSw.elapsedMilliseconds}ms');
+      phaseSw.reset();
 
-      // ✅ Step 4: Initialize Features
-      talker.info('🔔 Initializing Notifications...');
+      // ✅ Phase 5: Initialize Features
+      talker.info('🔔 Phase 5: Initializing Notifications...');
       Get.put(NotificationService(), permanent: true);
       Get.put(AppointmentTimeService(), permanent: true);
       Get.put(TaskTimeService(), permanent: true);
 
-      // ✅ Step 4.5: Register AI Assistant Services (Tool Execution & Networking)
-      Get.put(AiClientManager(), permanent: true);
-      Get.put(CommandExecutor(
-        taskRepo: Get.find<TaskRepository>(),
-        noteRepo: Get.find<NoteRepository>(),
-        medRepo: Get.find<MedicationRepository>(),
-        journalRepo: Get.find<JournalRepository>(),
-        isar: isar,
-      ), permanent: true);
-      Get.put(QueryEngine(
-        taskRepo: Get.find<TaskRepository>(),
-        medRepo: Get.find<MedicationRepository>(),
-        appointmentRepo: Get.find<AppointmentRepository>(),
-        taskTimeService: Get.find<TaskTimeService>(),
-        timeService: Get.find<TimeService>(),
-      ), permanent: true);
-      
+      // ✅ Phase 6: Register AI Assistant Services (Tool Execution & Networking)
+      Get.put(AiClientManager.instance, permanent: true);
+      Get.put(
+        CommandExecutor(
+          taskRepo: Get.find<TaskRepository>(),
+          noteRepo: Get.find<NoteRepository>(),
+          medRepo: Get.find<MedicationRepository>(),
+          journalRepo: Get.find<JournalRepository>(),
+        ),
+        permanent: true,
+      );
+      Get.put(
+        QueryEngine(
+          taskRepo: Get.find<TaskRepository>(),
+          medRepo: Get.find<MedicationRepository>(),
+          appointmentRepo: Get.find<AppointmentRepository>(),
+          taskTimeService: Get.find<TaskTimeService>(),
+          timeService: Get.find<TimeService>(),
+        ),
+        permanent: true,
+      );
+
       final appLockObserver = AppLockObserver();
       WidgetsBinding.instance.addObserver(appLockObserver);
       Get.put<AppLockObserver>(appLockObserver, permanent: true);
 
       Get.put(SettingsController(), permanent: true);
+      
+      talker.info('⏱️ [Trace] Phases 5 & 6 (Features & AI) completed in ${phaseSw.elapsedMilliseconds}ms');
+      phaseSw.stop();
 
       if (mounted) setState(() => _isInit = true);
-      talker.info('✅ Life OS is Ready');
+      
+      masterSw.stop();
+      talker.info('✅ Life OS is Ready! Total Cold Boot Time: ${masterSw.elapsedMilliseconds}ms');
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Fatal System Init Error');
       if (mounted) setState(() => _error = e.toString());
@@ -347,15 +384,19 @@ class MainApp extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 64)
+                            const Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: Colors.white,
+                                  size: 64,
+                                )
                                 .animate(onPlay: (c) => c.repeat())
                                 .shimmer(duration: const Duration(seconds: 2)),
                             const SizedBox(height: 24),
                             Text(
                               'tap_to_unlock'.tr,
                               style: const TextStyle(
-                                color: Colors.white, 
-                                fontWeight: FontWeight.bold, 
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                                 fontSize: 18,
                                 letterSpacing: 1.1,
                                 decoration: TextDecoration.none,

@@ -38,7 +38,6 @@ class AssistantView extends GetView<AssistantController> {
                   ],
                 ),
               ),
-              const _TypingIndicator(),
               const _QuickActionsArea(),
               const _AssistantInputArea(),
             ],
@@ -217,6 +216,11 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.isUser;
     final hasCards = !isUser && message.response != null && message.response!.cards.isNotEmpty;
 
+    // 🔄 Pending / Processing state — use StatefulWidget to safely manage AnimationController
+    if (message.isPending || message.isRetrying) {
+      return _PendingBubble(isRetrying: message.isRetrying);
+    }
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -228,7 +232,7 @@ class _MessageBubble extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser ? AppTheme.primary : theme.cardColor,
+                color: _getBubbleColor(theme, isUser, message.isFailed),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -242,14 +246,30 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text(
-                message.text,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isUser ? Colors.white : theme.textTheme.bodyMedium?.color,
-                  height: 1.5,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.text,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isUser ? Colors.white : (message.isFailed ? Colors.red.shade300 : theme.textTheme.bodyMedium?.color),
+                      height: 1.5,
+                    ),
+                  ),
+                  // 🔴 Failed message: show retry button
+                  if (message.isFailed) ...[
+                    const SizedBox(height: 8),
+                    _buildRetryButton(context),
+                  ],
+                ],
               ),
             ),
+            // Status indicator for non-user messages
+            if (!isUser && !message.isFailed)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                child: _buildStatusIcon(),
+              ),
             if (hasCards) ...[
               const SizedBox(height: 6),
               ...message.response!.cards.map((card) => ResponseCardWidget(card: card)),
@@ -259,41 +279,128 @@ class _MessageBubble extends StatelessWidget {
       ),
     ).animate().fadeIn(duration: const Duration(milliseconds: 200)).slideY(begin: 0.05, duration: const Duration(milliseconds: 200));
   }
+
+  Color _getBubbleColor(ThemeData theme, bool isUser, bool isFailed) {
+    if (isFailed) return Colors.red.withValues(alpha: 0.1);
+    return isUser ? AppTheme.primary : theme.cardColor;
+  }
+
+  Widget _buildStatusIcon() {
+    switch (message.status) {
+      case MessageStatus.success:
+        return const SizedBox.shrink();
+      case MessageStatus.failed:
+        return Icon(Icons.error_outline, size: 14, color: Colors.red.shade400);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildRetryButton(BuildContext context) {
+    final controller = Get.find<AssistantController>();
+    return GestureDetector(
+      onTap: () => controller.retryMessage(message.traceId),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.refresh_rounded, size: 14, color: Colors.orange.shade400),
+          const SizedBox(width: 4),
+          Text(
+            'retry'.tr,
+            style: TextStyle(fontSize: 11, color: Colors.orange.shade400, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _TypingIndicator extends GetWidget<AssistantController> {
-  const _TypingIndicator();
+/// 🛡️ CRASH FIX: Proper StatefulWidget for the pending animation bubble.
+///
+/// Root cause of the crash:
+/// `flutter_animate`'s `onPlay: (c) => c.repeat()` schedules repeating
+/// animations via `Future.delayed` timers internally. When the pending
+/// message is replaced (processing done), `_MessageBubble` is rebuilt
+/// with new data and the old widget subtree is unmounted. However, the
+/// `Future.delayed` timer is still alive and fires after unmount, calling
+/// `AnimationController.forward()` on a disposed controller → `_AssertionError`.
+///
+/// The fix: manage the `AnimationController` manually with `dispose()`,
+/// which cancels the ticker before the timer can fire.
+class _PendingBubble extends StatefulWidget {
+  final bool isRetrying;
+  const _PendingBubble({required this.isRetrying});
+
+  @override
+  State<_PendingBubble> createState() => _PendingBubbleState();
+}
+
+class _PendingBubbleState extends State<_PendingBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this, // ← Tied to widget lifecycle
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // ← Kills the ticker, prevents the crash
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Obx(() {
-      if (!controller.isTyping.value) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(left: 20, bottom: 16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: List.generate(3, (i) => Padding(
-                  padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
-                  child: Container(
-                    width: 6, height: 6,
-                    decoration: BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
-                  ).animate(onPlay: (c) => c.repeat(reverse: true))
-                    .scale(begin: const Offset(0.7, 0.7), end: const Offset(1.3, 1.3), duration: const Duration(milliseconds: 500), delay: Duration(milliseconds: i * 150)),
-                )),
-              ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(4),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 14, height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: widget.isRetrying ? Colors.orange : AppTheme.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                widget.isRetrying ? 'retrying'.tr : 'thinking'.tr,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    });
+      ),
+    );
   }
 }
 

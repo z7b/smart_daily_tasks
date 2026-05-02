@@ -1,146 +1,325 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 import 'dart:io';
-import '../../helpers/log_helper.dart';
+import 'dart:convert';
 import '../../helpers/result.dart';
 
+// ─── Isolate-safe top-level functions ──────────────────
+// These MUST be top-level to be passed to compute().
+
+/// Performs a full HTTP POST inside a separate Isolate, completely
+/// isolating the main thread from any native socket / DNS crashes.
+Future<_IsolateHttpResult> _isolateHttpPost(_IsolateHttpArgs args) async {
+  try {
+    final httpClient = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 5)  // 5s: 3 retries = 15s, safely under controller's 30s
+      ..idleTimeout = const Duration(seconds: 10)
+      ..badCertificateCallback = (_, _, _) => false;
+
+    final ioClient = IOClient(httpClient);
+
+    try {
+      // 🛡️ Use ioClient.post() instead of send()+fromStream().
+      // send() only covers headers — fromStream() body download has NO timeout
+      // and hangs until the outer 30s controller timeout fires.
+      // post() applies a single timeout to the FULL exchange (headers + body).
+      final response = await ioClient
+          .post(args.uri, headers: args.headers, body: args.body)
+          .timeout(args.timeout);
+
+      return _IsolateHttpResult(
+        statusCode: response.statusCode,
+        body: response.body,
+        headers: response.headers,
+      );
+    } on TimeoutException {
+      return const _IsolateHttpResult.failure('timeout_error');
+    } on http.ClientException catch (e) {
+      // 🛡️ Catches _ClientSocketException (HttpClient.connectionTimeout)
+      // which wraps SocketException in a ClientException from package:http.
+      // 'on SocketException' does NOT catch this — this handler is required.
+      return _IsolateHttpResult.failure('socket_error: ${e.message}');
+    } on SocketException catch (e) {
+      return _IsolateHttpResult.failure('socket_error: ${e.message}');
+    } on HandshakeException catch (e) {
+      return _IsolateHttpResult.failure('tls_error: ${e.message}');
+    } catch (e) {
+      return _IsolateHttpResult.failure('socket_error: $e'); // treat unknowns as retryable
+    } finally {
+      ioClient.close();
+      httpClient.close(force: true);
+    }
+  } catch (e) {
+    return _IsolateHttpResult.failure('isolate_init_error: $e');
+  }
+}
+
+/// Performs a full HTTP GET inside a separate Isolate.
+Future<_IsolateHttpResult> _isolateHttpGet(_IsolateHttpArgs args) async {
+  try {
+    final httpClient = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 5)
+      ..idleTimeout = const Duration(seconds: 10);
+
+    final ioClient = IOClient(httpClient);
+    try {
+      final response = await ioClient
+          .get(args.uri, headers: args.headers)
+          .timeout(args.timeout);
+      return _IsolateHttpResult(
+        statusCode: response.statusCode,
+        body: response.body,
+        headers: response.headers,
+      );
+    } on TimeoutException {
+      return const _IsolateHttpResult.failure('timeout_error');
+    } on http.ClientException catch (e) {
+      return _IsolateHttpResult.failure('socket_error: ${e.message}');
+    } on SocketException catch (e) {
+      return _IsolateHttpResult.failure('socket_error: ${e.message}');
+    } catch (e) {
+      return _IsolateHttpResult.failure('socket_error: $e');
+    } finally {
+      ioClient.close();
+      httpClient.close(force: true);
+    }
+  } catch (e) {
+    return _IsolateHttpResult.failure('isolate_init_error: $e');
+  }
+}
+
+Map<String, dynamic> _aiClientManagerDecodeJson(String source) {
+  try {
+    return jsonDecode(source) as Map<String, dynamic>;
+  } catch (_) {
+    return {};
+  }
+}
+
+// ─── Isolate Data Transfer Objects ─────────────────────
+
+class _IsolateHttpArgs {
+  final Uri uri;
+  final Map<String, String> headers;
+  final String body;
+  final Duration timeout;
+
+  const _IsolateHttpArgs({
+    required this.uri,
+    required this.headers,
+    required this.body,
+    required this.timeout,
+  });
+}
+
+class _IsolateHttpResult {
+  final int statusCode;
+  final String body;
+  final Map<String, String> headers;
+  final String? error;
+
+  bool get isSuccess => error == null && statusCode >= 200 && statusCode < 300;
+
+  const _IsolateHttpResult({
+    required this.statusCode,
+    required this.body,
+    required this.headers,
+  }) : error = null;
+
+  const _IsolateHttpResult.failure(this.error)
+      : statusCode = 0,
+        body = '',
+        headers = const {};
+}
+
+// ─── Main AiClientManager ───────────────────────────────
+
+/// 🛡️ Reliability Engineer's Choice: Comprehensive Network Guard
+/// 
+/// All HTTP requests are executed in separate Isolates via `compute()`,
+/// making it IMPOSSIBLE for native socket / DNS crashes to reach the
+/// main thread or the Flutter UI.
 class AiClientManager extends GetxService {
+  // Kept for backward-compat but no longer used for actual requests.
   http.Client? _sharedClient;
   bool _isClosed = false;
 
-  /// Returns a shared, persistent HTTP client configured with native socket timeouts.
-  /// This prevents the infamous _NativeSocket.lookup staggeredLookup crash.
+  final _failureCount = 0.obs;
+  final _lastFailureTime = Rxn<DateTime>();
+  static const int _maxFailuresBeforeTrip = 5;
+  static const Duration _resetDuration = Duration(minutes: 2);
+
+  AiClientManager._();
+  static final AiClientManager _instance = AiClientManager._();
+  static AiClientManager get instance => _instance;
+  factory AiClientManager() => _instance;
+
+  Duration? get circuitRemainingCooldown {
+    if (_failureCount.value < _maxFailuresBeforeTrip || _lastFailureTime.value == null) return null;
+    final diff = DateTime.now().difference(_lastFailureTime.value!);
+    if (diff > _resetDuration) return null;
+    return _resetDuration - diff;
+  }
+
+  bool get isCircuitOpen {
+    if (_failureCount.value >= _maxFailuresBeforeTrip) {
+      if (_lastFailureTime.value != null &&
+          DateTime.now().difference(_lastFailureTime.value!) > _resetDuration) {
+        _failureCount.value = 0;
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // Legacy client getter — kept for any future use but postWithRetry no longer uses it.
   http.Client get client {
     if (_isClosed || _sharedClient == null) {
       final ioClient = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 15)
-        ..idleTimeout = const Duration(seconds: 30);
-        
+        ..connectionTimeout = const Duration(seconds: 8)
+        ..idleTimeout = const Duration(seconds: 10);
       _sharedClient = IOClient(ioClient);
       _isClosed = false;
     }
     return _sharedClient!;
   }
 
-  /// Resets the client (useful when network changes or provider changes)
   void resetClient() {
-    _sharedClient?.close();
+    try { _sharedClient?.close(); } catch (_) {}
     _sharedClient = null;
     _isClosed = true;
   }
 
-  @override
-  void onClose() {
-    resetClient();
-    super.onClose();
+  void resetFailureCount() {
+    _failureCount.value = 0;
+    _lastFailureTime.value = null;
   }
 
-  /// Performs a POST network request with Exponential Backoff Retries
+  /// 🚀 DEFINITIVE FIX: Runs the ENTIRE HTTP POST (including DNS resolution
+  /// and TCP connect) inside a separate Isolate via `compute()`.
+  ///
+  /// This guarantees the main thread NEVER touches native sockets.
+  /// `_NativeSocket.lookup` crashes become impossible to propagate to Flutter.
   Future<Result<http.Response>> postWithRetry(
     Uri uri, {
     required Map<String, String> headers,
     required String body,
-    int maxRetries = 3,
-    Duration timeout = const Duration(seconds: 15),
+    int maxRetries = 2,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
+    if (isCircuitOpen) return Result.failure('circuit_open_error');
+
+    final args = _IsolateHttpArgs(
+      uri: uri,
+      headers: headers,
+      body: body,
+      timeout: timeout,
+    );
+
     int attempts = 0;
     while (attempts < maxRetries) {
+      attempts++;
       try {
-        attempts++;
-        final reqFuture = client.post(uri, headers: headers, body: body);
-        // 🛡️ Prevent background unhandled NativeSocket crashes if timeout occurs first
-        reqFuture.catchError((_) => http.Response('', 408));
-        
-        final response = await reqFuture.timeout(timeout);
+        // 🔒 ENTIRE request in Isolate — main thread is 100% safe
+        // 15s hard cap: DNS can hang 30s+ even with 5s connectionTimeout
+        // (connectionTimeout only starts AFTER DNS resolves)
+        final result = await compute(_isolateHttpPost, args)
+            .timeout(const Duration(seconds: 15));
 
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          return Result.success(response);
+        if (result.isSuccess) {
+          _failureCount.value = 0;
+          // Reconstruct http.Response for backward compat
+          return Result.success(http.Response(result.body, result.statusCode, headers: result.headers));
         }
 
-        // Check if retryable (429 Too Many Requests or 5xx Server Errors)
-        if (response.statusCode == 429 || response.statusCode >= 500) {
-          if (attempts >= maxRetries) {
-            return Result.failure('Server Error ${response.statusCode}');
+        if (result.error != null) {
+          final err = result.error!;
+          if (err.contains('socket_error')) {
+            _failureCount.value++;
+            _lastFailureTime.value = DateTime.now();
+            if (attempts >= maxRetries) return Result.failure('network_unreachable');
+            await Future.delayed(Duration(seconds: attempts));
+            continue;
           }
-          final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-          talker.warning('⚠️ AI POST Request failed (${response.statusCode}). Retrying in ${backoffDelay.inMilliseconds}ms...');
-          await Future.delayed(backoffDelay);
+          if (err.contains('timeout_error')) return Result.failure('timeout_error');
+          return Result.failure(err);
+        }
+
+        // HTTP error status
+        final statusCode = result.statusCode;
+        if (statusCode == 429 || statusCode >= 500) {
+          await Future.delayed(Duration(seconds: attempts));
           continue;
         }
+        return Result.failure('HTTP $statusCode: ${result.body}');
 
-        // Non-retryable error (e.g. 400 Bad Request, 401 Unauthorized)
-        return Result.failure('HTTP Error ${response.statusCode}: ${response.body}');
       } on TimeoutException {
-        if (attempts >= maxRetries) {
-          return Result.failure('Request timed out after $maxRetries attempts');
-        }
-        final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-        talker.warning('⚠️ AI POST Request timed out. Retrying in ${backoffDelay.inMilliseconds}ms...');
-        await Future.delayed(backoffDelay);
+        // compute().timeout(15s) fired — DNS or connection hung inside isolate
+        _failureCount.value++;
+        _lastFailureTime.value = DateTime.now();
+        if (attempts >= maxRetries) return Result.failure('timeout_error');
+        await Future.delayed(Duration(seconds: attempts));
       } catch (e) {
-        if (attempts >= maxRetries) {
-          return Result.failure(e.toString());
-        }
-        final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-        talker.warning('⚠️ AI POST Network Error. Retrying in ${backoffDelay.inMilliseconds}ms...');
-        await Future.delayed(backoffDelay);
+        // compute() itself failed — very rare
+        if (attempts >= maxRetries) return Result.failure('compute_error: $e');
+        await Future.delayed(Duration(seconds: attempts));
       }
     }
-    return Result.failure('Exhausted all retries');
+    return Result.failure('max_retries_reached');
   }
 
-  /// Performs a GET network request with Exponential Backoff Retries
+  /// 🔒 GET also runs fully inside an Isolate.
   Future<Result<http.Response>> getWithRetry(
     Uri uri, {
     required Map<String, String> headers,
-    int maxRetries = 3,
-    Duration timeout = const Duration(seconds: 15),
+    int maxRetries = 2,
+    Duration timeout = const Duration(seconds: 8),
   }) async {
+    if (isCircuitOpen) return Result.failure('circuit_open_error');
+
+    final args = _IsolateHttpArgs(
+      uri: uri,
+      headers: headers,
+      body: '',
+      timeout: timeout,
+    );
+
     int attempts = 0;
     while (attempts < maxRetries) {
+      attempts++;
       try {
-        attempts++;
-        final reqFuture = client.get(uri, headers: headers);
-        // 🛡️ Prevent background unhandled NativeSocket crashes if timeout occurs first
-        reqFuture.catchError((_) => http.Response('', 408));
-        
-        final response = await reqFuture.timeout(timeout);
+        final result = await compute(_isolateHttpGet, args)
+            .timeout(const Duration(seconds: 15));
 
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          return Result.success(response);
+        if (result.isSuccess) {
+          return Result.success(http.Response(result.body, result.statusCode, headers: result.headers));
         }
 
-        // Check if retryable (429 Too Many Requests or 5xx Server Errors)
-        if (response.statusCode == 429 || response.statusCode >= 500) {
-          if (attempts >= maxRetries) {
-            return Result.failure('Server Error ${response.statusCode}');
-          }
-          final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-          talker.warning('⚠️ AI GET Request failed (${response.statusCode}). Retrying in ${backoffDelay.inMilliseconds}ms...');
-          await Future.delayed(backoffDelay);
+        if (result.error != null) {
+          if (attempts >= maxRetries) return Result.failure(result.error!);
+          await Future.delayed(Duration(milliseconds: 500 * attempts));
           continue;
         }
 
-        // Non-retryable error
-        return Result.failure('HTTP Error ${response.statusCode}: ${response.body}');
-      } on TimeoutException {
-        if (attempts >= maxRetries) {
-          return Result.failure('Request timed out after $maxRetries attempts');
-        }
-        final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-        talker.warning('⚠️ AI GET Request timed out. Retrying in ${backoffDelay.inMilliseconds}ms...');
-        await Future.delayed(backoffDelay);
+        if (attempts >= maxRetries) return Result.failure('HTTP ${result.statusCode}');
+        await Future.delayed(Duration(milliseconds: 500 * attempts));
       } catch (e) {
-        if (attempts >= maxRetries) {
-          return Result.failure(e.toString());
-        }
-        final backoffDelay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
-        talker.warning('⚠️ AI GET Network Error. Retrying in ${backoffDelay.inMilliseconds}ms...');
-        await Future.delayed(backoffDelay);
+        if (attempts >= maxRetries) return Result.failure('compute_error: $e');
+        await Future.delayed(Duration(milliseconds: 500 * attempts));
       }
     }
-    return Result.failure('Exhausted all retries');
+    return Result.failure('max_retries_reached');
+  }
+
+  Future<Map<String, dynamic>> parseJsonSafe(String source) async {
+    try {
+      return await compute(_aiClientManagerDecodeJson, source);
+    } catch (e) {
+      return {};
+    }
   }
 }

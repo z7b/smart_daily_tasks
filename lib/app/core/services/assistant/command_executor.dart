@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:isar/isar.dart';
 
 import '../../../data/models/task_model.dart';
 import '../../../data/models/note_model.dart';
@@ -20,19 +19,15 @@ class CommandExecutor {
   final NoteRepository _noteRepo;
   final MedicationRepository _medRepo;
   final JournalRepository _journalRepo;
-  final Isar _isar;
-
   CommandExecutor({
     required TaskRepository taskRepo,
     required NoteRepository noteRepo,
     required MedicationRepository medRepo,
     required JournalRepository journalRepo,
-    required Isar isar,
   })  : _taskRepo = taskRepo,
         _noteRepo = noteRepo,
         _medRepo = medRepo,
-        _journalRepo = journalRepo,
-        _isar = isar;
+        _journalRepo = journalRepo;
 
   // ─── Task Operations ───────────────────────────────
 
@@ -50,10 +45,7 @@ class CommandExecutor {
     // Collision Prevention
     final startOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
-    final existing = await _isar.tasks
-        .filter()
-        .scheduledAtBetween(startOfDay, endOfDay)
-        .findAll();
+    final existing = await _taskRepo.getTasksForDateRange(startOfDay, endOfDay);
 
     final isDuplicate = existing.any((t) =>
         AiCommandHelper.normalizeArabic(t.title) ==

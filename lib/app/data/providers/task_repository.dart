@@ -265,6 +265,9 @@ class TaskRepository {
         return;
       }
 
+      final List<Task> templatesToUpdate = [];
+      final List<Task> instancesToCreate = [];
+
       for (int i = 0; i < recurringTemplates.length; i++) {
         final template = recurringTemplates[i];
         talker.info('[TRACE: 3.$i] Processing template ID: ${template.id} Title: ${template.title}');
@@ -274,9 +277,7 @@ class TaskRepository {
           final timestamp = template.createdAt.millisecondsSinceEpoch;
           template.seriesId = 'series_${template.id}_$timestamp';
           talker.info('[TRACE: 4.$i] Generated seriesId: ${template.seriesId}');
-          await _isar.writeTxn(() async {
-            await _isar.tasks.put(template);
-          });
+          templatesToUpdate.add(template);
         }
 
         final String sId = template.seriesId!;
@@ -323,7 +324,6 @@ class TaskRepository {
 
         // 4. Instance Check: Don't duplicate if already exists
         talker.info('[TRACE: 9.$i] Querying for existing instances today');
-        // Note: seriesIdEqualTo might show error if .g.dart is stale. Run build_runner!
         final instancesToday = await _isar.tasks
             .filter()
             .seriesIdEqualTo(sId)
@@ -342,16 +342,21 @@ class TaskRepository {
                 ? DateTime(today.year, today.month, today.day, template.scheduledEnd!.hour, template.scheduledEnd!.minute)
                 : null,
             createdAt: now,
-            // Recurrence on the instance is None to avoid it becoming a template itself
             recurrence: TaskRecurrence.none, 
             templateId: template.id,
           );
 
-          await _isar.writeTxn(() async {
-            await _isar.tasks.put(instance);
-          });
-          talker.info('[TRACE: 12.$i] Instance created: ${instance.title}');
+          instancesToCreate.add(instance);
         }
+      }
+
+      // 5. Batch Write Transaction (Production Efficiency)
+      if (templatesToUpdate.isNotEmpty || instancesToCreate.isNotEmpty) {
+        talker.info('[TRACE: 12] Performing batch write: ${templatesToUpdate.length} updates, ${instancesToCreate.length} creations');
+        await _isar.writeTxn(() async {
+          if (templatesToUpdate.isNotEmpty) await _isar.tasks.putAll(templatesToUpdate);
+          if (instancesToCreate.isNotEmpty) await _isar.tasks.putAll(instancesToCreate);
+        });
       }
       talker.info('[TRACE: 13] All templates processed');
     } catch (e, stack) {

@@ -34,7 +34,7 @@ class AiProviderConfig {
       displayName: 'OpenAI',
       requiresApiKey: true,
       requiresModel: true,
-      defaultBaseUrl: 'https://api.openai.com/v1/chat/completions',
+      defaultBaseUrl: 'https://api.openai.com',
       defaultModel: 'gpt-4o',
       logoIcon: 'openai',
       suggestedModels: [
@@ -49,7 +49,7 @@ class AiProviderConfig {
       displayName: 'Gemini',
       requiresApiKey: true,
       requiresModel: true,
-      defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/',
+      defaultBaseUrl: 'https://generativelanguage.googleapis.com',
       defaultModel: 'gemini-1.5-pro',
       logoIcon: 'gemini',
       suggestedModels: [
@@ -64,7 +64,7 @@ class AiProviderConfig {
       displayName: 'Anthropic',
       requiresApiKey: true,
       requiresModel: true,
-      defaultBaseUrl: 'https://api.anthropic.com/v1/messages',
+      defaultBaseUrl: 'https://api.anthropic.com',
       defaultModel: 'claude-3-opus-20240229',
       logoIcon: 'anthropic',
       suggestedModels: [
@@ -79,7 +79,7 @@ class AiProviderConfig {
       displayName: 'OpenRouter',
       requiresApiKey: true,
       requiresModel: true,
-      defaultBaseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      defaultBaseUrl: 'https://openrouter.ai',
       defaultModel: 'openai/gpt-4o',
       logoIcon: 'openrouter',
       suggestedModels: [
@@ -93,8 +93,8 @@ class AiProviderConfig {
       type: AiProviderType.lmStudio,
       displayName: 'LM Studio',
       requiresApiKey: false,
-      requiresModel: false, // Model is usually set in LM studio GUI
-      defaultBaseUrl: 'http://10.0.2.2:1234/v1/chat/completions', // 10.0.2.2 is Android emulator localhost
+      requiresModel: false,
+      defaultBaseUrl: 'http://10.0.2.2:1234',
       logoIcon: 'lmstudio',
     ),
     AiProviderConfig(
@@ -102,7 +102,7 @@ class AiProviderConfig {
       displayName: 'Ollama',
       requiresApiKey: false,
       requiresModel: true,
-      defaultBaseUrl: 'http://10.0.2.2:11434/api/chat',
+      defaultBaseUrl: 'http://10.0.2.2:11434',
       defaultModel: 'llama3',
       logoIcon: 'ollama',
       suggestedModels: ['llama3', 'mistral', 'phi3', 'gemma'],
