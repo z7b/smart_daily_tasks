@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../controllers/settings_controller.dart';
-import '../../assistant/views/assistant_settings_view.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({super.key});
@@ -181,10 +180,10 @@ class SettingsView extends GetView<SettingsController> {
           children: [
             _buildNavigationTile(
               context,
-              title: 'assistant_settings'.tr,
+              title: 'assistant'.tr,
               icon: CupertinoIcons.sparkles,
               iconBgColor: const Color(0xFFAF52DE),
-              onTap: () => Get.to(() => const AssistantSettingsView()),
+              onTap: () => Get.toNamed('/assistant'),
               isAr: isAr,
             ),
           ],

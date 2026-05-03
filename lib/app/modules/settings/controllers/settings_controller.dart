@@ -7,7 +7,6 @@ import '../../../core/services/backup_service.dart';
 import '../../../core/services/security_service.dart';
 import '../../../core/services/app_lock_service.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart' as ns;
-import '../../../core/helpers/log_helper.dart';
 import '../../../core/config/storage_keys.dart';
 
 class SettingsController extends GetxController {
