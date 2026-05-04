@@ -1,5 +1,10 @@
 import 'package:get/get.dart';
-
+import 'zh_cn.dart';
+import 'zh_tw.dart';
+import 'hi_in.dart';
+import 'fr_fr.dart';
+import 'es_es.dart';
+import 'ru_ru.dart';
 class Messages extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
@@ -400,6 +405,7 @@ class Messages extends Translations {
       'assistant_next_medication': 'Next: @name at @time (@countdown)',
       'assistant_overview': '📋 Your daily overview:',
       'assistant_nothing_scheduled': 'Nothing scheduled! Your day is clear. ✨',
+      'assistant_create_task_prompt': 'Sure! What would you like to name the task?',
       // Smart Assistant - Quick Actions
       'assistant_qa_tasks': 'My Tasks',
       'assistant_qa_next_appt': 'Next Appointment',
@@ -649,7 +655,7 @@ class Messages extends Translations {
       'edit_daily_step_goal': 'Edit Daily Step Goal',
       'daily_goal_steps': 'Daily Goal (steps)',
       'save_new_goal': 'Save New Goal',
-      'consecutive_days': 'Consecutive Days',
+      'consecutive_days': 'Streak',
       'completion_percentage': 'Completion: @percent%',
       'steps_of': 'steps of @goal',
       'of_goal': 'of goal @percent%',
@@ -713,6 +719,7 @@ class Messages extends Translations {
       'ends_in_x_minutes': 'Ends in @minutes minutes',
       'starts_in_x_hours': 'Starts in @hours hours',
       'starts_in_x_minutes': 'Starts in @minutes minutes',
+      'activity_and_movement': 'Activity & Movement',
     },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1117,6 +1124,7 @@ class Messages extends Translations {
       'assistant_next_medication': 'التالي: @name الساعة @time (@countdown)',
       'assistant_overview': '📋 ملخص يومك:',
       'assistant_nothing_scheduled': 'لا شيء مجدول! يومك فارغ. ✨',
+      'assistant_create_task_prompt': 'بالتأكيد! ما عنوان المهمة التي تريد إضافتها؟',
       // Smart Assistant - Quick Actions
       'assistant_qa_tasks': 'مهامي',
       'assistant_qa_next_appt': 'الموعد القادم',
@@ -1449,6 +1457,13 @@ class Messages extends Translations {
       'ends_in_x_minutes': 'ينتهي خلال @minutes دقيقة',
       'starts_in_x_hours': 'يبدأ خلال @hours ساعة',
       'starts_in_x_minutes': 'يبدأ خلال @minutes دقيقة',
+      'activity_and_movement': 'النشاط والحركة',
     },
+    'zh_CN': zhCN,
+    'zh_TW': zhTW,
+    'hi': hiIN,
+    'fr': frFR,
+    'es': esES,
+    'ru': ruRU,
   };
 }

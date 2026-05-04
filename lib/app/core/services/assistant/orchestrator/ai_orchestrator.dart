@@ -42,8 +42,19 @@ class AiOrchestrator {
           return await _queryEngine.queryMedications();
         case IntentType.overview:
           return await _queryEngine.queryOverview();
+        case IntentType.focus:
+          return await _queryEngine.queryFocus();
+        case IntentType.healthCheck:
+          return await _queryEngine.queryHealthCheck();
+        case IntentType.help:
+          return AssistantResponse.text('assistant_help_cmd'.tr);
+        case IntentType.createTask:
+          return AssistantResponse.text(
+            'assistant_create_task_prompt'.tr,
+            stateHint: StateHint.awaitingTaskTitle,
+          );
         default:
-          return const AssistantResponse(text: '');
+          return AssistantResponse.text('not_understood'.tr);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Local intent [$correlationId] error');

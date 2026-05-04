@@ -132,7 +132,7 @@ class _MessageBubble extends StatelessWidget {
     }
 
     return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isUser ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         constraints: BoxConstraints(maxWidth: Get.width * 0.85),
@@ -143,11 +143,11 @@ class _MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
                 color: _getBubbleColor(theme, isUser, message.isFailed),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(4),
-                  bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
+                borderRadius: BorderRadiusDirectional.only(
+                  topStart: const Radius.circular(20),
+                  topEnd: const Radius.circular(20),
+                  bottomStart: Radius.circular(isUser ? 20 : 4),
+                  bottomEnd: Radius.circular(isUser ? 4 : 20),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -217,7 +217,7 @@ class _PendingBubbleState extends State<_PendingBubble>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: Container(
@@ -225,11 +225,11 @@ class _PendingBubbleState extends State<_PendingBubble>
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              bottomLeft: Radius.circular(4),
+            borderRadius: const BorderRadiusDirectional.only(
+              topStart: Radius.circular(20),
+              topEnd: Radius.circular(20),
+              bottomEnd: Radius.circular(20),
+              bottomStart: Radius.circular(4),
             ),
           ),
           child: Row(
@@ -260,9 +260,9 @@ class _QuickActionsArea extends GetWidget<AssistantController> {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      {'label': 'assistant_qa_tasks'.tr,      'text': 'ما هي مهامي اليوم؟'},
-      {'label': 'assistant_qa_next_appt'.tr,  'text': 'الموعد القادم'},
-      {'label': 'assistant_qa_overview'.tr,   'text': 'ملخص يومي'},
+      {'label': 'assistant_qa_tasks'.tr},
+      {'label': 'assistant_qa_next_appt'.tr},
+      {'label': 'assistant_qa_overview'.tr},
     ];
 
     return Container(
@@ -277,7 +277,7 @@ class _QuickActionsArea extends GetWidget<AssistantController> {
           final action = actions[index];
           return ActionChip(
             label: Text(action['label']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primary)),
-            onPressed: () => controller.sendMessage(action['text']!),
+            onPressed: () => controller.sendMessage(action['label']!),
             backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
             side: BorderSide.none,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

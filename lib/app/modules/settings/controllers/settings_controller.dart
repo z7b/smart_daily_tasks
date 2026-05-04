@@ -27,10 +27,24 @@ class SettingsController extends GetxController {
 
   RxString notificationStatus = 'pending'.obs;
 
-  final List<String> fontOptions = ['Rubik', 'Cairo', 'Amiri', 'Tajawal'];
+  /// Font options with CJK/Devanagari support
+  List<String> get fontOptions {
+    final lang = currentLanguage.value;
+    final base = ['Rubik', 'Cairo', 'Amiri', 'Tajawal'];
+    if (lang == 'zh_CN') return ['Noto Sans SC', ...base];
+    if (lang == 'zh_TW') return ['Noto Sans TC', ...base];
+    if (lang == 'hi') return ['Noto Sans Devanagari', ...base];
+    return base;
+  }
+
   final List<String> fontSizeKeys = ['small', 'medium', 'large'];
   final List<String> startScreenKeys = StartScreen.values.map((e) => e.key).toList();
   final List<String> dayOfWeekKeys = DayOfWeek.values.map((e) => e.key).toList();
+
+  /// All supported language keys for the language picker
+  static const List<String> languageKeys = [
+    'ar', 'en', 'zh_CN', 'zh_TW', 'hi', 'fr', 'es', 'ru',
+  ];
 
   @override
   void onInit() {
@@ -44,7 +58,7 @@ class SettingsController extends GetxController {
 
   void _loadCurrentSettings() {
     isDarkMode.value = _themeService.isDarkMode;
-    currentLanguage.value = _themeService.getLocale().languageCode;
+    currentLanguage.value = _themeService.getLocaleKey();
     fontType.value = _themeService.fontTypeRx.value;
     fontSize.value = _themeService.fontSizeRx.value;
     preventScreenshots.value = _securityService.isScreenshotPrevented.value;
@@ -74,10 +88,42 @@ class SettingsController extends GetxController {
     });
   }
 
-  void changeLanguage(String lang) {
-    currentLanguage.value = lang;
-    _themeService.saveLocale(lang);
-    Get.updateLocale(lang == 'ar' ? const Locale('ar', 'SA') : const Locale('en', 'US'));
+  void changeLanguage(String langKey) {
+    currentLanguage.value = langKey;
+    _themeService.saveLocale(langKey);
+
+    final locale = ThemeService.supportedLocales[langKey];
+    if (locale != null) {
+      // Auto-switch font for CJK/Devanagari
+      if (langKey == 'zh_CN') {
+        _themeService.switchFont('Noto Sans SC');
+        fontType.value = 'Noto Sans SC';
+      } else if (langKey == 'zh_TW') {
+        _themeService.switchFont('Noto Sans TC');
+        fontType.value = 'Noto Sans TC';
+      } else if (langKey == 'hi') {
+        _themeService.switchFont('Noto Sans Devanagari');
+        fontType.value = 'Noto Sans Devanagari';
+      } else if (!['Noto Sans SC', 'Noto Sans TC', 'Noto Sans Devanagari'].contains(fontType.value)) {
+        // Keep current font if it's a standard font
+      } else {
+        // Reset to default when switching away from CJK/Devanagari
+        _themeService.switchFont('Rubik');
+        fontType.value = 'Rubik';
+      }
+
+      Get.updateLocale(locale);
+    }
+  }
+
+  /// Shows the language picker with all supported languages.
+  void showLanguagePicker() {
+    _showSelectionDialog(
+      title: 'language'.tr,
+      options: languageKeys,
+      currentValue: currentLanguage.value,
+      onSelected: (val) => changeLanguage(val),
+    );
   }
 
   void changeFirstDayOfWeek() {
@@ -123,24 +169,55 @@ class SettingsController extends GetxController {
   Future<void> createBackup() async { await BackupService().createBackup(); _showSnackbar('success'.tr, 'data_exported_successfully'.tr); }
   Future<void> restoreBackup() async { await BackupService().restoreBackup(); Get.offAllNamed('/home'); }
 
+  /// Hardened selection dialog with SafeArea, scroll, and responsive constraints.
   void _showSelectionDialog({required String title, required List<String> options, required String currentValue, required Function(String) onSelected}) {
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Get.theme.scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            ...options.map((opt) => ListTile(
-              title: Text(opt.tr),
-              trailing: opt == currentValue ? const Icon(Icons.check, color: Colors.blue) : null,
-              onTap: () { onSelected(opt); Get.back(); },
-            )),
-          ],
+      SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: Get.height * 0.65,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Get.theme.scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final opt = options[index];
+                      return ListTile(
+                        title: Text(opt.tr),
+                        trailing: opt == currentValue ? const Icon(Icons.check, color: Colors.blue) : null,
+                        onTap: () { onSelected(opt); Get.back(); },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
+      isScrollControlled: true,
     );
   }
 

@@ -82,11 +82,8 @@ class SettingsView extends GetView<SettingsController> {
               title: 'language'.tr,
               icon: CupertinoIcons.globe,
               iconBgColor: const Color(0xFF007AFF),
-              valueBuilder: () => controller.currentLanguage.value == 'ar' ? 'arabic'.tr : 'english'.tr,
-              onTap: () {
-                final newLang = controller.currentLanguage.value == 'ar' ? 'en' : 'ar';
-                controller.changeLanguage(newLang);
-              },
+              valueBuilder: () => controller.currentLanguage.value.tr,
+              onTap: () => controller.showLanguagePicker(),
               isAr: isAr,
             ),
             _divider(context),
