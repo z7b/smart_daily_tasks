@@ -42,7 +42,7 @@ class AppPages {
 
   static String get savedStartRoute {
     try {
-      return SettingsController.getSavedStartRoute();
+      return Get.find<SettingsController>().getSavedStartRoute();
     } catch (e, stack) {
       talker.handle(e, stack, '⚠️ Error reading saved start route');
       return Routes.HOME;

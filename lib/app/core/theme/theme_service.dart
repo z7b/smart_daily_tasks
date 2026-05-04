@@ -23,6 +23,18 @@ class ThemeService extends GetxService {
 
   ThemeMode get theme => isDarkModeRx.value ? ThemeMode.dark : ThemeMode.light;
 
+  /// Master locale map — single source of truth for all 8 supported languages.
+  static const Map<String, Locale> supportedLocales = {
+    'ar': Locale('ar', 'SA'),
+    'en': Locale('en', 'US'),
+    'zh_CN': Locale('zh', 'CN'),
+    'zh_TW': Locale('zh', 'TW'),
+    'hi': Locale('hi', 'IN'),
+    'fr': Locale('fr', 'FR'),
+    'es': Locale('es', 'ES'),
+    'ru': Locale('ru', 'RU'),
+  };
+
   bool _loadThemeFromBox() {
     try {
       return _box.read(_key) ?? true;
@@ -111,10 +123,8 @@ class ThemeService extends GetxService {
   Locale getLocale() {
     try {
       final savedLocale = _box.read(_localeKey);
-      if (savedLocale != null) {
-        return savedLocale == 'ar'
-            ? const Locale('ar', 'SA')
-            : const Locale('en', 'US');
+      if (savedLocale != null && supportedLocales.containsKey(savedLocale)) {
+        return supportedLocales[savedLocale]!;
       }
     } catch (e) {
       debugPrint('⚠️ Error reading locale: $e');
@@ -122,15 +132,37 @@ class ThemeService extends GetxService {
     
     // Auto-detect device locale
     final deviceLocale = Get.deviceLocale;
-    if (deviceLocale != null && deviceLocale.languageCode == 'ar') {
-      return const Locale('ar', 'SA');
+    if (deviceLocale != null) {
+      final langCode = deviceLocale.languageCode;
+      // Check for exact match first (e.g. zh_CN, zh_TW)
+      final fullCode = '${langCode}_${deviceLocale.countryCode ?? ''}';
+      if (supportedLocales.containsKey(fullCode)) {
+        return supportedLocales[fullCode]!;
+      }
+      // Then check language code only
+      if (supportedLocales.containsKey(langCode)) {
+        return supportedLocales[langCode]!;
+      }
+      // Special case for Chinese without country code
+      if (langCode == 'zh') {
+        return supportedLocales['zh_CN']!;
+      }
     }
-    return const Locale('en', 'US');
+    return const Locale('en', 'US'); // Fallback
   }
 
-  void saveLocale(String languageCode) {
+  /// Returns the storage key for the current locale (e.g. 'ar', 'en', 'zh_CN')
+  String getLocaleKey() {
+    final savedLocale = _box.read(_localeKey);
+    if (savedLocale != null && supportedLocales.containsKey(savedLocale)) {
+      return savedLocale;
+    }
+    return 'en';
+  }
+
+  void saveLocale(String languageKey) {
     try {
-      _box.write(_localeKey, languageCode);
+      _box.write(_localeKey, languageKey);
     } catch (e) {
       debugPrint('⚠️ Error saving locale: $e');
     }

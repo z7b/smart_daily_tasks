@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../controllers/settings_controller.dart';
-import '../../assistant/views/assistant_settings_view.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({super.key});
@@ -83,11 +82,8 @@ class SettingsView extends GetView<SettingsController> {
               title: 'language'.tr,
               icon: CupertinoIcons.globe,
               iconBgColor: const Color(0xFF007AFF),
-              valueBuilder: () => controller.currentLanguage.value == 'ar' ? 'arabic'.tr : 'english'.tr,
-              onTap: () {
-                final newLang = controller.currentLanguage.value == 'ar' ? 'en' : 'ar';
-                controller.changeLanguage(newLang);
-              },
+              valueBuilder: () => controller.currentLanguage.value.tr,
+              onTap: () => controller.showLanguagePicker(),
               isAr: isAr,
             ),
             _divider(context),
@@ -116,7 +112,8 @@ class SettingsView extends GetView<SettingsController> {
               icon: CupertinoIcons.lock_fill,
               iconBgColor: const Color(0xFFFF3B30),
               value: controller.appLock,
-              onChanged: (_) => controller.toggleAppLock(),
+              onChanged: (val) => controller.toggleAppLock(val),
+              onTap: () => controller.toggleAppLock(),
             ),
             _divider(context),
             _buildSwitchTile(
@@ -125,7 +122,8 @@ class SettingsView extends GetView<SettingsController> {
               icon: CupertinoIcons.eye_slash_fill,
               iconBgColor: const Color(0xFF8E8E93),
               value: controller.preventScreenshots,
-              onChanged: (_) => controller.togglePreventScreenshots(),
+              onChanged: (val) => controller.togglePreventScreenshots(val),
+              onTap: () => controller.togglePreventScreenshots(),
             ),
             _divider(context),
             Obx(() {
@@ -179,10 +177,10 @@ class SettingsView extends GetView<SettingsController> {
           children: [
             _buildNavigationTile(
               context,
-              title: 'assistant_settings'.tr,
+              title: 'assistant'.tr,
               icon: CupertinoIcons.sparkles,
               iconBgColor: const Color(0xFFAF52DE),
-              onTap: () => Get.to(() => const AssistantSettingsView()),
+              onTap: () => Get.toNamed('/assistant'),
               isAr: isAr,
             ),
           ],
@@ -231,8 +229,9 @@ class SettingsView extends GetView<SettingsController> {
     return Divider(height: 1, indent: 56, color: Theme.of(context).dividerColor.withAlpha(20));
   }
 
-  Widget _buildSwitchTile(BuildContext context, {required String title, required IconData icon, required Color iconBgColor, required RxBool value, required ValueChanged<bool> onChanged}) {
+  Widget _buildSwitchTile(BuildContext context, {required String title, required IconData icon, required Color iconBgColor, required RxBool value, required ValueChanged<bool> onChanged, VoidCallback? onTap}) {
     return ListTile(
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Container(width: 32, height: 32, decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.white, size: 18)),
       title: Text(

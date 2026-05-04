@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_theme.dart';
-import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
-import '../../../../core/services/assistant/ai_health_tracker.dart';
 
 class AssistantStatusHeader extends StatelessWidget {
   const AssistantStatusHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final settings = Get.find<SettingsController>();
     final theme = Theme.of(context);
 
     return Container(
@@ -20,7 +17,21 @@ class AssistantStatusHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _buildHealthIndicator(settings),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.green,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.4),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,63 +46,34 @@ class AssistantStatusHeader extends StatelessWidget {
                   letterSpacing: 0.5,
                 ),
               ),
-              Obx(() => Text(
-                settings.activeAiProvider.displayName,
+              Text(
+                'Local Assistant', // Since there's no external AI, it's just a local assistant
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.primary,
                 ),
-              )),
+              ),
             ],
           ),
           const Spacer(),
-          _buildModelBadge(settings, theme),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'LOCAL',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildHealthIndicator(SettingsController settings) {
-    return Obx(() {
-      final isHealthy = AiHealthTracker.isHealthy(
-        settings.activeAiProvider.type.name,
-        settings.aiModel.value,
-      );
-
-      return Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isHealthy ? Colors.green : Colors.orange,
-          boxShadow: [
-            BoxShadow(
-              color: (isHealthy ? Colors.green : Colors.orange).withValues(alpha: 0.4),
-              blurRadius: 4,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Widget _buildModelBadge(SettingsController settings, ThemeData theme) {
-    return Obx(() => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        settings.aiModel.value.split('/').last.toUpperCase(),
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.primary,
-        ),
-      ),
-    ));
   }
 }

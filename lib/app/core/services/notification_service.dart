@@ -117,27 +117,29 @@ class NotificationService extends GetxService {
     }
   }
 
-  Future<void> requestFullPermissions() async {
-    try {
-      // 1. Post Notifications (Android 13+)
-      if (await Permission.notification.isDenied) {
-        final status = await Permission.notification.request();
-        talker.info('📢 Notification Permission Status: $status');
-      }
-      
-      // 2. Exact Alarms (Android 12+)
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final status = await Permission.scheduleExactAlarm.status;
-        if (status.isDenied) {
-          talker.warning('🕒 Exact Alarm Permission is Denied. Reminders might be delayed.');
-          await Permission.scheduleExactAlarm.request();
-        }
-      }
+  bool _isRequestingPermissions = false;
 
-      // 3. Android 16 Stability: Request Battery Optimization Exemption
-      await requestBatteryExemption();
+  Future<void> requestFullPermissions() async {
+    if (_isRequestingPermissions) return;
+
+    try {
+      _isRequestingPermissions = true;
+      
+      // 🛡️ High Standard: Batch all permissions in a SINGLE managed call
+      // This includes Notifications, Exact Alarms, AND Battery Optimizations
+      talker.info('📢 Starting Unified Permission Request Batch...');
+      
+      final statuses = await [
+        Permission.notification,
+        Permission.scheduleExactAlarm,
+        Permission.ignoreBatteryOptimizations,
+      ].request();
+
+      talker.info('📢 Unified Batch Permission Results: $statuses');
     } catch (e) {
-      talker.warning('⚠️ Gracefully suppressed permission race condition: $e');
+      talker.warning('⚠️ Gracefully handled permission race: $e');
+    } finally {
+      _isRequestingPermissions = false;
     }
   }
 

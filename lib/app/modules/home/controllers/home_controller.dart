@@ -167,9 +167,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       _bindTaskStream();
       _loadRealData();
     });
-
-    // ✅ Architecture Fix: Run recurrence engine once on boot
-    Get.find<TaskRepository>().instantiateRecurringTasks();
   }
 
   @override
@@ -184,11 +181,27 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       Get.toNamed(startRoute);
     }
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (_healthService.isAuthorized.value == true) {
-        talker.info('🏥 Phase 5: Triggering background pulse sync...');
-        _healthService.fetchAndPersistSteps();
-      }
+    // ✅ Startup Performance: Defer heavy operations until FIRST FRAME IS RENDERED + IDLE DELAY
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      
+      // 1️⃣ Recurrence Engine (Deferred by 2 seconds post-frame)
+      Future.delayed(const Duration(seconds: 2), () async {
+        talker.info('♻️ Starting Recurrence Engine (Post-Frame)...');
+        final sw = Stopwatch()..start();
+        await Get.find<TaskRepository>().instantiateRecurringTasks();
+        talker.info('⏱️ [Trace] Recurrence Engine completed in ${sw.elapsedMilliseconds}ms');
+      });
+
+      // 2️⃣ Health Sync (Deferred by 4 seconds post-frame to avoid concurrent DB locks)
+      Future.delayed(const Duration(seconds: 4), () async {
+        if (_healthService.isAuthorized.value == true) {
+          talker.info('🏥 Phase 5: Triggering background pulse sync (Idle Phase)...');
+          final sw = Stopwatch()..start();
+          await _healthService.fetchAndPersistSteps();
+          talker.info('⏱️ [Trace] Health Sync completed in ${sw.elapsedMilliseconds}ms');
+        }
+      });
+      
     });
   }
 

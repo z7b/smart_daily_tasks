@@ -120,9 +120,9 @@ class JournalController extends GetxController {
       final validNote = note.trim().isEmpty ? null : note.trim();
       final validMood = Mood.values[moodIndex.clamp(0, 4)];
       
-      final success = await _repository.addOrUpdateJournalForDate(date, validMood, validNote);
+      final result = await _repository.addOrUpdateJournalForDate(date, validMood, validNote);
 
-      if (success) {
+      if (result.isSuccess) {
         Get.back();
         _showSnackbar('success'.tr, 'journal_entry_saved'.tr);
       } else {

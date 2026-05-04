@@ -2,87 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/services/assistant/message_model.dart';
+import '../../../core/services/assistant/assistant_response.dart';
 import '../../../core/services/assistant/orchestrator/ai_orchestrator.dart';
 import '../../../core/helpers/log_helper.dart';
-import '../../settings/controllers/settings_controller.dart';
 
+/// 🏗️ Local-Only Assistant Controller
+///
+/// All requests are handled by the local QueryEngine via AiOrchestrator.
+/// No external API calls. No queue needed — local queries complete instantly.
 class AssistantController extends GetxController {
   final messages = <Message>[].obs;
-  final isTyping = false.obs;
-  
-  final messageController = TextEditingController();
-  final settingsController = Get.find<SettingsController>();
-  
-  // Intelligence Core
-  final _orchestrator = AiOrchestrator();
 
-  // 🛡️ Debounce guard
-  DateTime? _lastActionTime;
+  final _orchestrator = AiOrchestrator();
 
   @override
   void onInit() {
     super.onInit();
-    talker.info('🤖 AssistantController initialized (Orchestrator Mode)');
+    talker.info('🤖 AssistantController initialized (Local Mode)');
     _addWelcomeMessage();
   }
 
-  @override
-  void onClose() {
-    messageController.dispose();
-    super.onClose();
-  }
+  // ─── Public API ──────────────────────────────────────
 
-  void _addWelcomeMessage() {
-    if (!settingsController.isAiConfigured) return;
-
-    final greeting = _getGreeting();
-    messages.add(Message(
-      text: '$greeting\n${'assistant_welcome'.tr}',
-      isUser: false,
-    ));
-  }
-
-  bool get isConfigured => settingsController.isAiConfigured;
-
-  Future<void> sendMessage(String text) async {
+  /// Send a command — resolved locally, never hits a network.
+  void sendMessage(String text) {
     if (text.trim().isEmpty) return;
-    if (!isConfigured) {
-      talker.warning('⚠️ Attempted to send message without AI configuration');
-      return;
-    }
 
-    // 🛡️ 2-second cooldown
-    final now = DateTime.now();
-    if (_lastActionTime != null &&
-        now.difference(_lastActionTime!) < const Duration(seconds: 2)) {
-      return;
-    }
-    
-    // 🛡️ Concurrency Guard
-    if (isTyping.value) return;
+    final userMsg = Message.user(text.trim());
+    userMsg.status = MessageStatus.success;
+    messages.add(userMsg);
 
-    _lastActionTime = now;
+    talker.info('📬 Command received: "${text.trim()}"');
+    _processLocally(text.trim());
+  }
 
-    messages.add(Message(text: text, isUser: true));
-    isTyping.value = true;
-
-    try {
-      final response = await _orchestrator.processMessage(text, messages.toList());
-      messages.add(Message(text: response.text, isUser: false, response: response));
-    } catch (e, stack) {
-      talker.handle(e, stack, '🤖 Assistant processing error');
-      messages.add(Message(
-        text: '${'error'.tr}: $e',
-        isUser: false,
-      ));
-    }
-
-    isTyping.value = false;
+  void clearChat() {
+    messages.clear();
+    _addWelcomeMessage();
+    talker.info('🧹 Assistant chat cleared');
   }
 
   void refreshInsights() {
-    talker.info('🔄 Refreshing insights...');
-    // In a future version, this could fetch dynamic insights from a service
     Get.snackbar(
       'daily_insights'.tr,
       'insights_updated'.tr,
@@ -92,10 +52,45 @@ class AssistantController extends GetxController {
     );
   }
 
-  void clearChat() {
-    messages.clear();
-    _addWelcomeMessage();
-    talker.info('🧹 Assistant chat cleared');
+  // ─── Local Processing ─────────────────────────────────
+
+  Future<void> _processLocally(String text) async {
+    // Show a brief pending indicator
+    final pending = Message.pending('local_${DateTime.now().millisecondsSinceEpoch}');
+    messages.add(pending);
+
+    try {
+      final response = await _orchestrator.processMessage(text, _buildHistory());
+      _replaceLast(response);
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Local processing error');
+      _replaceLast(AssistantResponse.error('${'error'.tr}: $e'));
+    }
+  }
+
+  void _replaceLast(AssistantResponse response) {
+    final idx = messages.lastIndexWhere((m) => !m.isUser && m.isPending);
+    if (idx != -1) {
+      if (response.type == ResponseType.error) {
+        messages[idx] = Message.error(response.text);
+      } else {
+        messages[idx] = Message.bot(response.text, response: response);
+      }
+      messages.refresh();
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────
+
+  List<Message> _buildHistory() {
+    return messages
+        .where((m) => m.status == MessageStatus.success && m.text.isNotEmpty)
+        .toList();
+  }
+
+  void _addWelcomeMessage() {
+    final greeting = _getGreeting();
+    messages.add(Message.bot('$greeting\n${'assistant_welcome'.tr}'));
   }
 
   String _getGreeting() {

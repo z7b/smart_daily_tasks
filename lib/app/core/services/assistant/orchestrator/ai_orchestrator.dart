@@ -1,65 +1,64 @@
 import 'package:get/get.dart';
 import '../message_model.dart';
 import '../assistant_response.dart';
-import '../external_ai_client.dart';
 import '../query_engine.dart';
-import 'package:smart_daily_tasks/app/modules/settings/controllers/settings_controller.dart';
+import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'intent_analyzer.dart';
-import 'model_router.dart';
-import 'prompt_builder.dart';
 
+/// 🏗️ Local-Only AI Orchestrator
+///
+/// Routes all commands to the local QueryEngine.
+/// No external AI providers. No network calls.
+/// Contract: NEVER throws. Always returns AssistantResponse.
 class AiOrchestrator {
   final QueryEngine _queryEngine = Get.find<QueryEngine>();
-  final ModelRouter _router = ModelRouter();
-  final SettingsController _settings = Get.find<SettingsController>();
 
-  Future<AssistantResponse> processMessage(String text, List<Message> history) async {
-    // 1. Analyze Intent
-    final intent = IntentAnalyzer.analyze(text);
+  Future<AssistantResponse> processMessage(String text, List<Message> history, {String? correlationId}) async {
+    try {
+      final intent = IntentAnalyzer.analyze(text);
 
-    // 2. Handle simple local intents directly (Optimization)
-    if (_isPurelyLocal(intent) && !_isConversational(text)) {
-      return await _handleLocalIntent(intent);
+      if (correlationId != null) {
+        talker.info('🧠 Orchestrator [$correlationId]: intent=${intent.name}');
+      }
+
+      return await _handleLocalIntent(intent, correlationId);
+
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Orchestrator [$correlationId] error');
+      return AssistantResponse.error('${'error'.tr}: $e');
     }
-
-    // 3. Routing & AI Processing
-    final provider = _router.getBestProvider(intent);
-    final client = ExternalAiClient(
-      config: provider,
-      apiKey: _settings.aiApiKey.value,
-      model: _settings.aiModel.value,
-      customBaseUrl: _settings.aiUseCustomUrl.value ? _settings.aiCustomUrl.value : '',
-      toolsEnabled: _settings.aiToolsEnabled.value,
-    );
-
-    final systemContext = PromptBuilder.buildSystemPrompt(intent: intent);
-
-    return await client.process(history, systemContext: systemContext);
   }
 
-  bool _isPurelyLocal(IntentType intent) {
-    return intent != IntentType.general && intent != IntentType.createTask;
-  }
-
-  bool _isConversational(String text) {
-    // If the text is long or contains complex words, it might need AI even for local intents
-    return text.trim().split(' ').length > 4;
-  }
-
-  Future<AssistantResponse> _handleLocalIntent(IntentType intent) async {
-    switch (intent) {
-      case IntentType.tasks:
-        return await _queryEngine.queryTasks();
-      case IntentType.nextTask:
-        return await _queryEngine.queryNextTask();
-      case IntentType.appointments:
-        return await _queryEngine.queryAppointments();
-      case IntentType.medications:
-        return await _queryEngine.queryMedications();
-      case IntentType.overview:
-        return await _queryEngine.queryOverview();
-      default:
-        return const AssistantResponse(text: 'I am not sure how to help with that locally.');
+  Future<AssistantResponse> _handleLocalIntent(IntentType intent, String? correlationId) async {
+    try {
+      switch (intent) {
+        case IntentType.tasks:
+          return await _queryEngine.queryTasks();
+        case IntentType.nextTask:
+          return await _queryEngine.queryNextTask();
+        case IntentType.appointments:
+          return await _queryEngine.queryAppointments();
+        case IntentType.medications:
+          return await _queryEngine.queryMedications();
+        case IntentType.overview:
+          return await _queryEngine.queryOverview();
+        case IntentType.focus:
+          return await _queryEngine.queryFocus();
+        case IntentType.healthCheck:
+          return await _queryEngine.queryHealthCheck();
+        case IntentType.help:
+          return AssistantResponse.text('assistant_help_cmd'.tr);
+        case IntentType.createTask:
+          return AssistantResponse.text(
+            'assistant_create_task_prompt'.tr,
+            stateHint: StateHint.awaitingTaskTitle,
+          );
+        default:
+          return AssistantResponse.text('not_understood'.tr);
+      }
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Local intent [$correlationId] error');
+      return AssistantResponse.error('${'error'.tr}: $e');
     }
   }
 }

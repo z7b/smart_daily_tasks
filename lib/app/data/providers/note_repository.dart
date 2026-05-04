@@ -1,6 +1,7 @@
 
 import 'package:isar/isar.dart';
 import '../../core/helpers/log_helper.dart';
+import '../../core/helpers/result.dart';
 import '../models/note_model.dart';
 
 class NoteRepository {
@@ -11,18 +12,18 @@ class NoteRepository {
   }
 
   /// Create a new note with success result
-  Future<bool> addNote(Note note) async {
+  Future<Result<bool>> addNote(Note note) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.notes.put(note);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Add Note)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Add Note)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
@@ -37,35 +38,35 @@ class NoteRepository {
   }
 
   /// Update an existing note with success result
-  Future<bool> updateNote(Note note) async {
+  Future<Result<bool>> updateNote(Note note) async {
     try {
       final noteWithTimestamp = note.copyWith(updatedAt: DateTime.now());
       await _isar.writeTxn(() async {
         await _isar.notes.put(noteWithTimestamp);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Update Note)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Update Note)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
   /// Delete a note with safety governance
-  Future<bool> deleteNote(Id id) async {
+  Future<Result<bool>> deleteNote(Id id) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.notes.delete(id);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Delete Note)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete Note)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 

@@ -1,6 +1,7 @@
 
 import 'package:isar/isar.dart';
 import '../../core/helpers/log_helper.dart';
+import '../../core/helpers/result.dart';
 import '../models/journal_model.dart';
 
 class JournalRepository {
@@ -28,23 +29,23 @@ class JournalRepository {
         .count();
   }
 
-  Future<bool> addJournal(Journal journal) async {
+  Future<Result<bool>> addJournal(Journal journal) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.journals.put(journal);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Add Journal)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Add Journal)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
   /// Atomically add or update an entry for a specific date (Resolves Race Conditions)
-  Future<bool> addOrUpdateJournalForDate(DateTime date, Mood mood, String? note) async {
+  Future<Result<bool>> addOrUpdateJournalForDate(DateTime date, Mood mood, String? note) async {
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
@@ -65,10 +66,10 @@ class JournalRepository {
         
         await _isar.journals.put(journal);
       });
-      return true;
+      return Result.success(true);
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Atomic Database Error (Add/Update Journal)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
@@ -83,34 +84,34 @@ class JournalRepository {
   }
 
   /// Update an existing journal entry with success result
-  Future<bool> updateJournal(Journal journal) async {
+  Future<Result<bool>> updateJournal(Journal journal) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.journals.put(journal);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Update Journal)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Update Journal)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 
   /// Delete a journal entry with safety governance
-  Future<bool> deleteJournal(Id id) async {
+  Future<Result<bool>> deleteJournal(Id id) async {
     try {
       await _isar.writeTxn(() async {
         await _isar.journals.delete(id);
       });
-      return true;
+      return Result.success(true);
     } on IsarError catch (e, stack) {
       talker.handle(e, stack, '🔴 Isar Database Error (Delete Journal)');
-      return false;
+      return Result.failure(e.toString());
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Unknown Database Error (Delete Journal)');
-      return false;
+      return Result.failure(e.toString());
     }
   }
 }

@@ -254,6 +254,122 @@ class QueryEngine {
     );
   }
 
+  // ─── Focus Query ──────────────────────────────────
+
+  /// Returns smart focus: high-priority tasks + next appointment + next medication
+  Future<AssistantResponse> queryFocus() async {
+    final now = _timeService.now;
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final tasks = await _taskRepo.getTasksForDateRange(startOfDay, endOfDay);
+    final activeTasks = tasks
+        .where((t) => t.status == TaskStatus.active)
+        .toList()
+      ..sort((a, b) {
+        final priorityOrder = {TaskPriority.high: 0, TaskPriority.medium: 1, TaskPriority.low: 2};
+        final pCmp = (priorityOrder[a.priority] ?? 1).compareTo(priorityOrder[b.priority] ?? 1);
+        if (pCmp != 0) return pCmp;
+        return a.scheduledAt.compareTo(b.scheduledAt);
+      });
+
+    final parts = <String>[];
+
+    if (activeTasks.isEmpty) {
+      parts.add('✅ ${'no_pending_tasks'.tr}');
+    } else {
+      final topTasks = activeTasks.take(3);
+      for (final task in topTasks) {
+        final timeStr = DateFormat.jm(_locale).format(task.scheduledAt).f;
+        final priorityIcon = task.priority == TaskPriority.high ? '🔴' 
+            : task.priority == TaskPriority.medium ? '🟡' : '🟢';
+        parts.add('$priorityIcon ${task.title} — $timeStr');
+      }
+      if (activeTasks.length > 3) {
+        parts.add('   +${(activeTasks.length - 3).toString().f} ${'tasks'.tr}...');
+      }
+    }
+
+    // Next appointment
+    final appointments = await _appointmentRepo.getUpcomingAppointments(now);
+    final upcomingAppts = appointments
+        .where((a) => a.scheduledAt.isAfter(now) && a.status == AppointmentStatus.active)
+        .toList()
+      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+    if (upcomingAppts.isNotEmpty) {
+      final next = upcomingAppts.first;
+      final diff = next.scheduledAt.difference(now);
+      parts.add('\n🏥 ${next.doctorName} — ${_formatDiff(diff)}');
+    }
+
+    // Next medication
+    final meds = await _medRepo.getAllMedications();
+    final activeMeds = meds.where((m) => m.isActive).toList();
+    Duration? shortestDiff;
+    String? nextMedName;
+
+    for (final med in activeMeds) {
+      for (final timeStr in med.reminderTimes) {
+        final timeParts = timeStr.split(':');
+        if (timeParts.length != 2) continue;
+        final hour = int.tryParse(timeParts[0]) ?? 0;
+        final minute = int.tryParse(timeParts[1]) ?? 0;
+        final reminderTime = DateTime(now.year, now.month, now.day, hour, minute);
+        if (reminderTime.isAfter(now)) {
+          final diff = reminderTime.difference(now);
+          if (shortestDiff == null || diff < shortestDiff) {
+            shortestDiff = diff;
+            nextMedName = med.name;
+          }
+        }
+      }
+    }
+    if (nextMedName != null) {
+      parts.add('💊 $nextMedName — ${_formatDiff(shortestDiff!)}');
+    }
+
+    return AssistantResponse.text(
+      '🎯 ${'today_focus'.tr}\n\n${parts.join('\n')}',
+    );
+  }
+
+  // ─── Health Check Query ───────────────────────────
+
+  /// Returns medication compliance + step activity for the day
+  Future<AssistantResponse> queryHealthCheck() async {
+    final meds = await _medRepo.getAllMedications();
+    final active = meds.where((m) => m.isActive).toList();
+
+    final parts = <String>[];
+
+    if (active.isEmpty) {
+      parts.add('✅ ${'no_medications_scheduled'.tr}');
+    } else {
+      int totalTaken = 0;
+      int totalExpected = 0;
+
+      for (final med in active) {
+        final taken = med.todayDoseCount;
+        final expected = med.reminderTimes.length;
+        totalTaken += taken;
+        totalExpected += expected;
+        
+        final icon = taken >= expected ? '✅' : '⏳';
+        parts.add('$icon ${med.name}: ${taken.toString().f}/${expected.toString().f}');
+      }
+
+      if (totalExpected > 0) {
+        final pct = ((totalTaken / totalExpected) * 100).round();
+        parts.insert(0, '💊 ${'medications'.tr} — ${pct.toString().f}%\n');
+      }
+    }
+
+    return AssistantResponse.text(
+      '🩺 ${'health_check'.tr}\n\n${parts.join('\n')}',
+    );
+  }
+
   // ─── Card Builders ─────────────────────────────────
 
   ResponseCard _taskToCard(Task task) {
