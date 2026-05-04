@@ -104,8 +104,10 @@ const Map<String, String> ruRU = {
   'msg_high_performance': 'Ваша продуктивность сегодня на высоте! 🚀',
 
   // ─── Assistant ───────────────────────────────────
-  'assistant_welcome': 'Добро пожаловать в умного помощника. Чем я могу помочь сегодня?',
-  'assistant_help_cmd': 'Вы можете сказать: "Добавить задачу [название]", "Написать заметку [содержание]" или "Записать в дневник [текст]".',
+  'assistant_welcome':
+      'Добро пожаловать в умного помощника. Чем я могу помочь сегодня?',
+  'assistant_help_cmd':
+      'Вы можете сказать: "Добавить задачу [название]", "Написать заметку [содержание]" или "Записать в дневник [текст]".',
   'not_understood': 'Я не понял. Попробуйте попросить "помощь".',
   'daily_insights': 'Дневные Обзоры',
   'today_focus': 'Фокус Дня',
@@ -157,7 +159,8 @@ const Map<String, String> ruRU = {
 
   // ─── Security ────────────────────────────────────
   'tap_to_unlock': 'Нажмите для разблокировки',
-  'authenticate_to_unlock_app': 'Подтвердите личность для разблокировки Life OS',
+  'authenticate_to_unlock_app':
+      'Подтвердите личность для разблокировки Life OS',
   'auth_failure_title': 'Ошибка аутентификации',
   'auth_failure_msg': 'Пожалуйста, попробуйте ещё раз',
   'app_lock_enabled_msg': 'Блокировка включена',
@@ -198,19 +201,42 @@ const Map<String, String> ruRU = {
   'system_diagnostics': 'Системная диагностика',
 
   // ─── Assistant Query Responses ───────────────────
-  'assistant_tasks_summary': 'У вас @total задач на сегодня (@active активных, @completed выполненных)',
+  'assistant_tasks_summary':
+      'У вас @total задач на сегодня (@active активных, @completed выполненных)',
   'assistant_next_task': 'Следующая задача: @title — @time',
-  'no_upcoming_tasks': 'Нет предстоящих задач. Наслаждайтесь свободным временем! 🎉',
+  'no_upcoming_tasks':
+      'Нет предстоящих задач. Наслаждайтесь свободным временем! 🎉',
   'assistant_appointments_summary': 'У вас @count предстоящих визитов',
-  'assistant_next_appointment': 'Ваш следующий визит к Dr. @doctor — @countdown',
+  'assistant_next_appointment':
+      'Ваш следующий визит к Dr. @doctor — @countdown',
   'assistant_medications_summary': 'У вас @count активных лекарств',
   'assistant_next_medication': 'Следующий: @name в @time (@countdown)',
   'assistant_overview': '📋 Ваш дневной обзор:',
-  'assistant_nothing_scheduled': 'Ничего не запланировано! Ваш день свободен. ✨',
+  'assistant_nothing_scheduled':
+      'Ничего не запланировано! Ваш день свободен. ✨',
   'assistant_create_task_prompt': 'Конечно! Как назовём задачу?',
   'assistant_qa_tasks': 'Мои Задачи',
   'assistant_qa_next_appt': 'Следующий Визит',
   'assistant_qa_overview': 'Дневной Обзор',
   'assistant_qa_next_med': 'Следующее Лекарство',
-  'activity_and_movement': 'Активность и движение',
+  'activity_and_movement': 'Активность и Движение',
+  'tasks_left': 'Осталось задач: @count',
+  'activity': 'Активность',
+  'reading_insights': 'Статистика чтения',
+  'next': 'Далее',
+  'or_enter_custom': 'Или введите свою цель',
+  'add_manually': 'Добавить вручную',
+  'add_manual_steps': 'Добавить шаги вручную',
+  'add_manual_steps_desc':
+      'Добавьте шаги, сделанные без телефона, для точности.',
+  'sensors_connected': 'Датчики подключены',
+  'sensors_disconnected': 'Датчики отключены',
+  'syncing_with_device': 'Синхронизация с устройством',
+  'connect_to_sync': 'Подключите приложение к датчикам для автосинхронизации',
+  'connect': 'Подключить сейчас',
+  'sync_health': 'Синхронизировать здоровье',
+  'log_attendance': 'Отметить посещаемость',
+  'security_status_unsafe': 'Небезопасно - Обнаружен Root/Jailbreak',
+  'security_status_safe': 'Безопасно - Защита от скриншотов активна',
+  'security_status_normal': 'Нормально',
 };
