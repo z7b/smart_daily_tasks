@@ -68,7 +68,7 @@ class BookmarksController extends GetxController {
 
       // 1. Hard Validation - Essential fields
       if (bookmark.title.trim().isEmpty || bookmark.url.trim().isEmpty) {
-        _showSnackbar('error'.tr, 'Title and URL are required', isError: true);
+        _showSnackbar('error'.tr, 'title_url_required'.tr, isError: true);
         return;
       }
 

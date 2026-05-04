@@ -796,7 +796,7 @@ class HomeView extends GetView<HomeController> {
                         Row(
                           children: [
                             Text(
-                              'النشاط والحركة',
+                              'activity_and_movement'.tr,
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 18,
@@ -828,7 +828,7 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '${controller.currentStreak.value.f} يوم',
+                                      'streak_x_days'.trParams({'count': controller.currentStreak.value.f}),
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 10,

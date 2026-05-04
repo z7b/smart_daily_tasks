@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../controllers/assistant_controller.dart';
@@ -107,7 +106,10 @@ class _ChatSliverList extends GetWidget<AssistantController> {
           itemCount: controller.messages.length,
           itemBuilder: (context, index) {
             final message = controller.messages[index];
-            return _MessageBubble(message: message);
+            return _MessageBubble(
+              key: ValueKey(message.traceId),
+              message: message,
+            );
           },
         ),
       );
@@ -115,15 +117,48 @@ class _ChatSliverList extends GetWidget<AssistantController> {
   }
 }
 
-// ─── Message Bubble ────────────────────────────────────
+// ─── Message Bubble (lifecycle-safe animation) ─────────
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   final Message message;
-  const _MessageBubble({required this.message});
+  const _MessageBubble({super.key, required this.message});
+
+  @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _fadeAnim;
+  late final Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
+    );
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final message = widget.message;
     final isUser = message.isUser;
     final hasCards = !isUser && message.response != null && message.response!.cards.isNotEmpty;
 
@@ -131,47 +166,53 @@ class _MessageBubble extends StatelessWidget {
       return _PendingBubble(isRetrying: false);
     }
 
-    return Align(
-      alignment: isUser ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        constraints: BoxConstraints(maxWidth: Get.width * 0.85),
-        child: Column(
-          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              decoration: BoxDecoration(
-                color: _getBubbleColor(theme, isUser, message.isFailed),
-                borderRadius: BorderRadiusDirectional.only(
-                  topStart: const Radius.circular(20),
-                  topEnd: const Radius.circular(20),
-                  bottomStart: Radius.circular(isUser ? 20 : 4),
-                  bottomEnd: Radius.circular(isUser ? 4 : 20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isUser ? AppTheme.primary : Colors.black).withValues(alpha: 0.06),
-                    blurRadius: 12, offset: const Offset(0, 4),
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: Align(
+          alignment: isUser ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            constraints: BoxConstraints(maxWidth: Get.width * 0.85),
+            child: Column(
+              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _getBubbleColor(theme, isUser, message.isFailed),
+                    borderRadius: BorderRadiusDirectional.only(
+                      topStart: const Radius.circular(20),
+                      topEnd: const Radius.circular(20),
+                      bottomStart: Radius.circular(isUser ? 20 : 4),
+                      bottomEnd: Radius.circular(isUser ? 4 : 20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isUser ? AppTheme.primary : Colors.black).withValues(alpha: 0.06),
+                        blurRadius: 12, offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Text(
-                message.text,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isUser ? Colors.white : (message.isFailed ? Colors.red.shade300 : theme.textTheme.bodyMedium?.color),
-                  height: 1.5,
+                  child: Text(
+                    message.text,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isUser ? Colors.white : (message.isFailed ? Colors.red.shade300 : theme.textTheme.bodyMedium?.color),
+                      height: 1.5,
+                    ),
+                  ),
                 ),
-              ),
+                if (hasCards) ...[
+                  const SizedBox(height: 6),
+                  ...message.response!.cards.map((card) => ResponseCardWidget(card: card)),
+                ],
+              ],
             ),
-            if (hasCards) ...[
-              const SizedBox(height: 6),
-              ...message.response!.cards.map((card) => ResponseCardWidget(card: card)),
-            ],
-          ],
+          ),
         ),
       ),
-    ).animate().fadeIn(duration: const Duration(milliseconds: 200)).slideY(begin: 0.05, duration: const Duration(milliseconds: 200));
+    );
   }
 
   Color _getBubbleColor(ThemeData theme, bool isUser, bool isFailed) {
