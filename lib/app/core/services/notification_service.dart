@@ -541,9 +541,9 @@ class NotificationService extends GetxService {
       final morningTime = DateTime(now.year, now.month, now.day, 8, 0);
       await scheduleNotification(
         id: stepsOffset + 1,
-        title: '<font color="#3B82F6">خطوة صغيرة الآن...</font>',
-        body: 'نشاطك اليومي',
-        bigText: 'تصنع فرقًا كبيرًا لاحقًا 💪<br>هدفك اليوم <font color="#3B82F6">$goalFormatted</font> خطوة،<br>أنت قريب من إنجازه!',
+        title: 'small_step_now'.tr,
+        body: 'daily_activity'.tr,
+        bigText: 'makes_big_difference'.trParams({'goal': goalFormatted}),
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: morningTime,
@@ -557,9 +557,9 @@ class NotificationService extends GetxService {
       final middayTime = DateTime(now.year, now.month, now.day, 13, 0);
       await scheduleNotification(
         id: stepsOffset + 2,
-        title: '<font color="#3B82F6">وقت التحرك! 🚶‍♂️</font>',
-        body: 'نشاطك اليومي',
-        bigText: 'استغل وقت الظهيرة للمشي ☕<br>باقي <font color="#3B82F6">$remainingFormatted</font> خطوة لهدفك،<br>جدد نشاطك وأكمل التحدي!',
+        title: 'time_to_move'.tr,
+        body: 'daily_activity'.tr,
+        bigText: 'noon_walk_tip'.trParams({'remaining': remainingFormatted}),
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: middayTime,
@@ -573,9 +573,9 @@ class NotificationService extends GetxService {
       final eveningTime = DateTime(now.year, now.month, now.day, 18, 0);
       await scheduleNotification(
         id: stepsOffset + 3,
-        title: '<font color="#FF9500">أنت قريب من إنجازه! 🔥</font>',
-        body: 'نشاطك اليومي',
-        bigText: 'أفضل وقت للمشي هو بين 6 - 8 مساءً 🏃‍♂️<br>باقي فقط <font color="#FF9500">$remainingFormatted</font> خطوة،<br>لا تستسلم الآن، يمكنك فعلها!',
+        title: 'almost_done_fire'.tr,
+        body: 'daily_activity'.tr,
+        bigText: 'evening_walk_tip'.trParams({'remaining': remainingFormatted}),
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: eveningTime,

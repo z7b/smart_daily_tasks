@@ -1217,15 +1217,15 @@ class StepsView extends GetView<StepsController> {
       emoji = '🏃‍♂️';
     } else if (progress >= 0.5) {
       title = 'halfway_there_flash'.tr;
-      subtitle = 'باقي ${remaining.f} خطوة، لا تستسلم الآن.';
+      subtitle = 'keep_going_subtitle'.trParams({'remaining': remaining.f});
       emoji = '🚶‍♂️';
     } else if (progress > 0.0) {
-      title = 'بداية موفقة! 🌟';
-      subtitle = 'باقي ${remaining.f} خطوة للوصول للهدف.';
+      title = 'great_start_title'.tr;
+      subtitle = 'keep_going_subtitle'.trParams({'remaining': remaining.f});
       emoji = '👟';
     } else {
-      title = 'يوم جديد، طاقة جديدة! 🌅';
-      subtitle = 'حان الوقت للخطوة الأولى نحو هدفك.';
+      title = 'new_day_energy'.tr;
+      subtitle = 'time_for_first_step'.tr;
       emoji = '🛌';
     }
     
@@ -1364,7 +1364,7 @@ class StepsView extends GetView<StepsController> {
               ),
               SizedBox(width: 6),
               Text(
-                'التحديات الجارية',
+                'ongoing_challenges'.tr,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -1373,7 +1373,7 @@ class StepsView extends GetView<StepsController> {
               ),
               Spacer(),
               Text(
-                '3 أيام متبقية',
+                'days_left_count'.trParams({'count': '3'}),
                 style: TextStyle(
                   fontSize: 11,
                   color: _greenDeep,
@@ -1386,16 +1386,16 @@ class StepsView extends GetView<StepsController> {
           Row(
             children: [
               tile(
-                'تحدي 70K',
-                'أكمل 70 ألف خطوة',
+                'challenge_70k'.tr,
+                'complete_70k_steps'.tr,
                 4600 / 70000,
                 '4,600 / 70,000',
                 _purple,
               ),
               SizedBox(width: 8),
               tile(
-                'تحدي يومي',
-                'أكمل ${controller.dailyGoal.value.f} خطوة',
+                'daily_challenge'.tr,
+                'complete_x_steps'.trParams({'count': controller.dailyGoal.value.f}),
                 controller.progress,
                 '${controller.stepsToday.f} / ${controller.dailyGoal.value.f}',
                 _amber,
@@ -1552,7 +1552,7 @@ class StepsView extends GetView<StepsController> {
               ),
               SizedBox(width: 6),
               Text(
-                'الشارات المتاحة',
+                'badges'.tr,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -1597,7 +1597,7 @@ class StepsView extends GetView<StepsController> {
                               itemBuilder: (context, i) {
                                 final a = controller.achievements[i];
                                 return tile(
-                                  a.isUnlocked ? 'مفتوح' : 'مغلق',
+                                  a.isUnlocked ? 'unlocked'.tr : 'locked'.tr,
                                   a.isUnlocked ? a.color : _faint,
                                   a.icon,
                                   a.titleKey.tr,
@@ -1618,7 +1618,7 @@ class StepsView extends GetView<StepsController> {
                 child: Row(
                   children: [
                     Text(
-                      'عرض الكل',
+                      'view_all'.tr,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -1636,7 +1636,7 @@ class StepsView extends GetView<StepsController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: top3.take(3).map((a) {
               return tile(
-                a.isUnlocked ? 'مفتوح' : 'مغلق',
+                a.isUnlocked ? 'unlocked'.tr : 'locked'.tr,
                 a.isUnlocked ? a.color : _faint,
                 a.icon,
                 a.titleKey.tr,
@@ -1715,15 +1715,19 @@ class StepsView extends GetView<StepsController> {
         children: [
           Row(
             children: [
-              Text(
-                'نشاطك على مدار اليوم',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _text,
+              Expanded(
+                child: Text(
+                  'activity_throughout_day'.tr,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -1731,7 +1735,7 @@ class StepsView extends GetView<StepsController> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'الآن ${currentHour > 12 ? '${currentHour - 12} م' : '$currentHour ص'}',
+                  'now_time'.trParams({'time': currentHour > 12 ? '${currentHour - 12}' : '$currentHour'}),
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _blue),
                 ),
               ),
@@ -1751,10 +1755,10 @@ class StepsView extends GetView<StepsController> {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final h = group.x;
                       if (h > currentHour) return null;
-                      final period = h >= 12 ? 'م' : 'ص';
+                      final period = h >= 12 ? 'pm_short'.tr : 'am_short'.tr;
                       final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
                       return BarTooltipItem(
-                        '${rod.toY.toInt()} خطوة\n$displayH $period',
+                        "${'steps_count_nl'.trParams({'count': rod.toY.toInt().toString()})}$displayH $period",
                         TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                       );
                     },
@@ -1800,10 +1804,10 @@ class StepsView extends GetView<StepsController> {
                       interval: 6,
                       getTitlesWidget: (v, _) {
                         final labels = {
-                          0: '12 ص',
-                          6: '6 ص',
-                          12: '12 م',
-                          18: '6 م',
+                          0: '12 ${'am_short'.tr}',
+                          6: '6 ${'am_short'.tr}',
+                          12: '12 ${'pm_short'.tr}',
+                          18: '6 ${'pm_short'.tr}',
                         };
                         final t = labels[v.toInt()];
                         if (t == null) return SizedBox();
@@ -1851,20 +1855,20 @@ class StepsView extends GetView<StepsController> {
     String subTip = '';
     
     if (progress >= 1.0) {
-      mainTip = 'جسمك في أفضل حالاته الآن! 💪';
-      subTip = 'لقد حققت هدفك، احرص على أخذ قسط من الراحة والاسترخاء.';
+      mainTip = 'body_at_best_tip'.tr;
+      subTip = 'goal_reached_relax'.tr; // Needs to be added
     } else if (progress == 0) {
-      mainTip = 'المشي المبكر هو وقتك الذهبي! ☀️';
-      subTip = '10 دقائق مشي الآن ستضاعف مستوى نشاطك طوال اليوم.';
+      mainTip = 'early_walk_golden'.tr; // Needs to be added
+      subTip = '10m_walk_tip'.tr;
     } else if (steps > avg && avg > 0) {
-      mainTip = 'أنت تتفوق على متوسطك المعتاد! 🚀';
-      subTip = 'معدل حرق السعرات لديك اليوم ممتاز، استمر في الحركة.';
+      mainTip = 'beating_average'.tr; // Needs to be added
+      subTip = 'burn_rate_excellent'.tr; // Needs to be added
     } else if (progress > 0.5) {
-      mainTip = 'أفضل وقت لإنهاء نشاطك هو بين 6-8 مساءً.';
-      subTip = 'حاول المشي 15 دقيقة إضافية لتحسين طاقتك أكثر.';
+      mainTip = 'best_time_to_finish'.tr; // Needs to be added
+      subTip = 'walk_15m_more'.tr; // Needs to be added
     } else {
-      mainTip = 'الجلوس طويلاً يقلل من تركيزك! 🚶‍♂️';
-      subTip = 'خذ استراحة قصيرة وامشِ لبضع خطوات لتجديد دورتك الدموية.';
+      mainTip = 'sitting_reduces_focus'.tr; // Needs to be added
+      subTip = 'take_short_break'.tr; // Needs to be added
     }
 
     return Container(
@@ -1903,7 +1907,7 @@ class StepsView extends GetView<StepsController> {
                     Text('💡', style: TextStyle(fontSize: 16)),
                     SizedBox(width: 6),
                     Text(
-                      'نصيحة اليوم',
+                      'daily_tip'.tr,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,

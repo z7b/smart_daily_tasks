@@ -351,27 +351,34 @@ class JobView extends GetView<JobController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'salary_countdown'.tr,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withAlpha(200),
-                          fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'salary_countdown'.tr,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white.withAlpha(200),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${NumberFormat.decimalPattern(Get.locale?.languageCode).format(days).f} ${'days_left'.tr}',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1,
+                        const SizedBox(height: 6),
+                        Text(
+                          '${NumberFormat.decimalPattern(Get.locale?.languageCode).format(days).f} ${'days_left'.tr}',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(

@@ -663,16 +663,19 @@ class HomeView extends GetView<HomeController> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'salary_countdown'.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      letterSpacing: -0.2,
+                  Expanded(
+                    child: Text(
+                      'salary_countdown'.tr,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
                   Text(
                     '${days.f} ${'days_left'.tr}',
                     style: const TextStyle(
@@ -795,13 +798,17 @@ class HomeView extends GetView<HomeController> {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'النشاط والحركة',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 18,
-                                color: isAuth ? Colors.white : null,
-                                letterSpacing: -0.5,
+                            Flexible(
+                              child: Text(
+                                'activity_and_movement'.tr,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                  color: isAuth ? Colors.white : null,
+                                  letterSpacing: -0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (isAuth &&
@@ -828,7 +835,7 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '${controller.currentStreak.value.f} يوم',
+                                      'streak_x_days'.trParams({'count': controller.currentStreak.value.f}),
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 10,

@@ -260,8 +260,15 @@ class AddAppointmentView extends GetView<AppointmentFormController> {
           children: [
             Icon(icon, size: 20, color: accentColor.withValues(alpha: 0.7)),
             const SizedBox(width: 16),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const Spacer(),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
             valueWidget,
             const SizedBox(width: 8),
             Icon(CupertinoIcons.chevron_right, size: 14, color: theme.disabledColor),
@@ -287,8 +294,15 @@ class AddAppointmentView extends GetView<AppointmentFormController> {
               children: [
                 Icon(CupertinoIcons.bell_fill, size: 20, color: accentColor.withValues(alpha: 0.7)),
                 const SizedBox(width: 16),
-                Text('reminder'.tr, style: const TextStyle(fontWeight: FontWeight.w700)),
-                const Spacer(),
+                Expanded(
+                  child: Text(
+                    'reminder'.tr,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Obx(() => CupertinoSwitch(
                       value: controller.reminderEnabled.value,
                       onChanged: (v) => controller.reminderEnabled.value = v,

@@ -250,7 +250,7 @@ class CalendarController extends GetxController {
         Get.back();
         _showSnackbar('success'.tr, 'event_added'.tr); // Reusing event_added for consistency
       } else {
-        _showSnackbar('error'.tr, 'Failed to update event', isError: true);
+        _showSnackbar('error'.tr, 'failed_to_update_event'.tr, isError: true);
       }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Event update exception');
