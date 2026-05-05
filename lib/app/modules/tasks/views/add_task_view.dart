@@ -215,8 +215,14 @@ class AddTaskView extends GetView<TaskFormController> {
                           child: const Icon(CupertinoIcons.paintbrush, color: Colors.white, size: 18),
                         ),
                         const SizedBox(width: 12),
-                        Text('color'.tr, style: const TextStyle(fontSize: 16)),
-                        const Spacer(),
+                        Expanded(
+                          child: Text(
+                            'color'.tr, 
+                            style: const TextStyle(fontSize: 16),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         _colorPalette(),
                       ],
                     ),
@@ -251,8 +257,14 @@ class AddTaskView extends GetView<TaskFormController> {
             child: Icon(icon, color: Colors.white, size: 18),
           ),
           const SizedBox(width: 12),
-          Text(title, style: const TextStyle(fontSize: 16)),
-          const Spacer(),
+          Expanded(
+            child: Text(
+              title, 
+              style: const TextStyle(fontSize: 16),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Obx(() => CupertinoSwitch(
             value: valueGetter(),
             onChanged: onChanged,
