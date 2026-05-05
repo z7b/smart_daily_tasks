@@ -1715,15 +1715,19 @@ class StepsView extends GetView<StepsController> {
         children: [
           Row(
             children: [
-              Text(
-                'activity_throughout_day'.tr,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _text,
+              Expanded(
+                child: Text(
+                  'activity_throughout_day'.tr,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
