@@ -377,4 +377,18 @@ const Map<String, String> ruRU = {
   'work_settings': 'Настройки работы',
   'work_shift': 'Рабочая смена',
   'working_days': 'Рабочие дни',
+
+  // ─── Journal ───────────────────────────────────────
+  'Success': 'Успешно',
+  'days_streak': 'дней подряд',
+  'edit_entry': 'Редактировать запись',
+  'how_feeling': 'Как вы себя чувствуете?',
+  'journal_delete_error': 'Ошибка при удалении',
+  'journal_entry_deleted': 'Запись удалена',
+  'journal_entry_saved': 'Запись сохранена',
+  'journal_save_error': 'Ошибка при сохранении',
+  'keep_writing': 'Продолжайте вести дневник!',
+  'new_entry': 'Новая запись',
+  'search_journal': 'Поиск по дневнику...',
+  'thoughts_hint': 'Напишите свои мысли здесь...',
 };
