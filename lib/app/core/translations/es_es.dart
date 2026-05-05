@@ -488,4 +488,13 @@ const Map<String, String> esES = {
   'treatment_duration': 'Duración del tratamiento',
   'will_alert_at': 'Alertará a las',
   'with_food': 'Con comida',
+
+  'almost_done_fire': '¡Casi terminado! 🔥',
+  'appointment_notif_detail': 'Tienes una cita con el Dr. @doctor en @location',
+  'daily_activity': 'Actividad diaria',
+  'evening_walk_tip': 'Un paseo nocturno te ayuda a relajarte y dormir mejor.',
+  'makes_big_difference': '¡hace una gran diferencia!',
+  'noon_walk_tip': 'Un paseo al mediodía aumenta tu energía para el resto del día.',
+  'small_step_now': 'Un pequeño paso ahora',
+  'time_to_move': '¡Hora de moverse!',
 };

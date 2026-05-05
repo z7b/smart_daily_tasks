@@ -841,4 +841,12 @@ const Map<String, String> zhTW = {
   'title_url_required': '標題和 URL 是必填項',
   'warning': '警告',
   'yes': '是',
+
+  'almost_done_fire': '快完成了！🔥',
+  'daily_activity': '日常活動',
+  'evening_walk_tip': '晚間散步有助於您放鬆並睡得更好。',
+  'makes_big_difference': '帶來很大改變！',
+  'noon_walk_tip': '中午散步能為您剩下的一天補充能量。',
+  'small_step_now': '現在的一小步',
+  'time_to_move': '是時候活動了！',
 };

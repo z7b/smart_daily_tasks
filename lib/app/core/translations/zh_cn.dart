@@ -841,4 +841,12 @@ const Map<String, String> zhCN = {
   'title_url_required': '标题和 URL 是必填项',
   'warning': '警告',
   'yes': '是',
+
+  'almost_done_fire': '快完成了！🔥',
+  'daily_activity': '日常活动',
+  'evening_walk_tip': '晚间散步有助于您放松并睡得更好。',
+  'makes_big_difference': '带来很大改变！',
+  'noon_walk_tip': '中午散步能为您剩下的一天补充能量。',
+  'small_step_now': '现在的一小步',
+  'time_to_move': '是时候活动了！',
 };

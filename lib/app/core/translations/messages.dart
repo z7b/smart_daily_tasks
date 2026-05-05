@@ -781,6 +781,8 @@ class Messages extends Translations {
       'thinking': 'Thinking...',
       'warning': 'Warning',
       'yes': 'Yes',
+
+      'appointment_notif_body': 'You have an appointment with Dr. @doctor at @location',
 },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1579,6 +1581,8 @@ class Messages extends Translations {
       'thinking': 'يُفكر...',
       'warning': 'تحذير',
       'yes': 'نعم',
+
+      'appointment_notif_body': 'لديك موعد مع الدكتور @doctor في @location',
 },
     'zh_CN': zhCN,
     'zh_TW': zhTW,

@@ -502,4 +502,13 @@ const Map<String, String> ruRU = {
   'save_event_error': 'Ошибка при сохранении события',
   'unexpected_error_occurred': 'Произошла непредвиденная ошибка',
   'warning': 'Внимание',
+
+  'almost_done_fire': 'Почти готово! 🔥',
+  'appointment_notif_detail': 'У вас назначена встреча с доктором @doctor в @location',
+  'daily_activity': 'Дневная активность',
+  'evening_walk_tip': 'Вечерняя прогулка помогает расслабиться и лучше спать.',
+  'makes_big_difference': 'имеет большое значение!',
+  'noon_walk_tip': 'Дневная прогулка повышает вашу энергию на весь оставшийся день.',
+  'small_step_now': 'Маленький шаг сейчас',
+  'time_to_move': 'Время двигаться!',
 };
