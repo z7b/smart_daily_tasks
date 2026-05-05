@@ -512,4 +512,5 @@ const Map<String, String> ruRU = {
   'small_step_now': 'Маленький шаг сейчас',
   'time_to_move': 'Время двигаться!',
   'notification_permissions_missing': 'Пожалуйста, предоставьте все разрешения для уведомлений',
+  'data_imported_successfully': 'Данные успешно импортированы.',
 };

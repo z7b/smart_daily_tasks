@@ -128,6 +128,26 @@ class Medication {
     );
   }
 
+  factory Medication.fromJson(Map<String, dynamic> json) {
+    return Medication(
+      name: json['name'] ?? '',
+      type: MedicationType.values[(json['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
+      dosage: json['dosage'],
+      instruction: MedicationInstruction.values[(json['instruction'] ?? 0).clamp(0, MedicationInstruction.values.length - 1)],
+      method: json['method'],
+      priority: TaskPriority.values[(json['priority'] ?? 1).clamp(0, TaskPriority.values.length - 1)],
+      description: json['description'],
+      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : DateTime.now(),
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      reminderTimes: (json['reminderTimes'] as List?)?.cast<String>() ?? [],
+      isActive: json['isActive'] ?? true,
+      isNotificationEnabled: json['isNotificationEnabled'] ?? true,
+      reminderLeadMinutes: json['reminderLeadMinutes'] ?? 0,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      intakeHistory: (json['intakeHistory'] as List?)?.map((e) => DateTime.parse(e)).toList() ?? [],
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

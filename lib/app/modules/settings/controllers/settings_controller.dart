@@ -195,8 +195,24 @@ class SettingsController extends GetxController {
     }
   }
 
-  Future<void> createBackup() async { await BackupService().createBackup(); _showSnackbar('success'.tr, 'data_exported_successfully'.tr); }
-  Future<void> restoreBackup() async { await BackupService().restoreBackup(); Get.offAllNamed('/home'); }
+  Future<void> createBackup() async {
+    try {
+      await BackupService().createBackup();
+      _showSnackbar('success'.tr, 'data_exported_successfully'.tr);
+    } catch (e) {
+      _showSnackbar('Error'.tr, 'failed_to_save'.tr, isError: true);
+    }
+  }
+
+  Future<void> restoreBackup() async {
+    try {
+      await BackupService().restoreBackup();
+      _showSnackbar('success'.tr, 'data_imported_successfully'.tr);
+      Future.delayed(const Duration(seconds: 1), () => Get.offAllNamed('/home'));
+    } catch (e) {
+      _showSnackbar('Error'.tr, 'failed_to_save'.tr, isError: true);
+    }
+  }
 
   /// Hardened selection dialog with SafeArea, scroll, and responsive constraints.
   void _showSelectionDialog({required String title, required List<String> options, required String currentValue, required Function(String) onSelected}) {

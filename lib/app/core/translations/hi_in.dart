@@ -550,4 +550,5 @@ const Map<String, String> hiIN = {
   'small_step_now': 'अभी एक छोटा कदम',
   'time_to_move': 'चलने का समय!',
   'notification_permissions_missing': 'कृपया सभी सूचना अनुमतियाँ प्रदान करें',
+  'data_imported_successfully': 'डेटा सफलतापूर्वक आयात किया गया।',
 };

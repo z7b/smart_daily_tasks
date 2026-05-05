@@ -91,6 +91,11 @@ class BackupService {
     final List<Journal> journalsToRestore = [];
     final List<Bookmark> bookmarksToRestore = [];
     final List<CalendarEvent> eventsToRestore = [];
+    final List<Book> booksToRestore = [];
+    final List<Medication> medicationsToRestore = [];
+    final List<StepLog> stepLogsToRestore = [];
+    final List<WorkProfile> workProfilesToRestore = [];
+    final List<AttendanceLog> attendanceLogsToRestore = [];
 
     // Process Tasks
     if (backupData['tasks'] != null && backupData['tasks'] is List) {
@@ -137,6 +142,51 @@ class BackupService {
       }
     }
 
+    // Process Books
+    if (backupData['books'] != null && backupData['books'] is List) {
+      for (var e in (backupData['books'] as List)) {
+        if (e is Map<String, dynamic>) {
+          booksToRestore.add(Book.fromJson(e)..id = Isar.autoIncrement);
+        }
+      }
+    }
+
+    // Process Medications
+    if (backupData['medications'] != null && backupData['medications'] is List) {
+      for (var e in (backupData['medications'] as List)) {
+        if (e is Map<String, dynamic>) {
+          medicationsToRestore.add(Medication.fromJson(e)..id = Isar.autoIncrement);
+        }
+      }
+    }
+
+    // Process StepLogs
+    if (backupData['stepLogs'] != null && backupData['stepLogs'] is List) {
+      for (var e in (backupData['stepLogs'] as List)) {
+        if (e is Map<String, dynamic>) {
+          stepLogsToRestore.add(StepLog.fromJson(e)..id = Isar.autoIncrement);
+        }
+      }
+    }
+
+    // Process WorkProfiles
+    if (backupData['workProfiles'] != null && backupData['workProfiles'] is List) {
+      for (var e in (backupData['workProfiles'] as List)) {
+        if (e is Map<String, dynamic>) {
+          workProfilesToRestore.add(WorkProfile.fromJson(e));
+        }
+      }
+    }
+
+    // Process AttendanceLogs
+    if (backupData['attendanceLogs'] != null && backupData['attendanceLogs'] is List) {
+      for (var e in (backupData['attendanceLogs'] as List)) {
+        if (e is Map<String, dynamic>) {
+          attendanceLogsToRestore.add(AttendanceLog.fromJson(e)..id = Isar.autoIncrement);
+        }
+      }
+    }
+
     // 2. Perform additive merge transaction (No .clear() calls)
     await _isar.writeTxn(() async {
       if (tasksToRestore.isNotEmpty) await _isar.tasks.putAll(tasksToRestore);
@@ -144,6 +194,12 @@ class BackupService {
       if (journalsToRestore.isNotEmpty) await _isar.journals.putAll(journalsToRestore);
       if (bookmarksToRestore.isNotEmpty) await _isar.bookmarks.putAll(bookmarksToRestore);
       if (eventsToRestore.isNotEmpty) await _isar.calendarEvents.putAll(eventsToRestore);
+      if (booksToRestore.isNotEmpty) await _isar.books.putAll(booksToRestore);
+      if (medicationsToRestore.isNotEmpty) await _isar.medications.putAll(medicationsToRestore);
+      if (stepLogsToRestore.isNotEmpty) await _isar.stepLogs.putAll(stepLogsToRestore);
+      if (workProfilesToRestore.isNotEmpty) await _isar.workProfiles.putAll(workProfilesToRestore);
+      if (attendanceLogsToRestore.isNotEmpty) await _isar.attendanceLogs.putAll(attendanceLogsToRestore);
     });
   }
 }
+
