@@ -465,5 +465,5 @@ const Map<String, String> ruRU = {
   'step_goal_reached_success': 'Цель достигнута!',
   'step_unit_name': 'Шаги',
   'streak_x_days': '@count дней подряд',
-  'unified_status': 'Статус: @status',
+  'unified_status': 'Система: @percent% интегрировано',
 };
