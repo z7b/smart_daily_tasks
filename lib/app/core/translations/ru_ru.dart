@@ -209,7 +209,7 @@ const Map<String, String> ruRU = {
       'Нет предстоящих задач. Наслаждайтесь свободным временем! 🎉',
   'assistant_appointments_summary': 'У вас @count предстоящих визитов',
   'assistant_next_appointment':
-      'Ваш следующий визит к Dr. @doctor — @countdown',
+      'Ваш следующий визит к д-ру @doctor — @countdown',
   'assistant_medications_summary': 'У вас @count активных лекарств',
   'assistant_next_medication': 'Следующий: @name в @time (@countdown)',
   'assistant_overview': '📋 Ваш дневной обзор:',
