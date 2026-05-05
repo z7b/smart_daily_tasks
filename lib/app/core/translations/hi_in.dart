@@ -104,8 +104,10 @@ const Map<String, String> hiIN = {
   'msg_high_performance': 'आज आपका प्रदर्शन शानदार है! 🚀',
 
   // ─── Assistant ───────────────────────────────────
-  'assistant_welcome': 'आपके स्मार्ट सहायक में आपका स्वागत है। आज मैं आपकी कैसे मदद कर सकता हूँ?',
-  'assistant_help_cmd': 'आप कह सकते हैं: "कार्य जोड़ो [शीर्षक]", "नोट लिखो [सामग्री]" या "डायरी लिखो [पाठ]"।',
+  'assistant_welcome':
+      'आपके स्मार्ट सहायक में आपका स्वागत है। आज मैं आपकी कैसे मदद कर सकता हूँ?',
+  'assistant_help_cmd':
+      'आप कह सकते हैं: "कार्य जोड़ो [शीर्षक]", "नोट लिखो [सामग्री]" या "डायरी लिखो [पाठ]"।',
   'not_understood': 'मैं समझ नहीं पाया। कृपया "मदद" कहें।',
   'daily_insights': 'दैनिक अंतर्दृष्टि',
   'today_focus': 'आज का फ़ोकस',
@@ -151,13 +153,15 @@ const Map<String, String> hiIN = {
   'add_appointment': 'अपॉइंटमेंट जोड़ें',
   'no_appointments': 'कोई आगामी अपॉइंटमेंट नहीं',
   'upcoming': 'आगामी',
-  'appointment_notif_body': 'आपका डॉक्टर @doctor के साथ @location पर अपॉइंटमेंट है',
+  'appointment_notif_body':
+      'आपका डॉक्टर @doctor के साथ @location पर अपॉइंटमेंट है',
   'appointment_alarms': 'अपॉइंटमेंट अलार्म',
   'reminders': 'अनुस्मारक',
 
   // ─── Security ────────────────────────────────────
   'tap_to_unlock': 'अनलॉक करने के लिए टैप करें',
-  'authenticate_to_unlock_app': 'Life OS अनलॉक करने के लिए अपनी पहचान सत्यापित करें',
+  'authenticate_to_unlock_app':
+      'Life OS अनलॉक करने के लिए अपनी पहचान सत्यापित करें',
   'auth_failure_title': 'प्रमाणीकरण विफल',
   'auth_failure_msg': 'कृपया पुन: प्रयास करें',
   'app_lock_enabled_msg': 'ऐप लॉक सक्षम',
@@ -195,15 +199,18 @@ const Map<String, String> hiIN = {
   'weekly': 'साप्ताहिक',
   'monthly': 'मासिक',
   'diagnostic_signal_title': 'Life OS: नैदानिक संकेत',
-  'diagnostic_signal_body': 'सिस्टम स्थिर है और सिग्नल वितरण सुनाई दे रहा है। 🚀',
+  'diagnostic_signal_body':
+      'सिस्टम स्थिर है और सिग्नल वितरण सुनाई दे रहा है। 🚀',
   'system_diagnostics': 'सिस्टम डायग्नोस्टिक्स',
 
   // ─── Assistant Query Responses ───────────────────
-  'assistant_tasks_summary': 'आज आपके @total कार्य हैं (@active सक्रिय, @completed पूर्ण)',
+  'assistant_tasks_summary':
+      'आज आपके @total कार्य हैं (@active सक्रिय, @completed पूर्ण)',
   'assistant_next_task': 'अगला कार्य: @title — @time',
   'no_upcoming_tasks': 'कोई आगामी कार्य नहीं। अपने खाली समय का आनंद लें! 🎉',
   'assistant_appointments_summary': 'आपके @count आगामी अपॉइंटमेंट हैं',
-  'assistant_next_appointment': 'आपका अगला अपॉइंटमेंट डॉ. @doctor के साथ है — @countdown',
+  'assistant_next_appointment':
+      'आपका अगला अपॉइंटमेंट डॉ. @doctor के साथ है — @countdown',
   'assistant_medications_summary': 'आपकी @count सक्रिय दवाइयाँ हैं',
   'assistant_next_medication': 'अगली: @name @time पर (@countdown)',
   'assistant_overview': '📋 आपका दैनिक अवलोकन:',
@@ -253,21 +260,29 @@ const Map<String, String> hiIN = {
   'pm_short': 'अप.',
   'am_short': 'पूर्वा.',
   'body_at_best_tip': 'आपका शरीर अभी अपनी सबसे अच्छी स्थिति में है! 💪',
-  '10m_walk_tip': 'अभी 10 मिनट की सैर आपके बाकी दिन की ऊर्जा को दोगुना कर देगी।',
-  'goal_reached_relax': 'आप अपने लक्ष्य तक पहुँच चुके हैं, कुछ आराम करना और रिलैक्स करना सुनिश्चित करें।',
+  '10m_walk_tip':
+      'अभी 10 मिनट की सैर आपके बाकी दिन की ऊर्जा को दोगुना कर देगी।',
+  'goal_reached_relax':
+      'आप अपने लक्ष्य तक पहुँच चुके हैं, कुछ आराम करना और रिलैक्स करना सुनिश्चित करें।',
   'early_walk_golden': 'सुबह की सैर आपका सुनहरा समय है! 🌅',
   'beating_average': 'आप अपने सामान्य औसत को पछाड़ रहे हैं! 📈',
   'burn_rate_excellent': 'आपकी कैलोरी बर्न रेट आज उत्कृष्ट है, चलते रहें।',
-  'best_time_to_finish': 'अपनी गतिविधि खत्म करने का सबसे अच्छा समय शाम 6-8 बजे के बीच है।',
-  'walk_15m_more': 'अपनी ऊर्जा को और बेहतर बनाने के लिए 15 मिनट अतिरिक्त चलने का प्रयास करें।',
-  'sitting_reduces_focus': 'बहुत देर तक बैठे रहने से आपका ध्यान कम होता है! 🚶‍♂️',
-  'take_short_break': 'एक छोटा ब्रेक लें और अपने रक्त संचार को ताज़ा करने के लिए कुछ कदम चलें।',
+  'best_time_to_finish':
+      'अपनी गतिविधि खत्म करने का सबसे अच्छा समय शाम 6-8 बजे के बीच है।',
+  'walk_15m_more':
+      'अपनी ऊर्जा को और बेहतर बनाने के लिए 15 मिनट अतिरिक्त चलने का प्रयास करें।',
+  'sitting_reduces_focus':
+      'बहुत देर तक बैठे रहने से आपका ध्यान कम होता है! 🚶‍♂️',
+  'take_short_break':
+      'एक छोटा ब्रेक लें और अपने रक्त संचार को ताज़ा करने के लिए कुछ कदम चलें।',
   'smart_suggestion': 'स्मार्ट सुझाव',
   'goal_updated_smartly': 'आपकी फिटनेस के अनुसार आपका लक्ष्य अपडेट किया गया!',
-  'enter_biometrics_desc': 'सटीक दूरी और कैलोरी गणना के लिए अपना डेटा दर्ज करें',
+  'enter_biometrics_desc':
+      'सटीक दूरी और कैलोरी गणना के लिए अपना डेटा दर्ज करें',
   'enter': 'दर्ज करें',
   'update_biometrics': 'बायोमेट्रिक्स अपडेट करें',
-  'biometrics_help_desc': 'यह हमें कैलोरी और दूरी की सटीक गणना करने में मदद करता है',
+  'biometrics_help_desc':
+      'यह हमें कैलोरी और दूरी की सटीक गणना करने में मदद करता है',
   'male': 'पुरुष',
   'female': 'महिला',
   'height_cm': 'ऊंचाई (सेमी)',
@@ -284,7 +299,8 @@ const Map<String, String> hiIN = {
   'of_goal': 'लक्ष्य का @percent%',
   'completion_percentage': 'पूर्ण: @percent%',
   'steps_of': '@goal के कदम',
-  'connect_health_data': 'गतिविधि सत्यापित करने के लिए स्वास्थ्य डेटा कनेक्ट करें',
+  'connect_health_data':
+      'गतिविधि सत्यापित करने के लिए स्वास्थ्य डेटा कनेक्ट करें',
   'yearly': 'वार्षिक',
   'activity_week': 'साप्ताहिक गतिविधि',
   'activity_month': 'मासिक गतिविधि',
@@ -412,7 +428,8 @@ const Map<String, String> hiIN = {
 
   // ─── Phase 3: Verified Additions ─────────────────
   'setup_job_title': 'नौकरी की जानकारी सेट करें',
-  'setup_job_desc': 'उपस्थिति और उत्पादकता को ट्रैक करने के लिए अपनी नौकरी की जानकारी जोड़ें',
+  'setup_job_desc':
+      'उपस्थिति और उत्पादकता को ट्रैक करने के लिए अपनी नौकरी की जानकारी जोड़ें',
   'read_verb': 'पढ़ना',
   'reading_goal_msg': 'अपने लक्ष्य तक पहुँचने के लिए पढ़ते रहें',
   'search_journal': 'डायरी खोजें...',
