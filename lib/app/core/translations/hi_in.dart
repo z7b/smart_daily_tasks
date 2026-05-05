@@ -396,16 +396,17 @@ const Map<String, String> hiIN = {
   'msg_dawn': 'फ़ज्र की नमाज़ और कुरान मत भूलना।',
   'unified_status': 'सिस्टम: आज @percent% एकीकृत',
 
-  // ─── Verified Audit Additions ─────────────────────
+  // ─── Verified Audit Finalization ─────────────────
   'assistant_active': 'सहायक सक्रिय',
   'local_assistant': 'लोकल सहायक',
-  'local_label': 'LOCAL',
+  'local_intelligence': 'लोकल',
   'remaining': 'शेष:',
   'next_appointment': 'अगला अपॉइंटमेंट',
-  'patient_label': 'मरीज़:',
-  'starts_in': 'शुरू होगा:',
+  'patient': 'मरीज़:',
+  'starts': 'शुरू होगा:',
   'past': 'बीता हुआ',
   'today': 'आज',
-  'passed_earlier': 'आज पहले हो चुका',
-  'steady_progress': 'जारी रखें! आप निरंतर प्रगति कर रहे हैं',
+  'appointment_passed_today': 'आज पहले हो चुका',
+  'step_goal_keep_going': 'जारी रखें! आप निरंतर प्रगति कर रहे हैं',
+  'job_position': 'पद / विभाग',
 };
