@@ -337,8 +337,8 @@ class JobSettingsView extends GetView<JobController> {
                             }
                           },
                         children: {
-                          false: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('work_shift'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                          true: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('holiday'.tr, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                          false: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: FittedBox(fit: BoxFit.scaleDown, child: Text('work_shift'.tr, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
+                          true: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: FittedBox(fit: BoxFit.scaleDown, child: Text('holiday'.tr, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                         },
                       ),
                     ],
