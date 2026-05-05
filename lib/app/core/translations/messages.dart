@@ -784,6 +784,9 @@ class Messages extends Translations {
 
       'appointment_notif_body': 'You have an appointment with Dr. @doctor at @location',
       'notification_permissions_missing': 'Please grant all notification permissions for full stability',
+      'diagnostic_signal_title': 'Life OS: Diagnostic Signal',
+      'diagnostic_signal_body': 'System is stable and signal delivery is audible. 🚀',
+      'system_diagnostics': 'System Diagnostics',
 },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1585,6 +1588,9 @@ class Messages extends Translations {
 
       'appointment_notif_body': 'لديك موعد مع الدكتور @doctor في @location',
       'notification_permissions_missing': 'يرجى منح جميع أذونات الإشعارات لتحقيق الاستقرار الكامل',
+      'diagnostic_signal_title': 'Life OS: إشارة تشخيصية',
+      'diagnostic_signal_body': 'النظام مستقر وتوصيل الإشارة مسموع. 🚀',
+      'system_diagnostics': 'تشخيصات النظام',
 },
     'zh_CN': zhCN,
     'zh_TW': zhTW,
