@@ -168,6 +168,7 @@ const Map<String, String> ruRU = {
   'data_exported_successfully': 'Данные успешно экспортированы',
 
   // ─── Dashboard ───────────────────────────────────
+  'dashboard_head': 'Интеграция Умной Жизни',
   'mind': 'Разум',
   'body': 'Тело',
   'spirit': 'Дух',

@@ -168,6 +168,7 @@ const Map<String, String> esES = {
   'data_exported_successfully': 'Datos exportados exitosamente',
 
   // ─── Dashboard ───────────────────────────────────
+  'dashboard_head': 'Integración de Vida Inteligente',
   'mind': 'Mente',
   'body': 'Cuerpo',
   'spirit': 'Espíritu',

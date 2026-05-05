@@ -165,6 +165,7 @@ const Map<String, String> hiIN = {
   'data_exported_successfully': 'डेटा सफलतापूर्वक निर्यात किया गया',
 
   // ─── Dashboard ───────────────────────────────────
+  'dashboard_head': 'स्मार्ट जीवन एकीकरण',
   'mind': 'मन',
   'body': 'शरीर',
   'spirit': 'आत्मा',
