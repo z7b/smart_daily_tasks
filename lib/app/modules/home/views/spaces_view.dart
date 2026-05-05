@@ -112,6 +112,13 @@ class SpacesView extends GetView<HomeController> {
                       fallbackIcon: Icons.business_center_rounded,
                       onTap: () => Get.toNamed(Routes.JOB),
                     ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'doctor_appointments'.tr,
+                      colors: const [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+                      fallbackIcon: Icons.local_hospital_rounded,
+                      onTap: () => Get.toNamed(Routes.APPOINTMENTS),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 120),
