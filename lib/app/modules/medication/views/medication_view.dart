@@ -265,10 +265,11 @@ class MedicationView extends GetView<MedicationController> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Row(
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
                                 children: [
                                   _miniInfoBadge(_getTypeText(med.type), theme.textTheme.bodySmall?.color),
-                                  const SizedBox(width: 8),
                                   _miniInfoBadge(_getInstructionText(med.instruction), theme.textTheme.bodySmall?.color),
                                 ],
                               ),
@@ -392,16 +393,19 @@ class MedicationView extends GetView<MedicationController> {
                           // Secondary Info (Dose Count / Status)
                           const SizedBox(height: 10),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                '${'doses_remaining'.tr}: ${(med.reminderTimes.length - med.todayDoseCount).f}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                              Expanded(
+                                child: Text(
+                                  '${'doses_remaining'.tr}: ${(med.reminderTimes.length - med.todayDoseCount).f}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               // Edit button (Clean Minimalist)
                               GestureDetector(
                                 onTap: () => _showAddMedicationSheet(context, med: med),
