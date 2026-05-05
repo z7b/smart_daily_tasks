@@ -849,4 +849,5 @@ const Map<String, String> zhCN = {
   'noon_walk_tip': '中午散步能为您剩下的一天补充能量。',
   'small_step_now': '现在的一小步',
   'time_to_move': '是时候活动了！',
+  'notification_permissions_missing': '请授予所有通知权限以确保稳定运行',
 };

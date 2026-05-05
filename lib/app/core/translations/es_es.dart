@@ -497,4 +497,5 @@ const Map<String, String> esES = {
   'noon_walk_tip': 'Un paseo al mediodía aumenta tu energía para el resto del día.',
   'small_step_now': 'Un pequeño paso ahora',
   'time_to_move': '¡Hora de moverse!',
+  'notification_permissions_missing': 'Por favor, concede todos los permisos de notificaciones',
 };

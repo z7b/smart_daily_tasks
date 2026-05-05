@@ -783,6 +783,7 @@ class Messages extends Translations {
       'yes': 'Yes',
 
       'appointment_notif_body': 'You have an appointment with Dr. @doctor at @location',
+      'notification_permissions_missing': 'Please grant all notification permissions for full stability',
 },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1583,6 +1584,7 @@ class Messages extends Translations {
       'yes': 'نعم',
 
       'appointment_notif_body': 'لديك موعد مع الدكتور @doctor في @location',
+      'notification_permissions_missing': 'يرجى منح جميع أذونات الإشعارات لتحقيق الاستقرار الكامل',
 },
     'zh_CN': zhCN,
     'zh_TW': zhTW,

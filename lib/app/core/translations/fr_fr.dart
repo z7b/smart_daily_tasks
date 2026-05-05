@@ -795,4 +795,5 @@ const Map<String, String> frFR = {
   'noon_walk_tip': 'Une marche à midi stimule votre énergie pour le reste de la journée.',
   'small_step_now': 'Un petit pas maintenant',
   'time_to_move': 'Il est temps de bouger !',
+  'notification_permissions_missing': 'Veuillez accorder toutes les autorisations de notifications',
 };

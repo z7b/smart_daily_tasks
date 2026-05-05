@@ -162,8 +162,37 @@ class SettingsController extends GetxController {
   }
 
   Future<void> checkNotificationStability({bool silent = false}) async {
-    final isStable = await Get.find<ns.NotificationService>().isSystemStable();
+    final notifService = Get.find<ns.NotificationService>();
+
+    // Step 1: Check current permission state
+    var isStable = await notifService.isSystemStable();
+
+    // Step 2: If not stable AND user pressed button (not silent), request missing permissions
+    if (!isStable && !silent) {
+      await notifService.requestFullPermissions();
+      // Re-check after requesting
+      isStable = await notifService.isSystemStable();
+    }
+
     notificationStatus.value = isStable ? 'amazing' : 'pending';
+
+    // Step 3: If interactive (not silent), give real feedback
+    if (!silent) {
+      if (isStable) {
+        // Fire a real test notification to prove the pipeline works end-to-end
+        await notifService.sendTestNotification();
+        _showSnackbar(
+          'notification_stability'.tr,
+          'diagnostic_signal_body'.tr,
+        );
+      } else {
+        _showSnackbar(
+          'notification_stability'.tr,
+          'notification_permissions_missing'.tr,
+          isError: true,
+        );
+      }
+    }
   }
 
   Future<void> createBackup() async { await BackupService().createBackup(); _showSnackbar('success'.tr, 'data_exported_successfully'.tr); }

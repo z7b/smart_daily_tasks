@@ -511,4 +511,5 @@ const Map<String, String> ruRU = {
   'noon_walk_tip': 'Дневная прогулка повышает вашу энергию на весь оставшийся день.',
   'small_step_now': 'Маленький шаг сейчас',
   'time_to_move': 'Время двигаться!',
+  'notification_permissions_missing': 'Пожалуйста, предоставьте все разрешения для уведомлений',
 };

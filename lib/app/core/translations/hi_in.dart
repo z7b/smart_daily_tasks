@@ -549,4 +549,5 @@ const Map<String, String> hiIN = {
   'noon_walk_tip': 'दोपहर की सैर बाकी दिन के लिए आपकी ऊर्जा बढ़ाती है।',
   'small_step_now': 'अभी एक छोटा कदम',
   'time_to_move': 'चलने का समय!',
+  'notification_permissions_missing': 'कृपया सभी सूचना अनुमतियाँ प्रदान करें',
 };

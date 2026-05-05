@@ -849,4 +849,5 @@ const Map<String, String> zhTW = {
   'noon_walk_tip': '中午散步能為您剩下的一天補充能量。',
   'small_step_now': '現在的一小步',
   'time_to_move': '是時候活動了！',
+  'notification_permissions_missing': '請授予所有通知權限以確保穩定運行',
 };

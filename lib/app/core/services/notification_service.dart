@@ -272,12 +272,12 @@ class NotificationService extends GetxService {
     try {
       await flutterLocalNotificationsPlugin.show(
         999, // Diagnostic ID
-        'Life OS: Diagnostic Signal',
-        'System is stable and signal delivery is audible. 🚀',
-        const NotificationDetails(
+        'diagnostic_signal_title'.tr,
+        'diagnostic_signal_body'.tr,
+        NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_tasks_channel',
-            'System Diagnostics',
+            'system_diagnostics'.tr,
             importance: Importance.max,
             priority: Priority.high,
             playSound: true,
@@ -291,6 +291,7 @@ class NotificationService extends GetxService {
       talker.handle(e, stack, '❌ Diagnostic Signal Failed');
     }
   }
+
 
   /// ✅ Real-time Stability Status
   Future<bool> isSystemStable() async {
