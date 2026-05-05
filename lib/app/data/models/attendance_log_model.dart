@@ -46,6 +46,16 @@ class AttendanceLog {
     );
   }
 
+  factory AttendanceLog.fromJson(Map<String, dynamic> json) {
+    return AttendanceLog(
+      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      status: AttendanceStatus.values[(json['status'] ?? 0).clamp(0, AttendanceStatus.values.length - 1)],
+      checkInTime: json['checkInTime'] != null ? DateTime.parse(json['checkInTime']) : null,
+      checkOutTime: json['checkOutTime'] != null ? DateTime.parse(json['checkOutTime']) : null,
+      note: json['note'],
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

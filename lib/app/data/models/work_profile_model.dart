@@ -80,6 +80,24 @@ class WorkProfile {
     );
   }
 
+  factory WorkProfile.fromJson(Map<String, dynamic> json) {
+    return WorkProfile(
+      id: json['id'] ?? 0,
+      employmentStatus: EmploymentStatus.values[(json['employmentStatus'] ?? 0).clamp(0, EmploymentStatus.values.length - 1)],
+      jobTitle: json['jobTitle'],
+      jobPosition: json['jobPosition'],
+      companyName: json['companyName'],
+      startMinutes: json['startMinutes'] ?? 540,
+      endMinutes: json['endMinutes'] ?? 1020,
+      customSchedulesJson: json['customSchedulesJson'],
+      salaryDay: json['salaryDay'] ?? 25,
+      monthlySalary: json['monthlySalary'] != null ? (json['monthlySalary']).toDouble() : null,
+      workingDays: (json['workingDays'] as List?)?.cast<int>() ?? [1, 2, 3, 4, 5],
+      remindersEnabled: json['remindersEnabled'] ?? true,
+      officialWorkHours: json['officialWorkHours'] != null ? (json['officialWorkHours']).toDouble() : 8.0,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

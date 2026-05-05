@@ -787,4 +787,13 @@ const Map<String, String> frFR = {
   'thinking': 'Réflexion...',
   'title_url_required': 'Titre et URL requis',
   'warning': 'Avertissement',
+
+  'almost_done_fire': 'Presque terminé ! 🔥',
+  'daily_activity': 'Activité quotidienne',
+  'evening_walk_tip': 'Une promenade du soir vous aide à vous détendre et à mieux dormir.',
+  'makes_big_difference': 'fait une grande différence !',
+  'noon_walk_tip': 'Une marche à midi stimule votre énergie pour le reste de la journée.',
+  'small_step_now': 'Un petit pas maintenant',
+  'time_to_move': 'Il est temps de bouger !',
+  'notification_permissions_missing': 'Veuillez accorder toutes les autorisations de notifications',
 };

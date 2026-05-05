@@ -81,7 +81,24 @@ class Book {
     return (currentPage / totalPages).clamp(0.0, 1.0);
   }
 
+  factory Book.fromJson(Map<String, dynamic> json) {
+    return Book(
+      title: json['title'] ?? '',
+      filePath: json['filePath'],
+      totalPages: json['totalPages'] ?? 0,
+      currentPage: json['currentPage'] ?? 0,
+      isFavorite: json['isFavorite'] ?? false,
+      isCompleted: json['isCompleted'] ?? false,
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      readingMood: Mood.values[(json['readingMood'] ?? 0).clamp(0, Mood.values.length - 1)],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      lastReadAt: json['lastReadAt'] != null ? DateTime.parse(json['lastReadAt']) : null,
+      completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null,
+    );
+  }
+
   Map<String, dynamic> toJson() {
+
     return {
       'id': id,
       'title': title,
