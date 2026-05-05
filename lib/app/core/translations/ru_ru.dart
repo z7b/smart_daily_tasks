@@ -407,4 +407,16 @@ const Map<String, String> ruRU = {
   'tasks_upcoming': 'Предстоящие',
   'time': 'Время',
   'title_hint': 'Название',
+
+  // ─── Notes Module ──────────────────────────────────
+  'Required': 'Обязательно',
+  'add_note': 'Добавить заметку',
+  'edit_note': 'Редактировать заметку',
+  'note_added': 'Заметка добавлена',
+  'note_updated': 'Заметка обновлена',
+  'pin': 'Закрепить',
+  'recent': 'Недавние',
+  'start_writing_hint': 'Начните писать...',
+  'today': 'Сегодня',
+  'unpin': 'Открепить',
 };
