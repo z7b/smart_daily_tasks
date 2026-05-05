@@ -404,7 +404,6 @@ const Map<String, String> hiIN = {
   'next_appointment': 'अगला अपॉइंटमेंट',
   'patient_label': 'मरीज़:',
   'starts_in': 'शुरू होगा:',
-  'of_goal': 'लक्ष्य का',
   'past': 'बीता हुआ',
   'today': 'आज',
   'passed_earlier': 'आज पहले हो चुका',
