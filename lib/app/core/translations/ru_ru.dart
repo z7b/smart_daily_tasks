@@ -391,4 +391,20 @@ const Map<String, String> ruRU = {
   'new_entry': 'Новая запись',
   'search_journal': 'Поиск по дневнику...',
   'thoughts_hint': 'Напишите свои мысли здесь...',
+
+  // ─── Tasks Module ──────────────────────────────────
+  'add_task_hint': 'Добавьте новую задачу...',
+  'color': 'Цвет',
+  'complete': 'Завершить',
+  'failed_to_delete': 'Не удалось удалить',
+  'failed_to_save': 'Не удалось сохранить',
+  'notes_hint': 'Дополнительные заметки...',
+  'task_deleted': 'Задача удалена',
+  'tasks_active': 'Активные',
+  'tasks_completed': 'Выполненные',
+  'tasks_overdue': 'Просроченные',
+  'tasks_timeline': 'Временная шкала',
+  'tasks_upcoming': 'Предстоящие',
+  'time': 'Время',
+  'title_hint': 'Название',
 };
