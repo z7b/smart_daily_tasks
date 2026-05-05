@@ -489,4 +489,17 @@ const Map<String, String> ruRU = {
   'postpone_by': 'Перенести на:',
   'reminder': 'Напоминание',
   'scheduled_at': 'Дата и время',
+
+  // ─── Calendar Module ───────────────────────────────
+  'add_event': 'Добавить событие',
+  'all_day': 'Весь день',
+  'conflict_warning': 'Это время пересекается с другим событием',
+  'event_added': 'Событие добавлено',
+  'event_deleted': 'Событие удалено',
+  'failed_to_update_event': 'Не удалось обновить событие',
+  'invalid_time_range': 'Время окончания должно быть позже времени начала',
+  'new_event': 'Новое событие',
+  'save_event_error': 'Ошибка при сохранении события',
+  'unexpected_error_occurred': 'Произошла непредвиденная ошибка',
+  'warning': 'Внимание',
 };
