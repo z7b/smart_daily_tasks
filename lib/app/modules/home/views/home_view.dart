@@ -183,15 +183,6 @@ class HomeView extends GetView<HomeController> {
                     Routes.CALENDAR,
                   ),
                 ),
-
-                _buildBentoItem(
-                  context,
-                  'doctor_appointments'.tr,
-                  '',
-                  CupertinoIcons.doc_person_fill,
-                  const Color(0xFF007AFF),
-                  Routes.APPOINTMENTS,
-                ),
               ],
             ),
           ),
