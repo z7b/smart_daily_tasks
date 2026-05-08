@@ -10,6 +10,7 @@ class MedicationDailyStats {
   final String nextTime;
   final String nextName;
   final String nextTimeLeft;
+  final DateTime? nextDoseAt;
 
   MedicationDailyStats({
     required this.taken,
@@ -17,6 +18,7 @@ class MedicationDailyStats {
     required this.nextTime,
     required this.nextName,
     required this.nextTimeLeft,
+    this.nextDoseAt,
   });
 }
 
@@ -54,9 +56,9 @@ class HomeMedicationService extends GetxService {
     String nextTime = '';
     String nextName = '';
     String nextTimeLeft = '';
+    DateTime? nextDoseDateTime;
 
     if (viewDate.isSameDay(now) || viewDate.isAfter(now)) {
-      DateTime? nextDoseDateTime;
       final locale = Get.locale?.languageCode ?? 'en';
       final todayStart = DateTime(now.year, now.month, now.day);
 
@@ -155,6 +157,7 @@ class HomeMedicationService extends GetxService {
       nextTime: nextTime,
       nextName: nextName,
       nextTimeLeft: nextTimeLeft,
+      nextDoseAt: nextDoseDateTime,
     );
   }
 

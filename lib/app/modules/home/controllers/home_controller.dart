@@ -130,6 +130,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final nextTaskFullDate = ''.obs;
   final nextTaskPriority = TaskPriority.medium.obs;
 
+  // Raw DateTimes for live countdown recalculation
+  final _nextTaskAt = Rxn<DateTime>();
+  final _nextMedAt = Rxn<DateTime>();
+  final minuteTick = 0.obs;
+
   final weeklyLabels = <String>[].obs;
 
 
@@ -256,6 +261,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextTaskTimeLeft.value = stats.nextTimeLeft;
       nextTaskFullDate.value = stats.nextFullDate;
       nextTaskPriority.value = stats.nextPriority;
+      _nextTaskAt.value = stats.nextScheduledAt;
 
       // ✅ SSOT: Update Today's Total Count
       taskCount.value = stats.total;
@@ -289,12 +295,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     _pulseTimer?.cancel();
     _pulseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _updateGreeting();
+      _refreshCountdowns();
       final now = DateTime.now();
       if (selectedDate.value.year == now.year &&
           selectedDate.value.month == now.month &&
           selectedDate.value.day == now.day) {
         _loadRealData();
-        // Periodically check for recurring tasks if the day has changed
         Get.find<TaskRepository>().instantiateRecurringTasks();
       }
     });
@@ -399,6 +405,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextMedicationTime.value = medStats.nextTime;
       nextMedicationName.value = medStats.nextName;
       nextMedicationTimeLeft.value = medStats.nextTimeLeft;
+      _nextMedAt.value = medStats.nextDoseAt;
 
       // Update Health & Activity
       currentStreak.value = healthStats.currentStreak;
@@ -441,6 +448,62 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   void _updateTotalProgress() {
     progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
+  }
+
+  /// Recompute time-left strings from stored raw DateTimes every minute tick.
+  void _refreshCountdowns() {
+    minuteTick.value++;
+    final now = DateTime.now();
+
+    // Refresh task countdown
+    if (_nextTaskAt.value != null && nextTaskTitle.value.isNotEmpty) {
+      final diff = _nextTaskAt.value!.difference(now);
+      if (diff.isNegative) {
+        nextTaskTimeLeft.value = 'overdue'.tr;
+      } else if (diff.inDays >= 1) {
+        if (diff.inDays == 1) {
+          nextTaskTimeLeft.value = 'tomorrow'.tr;
+        } else if (diff.inDays < 7) {
+          nextTaskTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+        } else {
+          final locale = Get.locale?.languageCode ?? 'en';
+          nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(_nextTaskAt.value!).f;
+        }
+      } else {
+        final hours = diff.inHours;
+        final minutes = (diff.inMinutes % 60).abs();
+        if (hours > 0) {
+          nextTaskTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
+        } else {
+          nextTaskTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
+        }
+      }
+    }
+
+    // Refresh medication countdown
+    if (_nextMedAt.value != null && nextMedicationTime.value.isNotEmpty) {
+      final diff = _nextMedAt.value!.difference(now);
+      if (diff.isNegative) {
+        nextMedicationTimeLeft.value = 'dose_missed'.tr;
+      } else if (diff.inDays >= 1) {
+        if (diff.inDays == 1) {
+          nextMedicationTimeLeft.value = 'tomorrow'.tr;
+        } else if (diff.inDays < 7) {
+          nextMedicationTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+        } else {
+          final locale = Get.locale?.languageCode ?? 'en';
+          nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(_nextMedAt.value!).f;
+        }
+      } else {
+        final hours = diff.inHours;
+        final minutes = (diff.inMinutes % 60).abs();
+        if (hours > 0) {
+          nextMedicationTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
+        } else {
+          nextMedicationTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
+        }
+      }
+    }
   }
 
 

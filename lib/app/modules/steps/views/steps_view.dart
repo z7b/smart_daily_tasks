@@ -950,13 +950,13 @@ class StepsView extends GetView<StepsController> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: controller.selectedTimeFilter.value == 'yearly' ? 36 : 28,
+                      reservedSize: 40,
                       getTitlesWidget: (v, meta) {
                         final i = v.toInt();
                         if (i < 0 || i >= data.length) return SizedBox.shrink();
                         return SideTitleWidget(
                           meta: meta,
-                          angle: controller.selectedTimeFilter.value == 'yearly' ? -0.5 : 0,
+                          angle: -0.61, // -35 degrees in radians
                           space: 8,
                           child: Text(
                             data[i]['label'], 

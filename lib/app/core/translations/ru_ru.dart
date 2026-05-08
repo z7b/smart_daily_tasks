@@ -212,6 +212,13 @@ const Map<String, String> ruRU = {
       'Ваш следующий визит к д-ру @doctor — @countdown',
   'assistant_medications_summary': 'У вас @count активных лекарств',
   'assistant_next_medication': 'Следующий: @name в @time (@countdown)',
+
+  // Salary Notifications
+  'salary_notify_title': 'День зарплаты! 💰',
+  'salary_notify_body': 'Сегодня ваш день зарплаты! Время праздновать.',
+  'salary_notify_title_early': 'Скоро зарплата',
+  'salary_notify_body_early': 'Осталось всего @days дней до вашей зарплаты! ⏳',
+
   'assistant_overview': '📋 Ваш дневной обзор:',
   'assistant_nothing_scheduled':
       'Ничего не запланировано! Ваш день свободен. ✨',
@@ -513,4 +520,24 @@ const Map<String, String> ruRU = {
   'time_to_move': 'Время двигаться!',
   'notification_permissions_missing': 'Пожалуйста, предоставьте все разрешения для уведомлений',
   'data_imported_successfully': 'Данные успешно импортированы.',
+
+  // ─── Premium & Subscription ──────────────────
+  'premium_subtitle': 'Безграничный опыт',
+  'premium_feature_1_title': 'Удалить всю рекламу',
+  'premium_feature_1_desc': 'Наслаждайтесь чистым опытом без перерывов',
+  'premium_feature_2_title': 'Эксклюзивные функции',
+  'premium_feature_2_desc': 'Ранний доступ ко всем новым функциям',
+  'premium_feature_3_title': 'Расширенные темы',
+  'premium_feature_3_desc': 'Эксклюзивные дополнительные цвета и дизайны',
+  'premium_feature_4_title': 'Облачное резервное копирование',
+  'premium_feature_4_desc': 'Автоматическая защита ваших данных',
+  'premium_yearly': 'Ежегодно',
+  'premium_monthly': 'Ежемесячно',
+  'premium_save_29': 'Скидка 29%',
+  'premium_month_short': '/месяц',
+  'premium_subscribe_now': 'Подписаться сейчас',
+  'premium_restore': 'Восстановить покупку',
+  'premium_not_available_title': 'Недоступно',
+  'premium_not_available_desc': 'Планы подписки не загружены. Проверьте подключение к Интернету.',
+  'premium_terms': 'Продлевается автоматически. Отмените в любое время в настройках.',
 };

@@ -212,6 +212,13 @@ const Map<String, String> esES = {
       'Tu próxima cita es con Dr. @doctor — @countdown',
   'assistant_medications_summary': 'Tienes @count medicamentos activos',
   'assistant_next_medication': 'Siguiente: @name a las @time (@countdown)',
+
+  // Salary Notifications
+  'salary_notify_title': '¡Día de pago! 💰',
+  'salary_notify_body': '¡Hoy es tu día de pago! Es hora de celebrar.',
+  'salary_notify_title_early': 'Salario próximo',
+  'salary_notify_body_early': '¡Solo faltan @days días para tu salario! ⏳',
+
   'assistant_overview': '📋 Tu resumen diario:',
   'assistant_nothing_scheduled': '¡Nada programado! Tu día está libre. ✨',
   'assistant_create_task_prompt':
@@ -499,4 +506,24 @@ const Map<String, String> esES = {
   'time_to_move': '¡Hora de moverse!',
   'notification_permissions_missing': 'Por favor, concede todos los permisos de notificaciones',
   'data_imported_successfully': 'Datos importados correctamente.',
+
+  // ─── Premium & Subscription ──────────────────
+  'premium_subtitle': 'Experiencia sin límites',
+  'premium_feature_1_title': 'Eliminar todos los anuncios',
+  'premium_feature_1_desc': 'Disfruta de una experiencia limpia sin interrupciones',
+  'premium_feature_2_title': 'Funciones exclusivas',
+  'premium_feature_2_desc': 'Acceso anticipado a todas las funciones nuevas',
+  'premium_feature_3_title': 'Temas avanzados',
+  'premium_feature_3_desc': 'Colores y diseños adicionales exclusivos',
+  'premium_feature_4_title': 'Copia de seguridad en la nube',
+  'premium_feature_4_desc': 'Protección automática para tus datos',
+  'premium_yearly': 'Anual',
+  'premium_monthly': 'Mensual',
+  'premium_save_29': 'Ahorra 29%',
+  'premium_month_short': '/mes',
+  'premium_subscribe_now': 'Suscríbete ahora',
+  'premium_restore': 'Restaurar compra',
+  'premium_not_available_title': 'No disponible',
+  'premium_not_available_desc': 'No se pudieron cargar los planes. Comprueba tu conexión a Internet.',
+  'premium_terms': 'Se renueva automáticamente. Cancela en cualquier momento en la configuración.',
 };

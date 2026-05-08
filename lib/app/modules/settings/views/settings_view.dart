@@ -5,6 +5,8 @@ import 'dart:ui';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/subscription_service.dart';
+import '../../subscription/views/premium_view.dart';
 import '../controllers/settings_controller.dart';
 
 class SettingsView extends GetView<SettingsController> {
@@ -87,15 +89,7 @@ class SettingsView extends GetView<SettingsController> {
               isAr: isAr,
             ),
             _divider(context),
-            _buildNavigationTile(
-              context,
-              title: 'start_screen'.tr,
-              icon: CupertinoIcons.house_fill,
-              iconBgColor: const Color(0xFFFF2D55),
-              valueBuilder: () => controller.startScreen.value.tr,
-              onTap: () => controller.changeStartScreen(),
-              isAr: isAr,
-            ),
+            _buildStartScreenTile(context, isAr),
           ],
         ),
         const SizedBox(height: 24),
@@ -116,15 +110,7 @@ class SettingsView extends GetView<SettingsController> {
               onTap: () => controller.toggleAppLock(),
             ),
             _divider(context),
-            _buildSwitchTile(
-              context,
-              title: 'prevent_screenshots'.tr,
-              icon: CupertinoIcons.eye_slash_fill,
-              iconBgColor: const Color(0xFF8E8E93),
-              value: controller.preventScreenshots,
-              onChanged: (val) => controller.togglePreventScreenshots(val),
-              onTap: () => controller.togglePreventScreenshots(),
-            ),
+            _buildScreenshotTile(context),
             _divider(context),
             Obx(() {
               final isStable = controller.notificationStatus.value == 'amazing';
@@ -399,5 +385,166 @@ class SettingsView extends GetView<SettingsController> {
         ),
       ),
     );
+  }
+
+  /// Subscription-gated prevent-screenshots tile
+  Widget _buildScreenshotTile(BuildContext context) {
+    final sub = Get.find<SubscriptionService>();
+    final theme = Theme.of(context);
+
+    return Obx(() {
+      final isPro = sub.isPremium.value;
+
+      return ListTile(
+        onTap: () {
+          if (isPro) {
+            controller.togglePreventScreenshots();
+          } else {
+            HapticFeedback.lightImpact();
+            Get.to(() => const PremiumView());
+          }
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isPro ? const Color(0xFF8E8E93) : const Color(0xFF8E8E93).withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(CupertinoIcons.eye_slash_fill, color: Colors.white.withValues(alpha: isPro ? 1.0 : 0.7), size: 18),
+        ),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                'prevent_screenshots'.tr,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: isPro
+                      ? theme.textTheme.bodyLarge?.color
+                      : theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.45),
+                ),
+              ),
+            ),
+            if (!isPro) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PRO',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        trailing: isPro
+            ? CupertinoSwitch(
+                value: controller.preventScreenshots.value,
+                activeTrackColor: AppTheme.primary,
+                onChanged: (val) => controller.togglePreventScreenshots(val),
+              )
+            : Icon(
+                CupertinoIcons.chevron_right,
+                size: 16,
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
+              ),
+      );
+    });
+  }
+
+  /// Subscription-gated start-screen tile
+  Widget _buildStartScreenTile(BuildContext context, bool isAr) {
+    final sub = Get.find<SubscriptionService>();
+    final theme = Theme.of(context);
+
+    return Obx(() {
+      final isPro = sub.isPremium.value;
+
+      return ListTile(
+        onTap: () {
+          if (isPro) {
+            controller.changeStartScreen();
+          } else {
+            HapticFeedback.lightImpact();
+            Get.to(() => const PremiumView());
+          }
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isPro ? const Color(0xFFFF2D55) : const Color(0xFFFF2D55).withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(CupertinoIcons.house_fill, color: Colors.white.withValues(alpha: isPro ? 1.0 : 0.7), size: 18),
+        ),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                'start_screen'.tr,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: isPro
+                      ? theme.textTheme.bodyLarge?.color
+                      : theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.45),
+                ),
+              ),
+            ),
+            if (!isPro) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PRO',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isPro)
+              Obx(() => Text(
+                controller.startScreen.value.tr,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.textTheme.bodyMedium?.color?.withAlpha(150),
+                ),
+              )),
+            const SizedBox(width: 4),
+            Icon(
+              isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+              size: 16,
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: isPro ? 0.5 : 0.3),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

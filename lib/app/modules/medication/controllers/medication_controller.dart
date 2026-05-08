@@ -166,6 +166,9 @@ class MedicationController extends GetxController {
           title: '${'my_medications'.tr}: ${med.name}',
           body: '${med.dosage ?? ""} - ${med.instruction.name.tr}',
           scheduledTime: scheduledDate,
+          isAlarm: true,
+          channelId: 'system_alarms_channel',
+          channelName: 'System Alarms',
         );
         
         talker.info('⏰ Scheduled: ${med.name} at ${scheduledDate.toString()}');

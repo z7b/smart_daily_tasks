@@ -21,6 +21,7 @@ class NotificationService extends GetxService {
   static const int calendarOffset = 400000000;
   static const int stepsOffset = 500000000;
   static const int appointmentOffset = 600000000;
+  static const int salaryOffset = 700000000;
 
   /// ✅ Phase 4: Deterministic ID Strategy
   /// Ensures notifications are consistent across app installs/restores.
@@ -77,6 +78,8 @@ class NotificationService extends GetxService {
         'Work Shifts',
         description: 'Reminders for your work shift start times',
         importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
       );
 
       await flutterLocalNotificationsPlugin
@@ -98,6 +101,38 @@ class NotificationService extends GetxService {
             AndroidFlutterLocalNotificationsPlugin
           >()
           ?.createNotificationChannel(stepsChannel);
+
+      // Create channel for System Alarms (Appointments, Tasks, Meds)
+      const AndroidNotificationChannel systemAlarmsChannel = AndroidNotificationChannel(
+        'system_alarms_channel',
+        'System Alarms',
+        description: 'High priority continuous alarms',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+      );
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(systemAlarmsChannel);
+
+      // Create channel for Reminders
+      const AndroidNotificationChannel remindersChannel = AndroidNotificationChannel(
+        'reminders_channel',
+        'Reminders',
+        description: 'General reminders for appointments and tasks',
+        importance: Importance.high,
+        playSound: true,
+      );
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(remindersChannel);
           
       // ✅ Defer permissions explicitly to prevent racing with Health Service during boot
       Future.delayed(const Duration(seconds: 12), () async {
@@ -197,6 +232,7 @@ class NotificationService extends GetxService {
     Importance? importance,
     Priority? priority,
     bool playSound = true,
+    bool isAlarm = false,
   }) async {
     // Safety check for initialization
     if (!isInitialized.value) {
@@ -242,6 +278,8 @@ class NotificationService extends GetxService {
             playSound: playSound,
             showWhen: true,
             subText: 'Life OS',
+            fullScreenIntent: isAlarm,
+            additionalFlags: isAlarm ? Int32List.fromList(<int>[4]) : null,
             largeIcon: largeIcon != null ? DrawableResourceAndroidBitmap(largeIcon) : null,
             styleInformation: bigText != null
                 ? BigTextStyleInformation(
@@ -360,18 +398,25 @@ class NotificationService extends GetxService {
     required int dayOfWeek, // 1-7 (Mon-Sun)
     required int hour,
     required int minute,
+    bool isAlarm = false,
   }) async {
     if (!isInitialized.value) await _waitForInit();
 
-    final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    // 🛡️ Use local DateTime for correct timezone handling
+    // (tz.local defaults to UTC if setLocalLocation was never called)
+    final now = DateTime.now();
+    DateTime scheduledLocal = DateTime(now.year, now.month, now.day, hour, minute);
     
-    int daysToAdd = (dayOfWeek - scheduledDate.weekday + 7) % 7;
-    scheduledDate = scheduledDate.add(Duration(days: daysToAdd));
+    // Calculate days until target weekday (DateTime.weekday is 1-7 ISO same as dayOfWeek)
+    int daysToAdd = (dayOfWeek - scheduledLocal.weekday + 7) % 7;
+    scheduledLocal = scheduledLocal.add(Duration(days: daysToAdd));
     
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    if (scheduledLocal.isBefore(now)) {
+      scheduledLocal = scheduledLocal.add(const Duration(days: 7));
     }
+
+    // Convert local DateTime → TZDateTime (preserving correct epoch time)
+    final tz.TZDateTime scheduledDate = tz.TZDateTime.from(scheduledLocal.toUtc(), tz.local);
 
     // Check for exact alarm permission on Android 12+
     bool canScheduleExact = true;
@@ -385,13 +430,16 @@ class NotificationService extends GetxService {
         title,
         body,
         scheduledDate,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'work_shifts_channel',
-            'Work Shifts',
-            channelDescription: 'Shift start reminders',
+            isAlarm ? 'system_alarms_channel' : 'work_shifts_channel',
+            isAlarm ? 'System Alarms' : 'Work Shifts',
+            channelDescription: isAlarm ? 'High priority continuous alarms' : 'Shift start reminders',
             importance: Importance.max,
-            priority: Priority.high,
+            priority: Priority.max,
+            playSound: true,
+            fullScreenIntent: isAlarm,
+            additionalFlags: isAlarm ? Int32List.fromList(<int>[4]) : null,
           ),
         ),
         androidScheduleMode: canScheduleExact 
@@ -401,7 +449,7 @@ class NotificationService extends GetxService {
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, 
       );
-      talker.info('📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute');
+      talker.info('📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute (local: $scheduledLocal)');
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Weekly notification scheduling failed');
     }
@@ -665,11 +713,12 @@ class NotificationService extends GetxService {
         htmlFormatBigText: true,
         scheduledTime: time,
         // High priority if it's the exact time alarm
-        channelId: isAlarm ? 'appointment_alarm_channel' : 'reminders_channel',
-        channelName: isAlarm ? 'Appointment Alarms' : 'Reminders',
+        channelId: isAlarm ? 'system_alarms_channel' : 'reminders_channel',
+        channelName: isAlarm ? 'System Alarms' : 'Reminders',
         importance: isAlarm ? Importance.max : Importance.high,
         priority: isAlarm ? Priority.max : Priority.high,
         playSound: true,
+        isAlarm: isAlarm,
       );
     }
 
