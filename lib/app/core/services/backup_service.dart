@@ -19,6 +19,7 @@ import '../../data/models/medication_model.dart';
 import '../../data/models/step_log_model.dart';
 import '../../data/models/work_profile_model.dart';
 import '../../data/models/attendance_log_model.dart';
+import '../../data/models/appointment_model.dart';
 
 
 class BackupService {
@@ -36,6 +37,7 @@ class BackupService {
     final stepLogs = await _isar.stepLogs.where().findAll();
     final workProfiles = await _isar.workProfiles.where().findAll();
     final attendanceLogs = await _isar.attendanceLogs.where().findAll();
+    final appointments = await _isar.appointments.where().findAll();
 
     final Map<String, dynamic> backupData = {
       'version': 2,
@@ -50,6 +52,20 @@ class BackupService {
       'stepLogs': stepLogs.map((e) => e.toJson()).toList(),
       'workProfiles': workProfiles.map((e) => e.toJson()).toList(),
       'attendanceLogs': attendanceLogs.map((e) => e.toJson()).toList(),
+      'appointments': appointments.map((e) => {
+        'id': e.id,
+        'patientName': e.patientName,
+        'doctorName': e.doctorName,
+        'clinicName': e.clinicName,
+        'clinicLocation': e.clinicLocation,
+        'note': e.note,
+        'scheduledAt': e.scheduledAt.toIso8601String(),
+        'status': e.status.index,
+        'remindersEnabled': e.remindersEnabled,
+        'alarmEnabled': e.alarmEnabled,
+        'reminderOffsets': e.reminderOffsets,
+        'color': e.color,
+      }).toList(),
     };
 
     return jsonEncode(backupData);
@@ -96,12 +112,13 @@ class BackupService {
     final List<StepLog> stepLogsToRestore = [];
     final List<WorkProfile> workProfilesToRestore = [];
     final List<AttendanceLog> attendanceLogsToRestore = [];
+    final List<Appointment> appointmentsToRestore = [];
 
     // Process Tasks
     if (backupData['tasks'] != null && backupData['tasks'] is List) {
       for (var e in (backupData['tasks'] as List)) {
         if (e is Map<String, dynamic>) {
-          tasksToRestore.add(Task.fromJson(e)..id = Isar.autoIncrement);
+          tasksToRestore.add(Task.fromJson(e));
         }
       }
     }
@@ -110,7 +127,7 @@ class BackupService {
     if (backupData['notes'] != null && backupData['notes'] is List) {
       for (var e in (backupData['notes'] as List)) {
         if (e is Map<String, dynamic>) {
-          notesToRestore.add(Note.fromJson(e)..id = Isar.autoIncrement);
+          notesToRestore.add(Note.fromJson(e));
         }
       }
     }
@@ -119,7 +136,7 @@ class BackupService {
     if (backupData['journal'] != null && backupData['journal'] is List) {
       for (var e in (backupData['journal'] as List)) {
         if (e is Map<String, dynamic>) {
-          journalsToRestore.add(Journal.fromJson(e)..id = Isar.autoIncrement);
+          journalsToRestore.add(Journal.fromJson(e));
         }
       }
     }
@@ -128,7 +145,7 @@ class BackupService {
     if (backupData['bookmarks'] != null && backupData['bookmarks'] is List) {
       for (var e in (backupData['bookmarks'] as List)) {
         if (e is Map<String, dynamic>) {
-          bookmarksToRestore.add(Bookmark.fromJson(e)..id = Isar.autoIncrement);
+          bookmarksToRestore.add(Bookmark.fromJson(e));
         }
       }
     }
@@ -137,7 +154,20 @@ class BackupService {
     if (backupData['events'] != null && backupData['events'] is List) {
       for (var e in (backupData['events'] as List)) {
         if (e is Map<String, dynamic>) {
-          eventsToRestore.add(CalendarEvent.fromJson(e)..id = Isar.autoIncrement);
+          final event = CalendarEvent.fromJson(e);
+          if (e['id'] != null) event.id = e['id'];
+          
+          if (e['linkedTaskId'] != null) {
+            final taskId = e['linkedTaskId'] as int;
+            final task = tasksToRestore.firstWhereOrNull((t) => t.id == taskId);
+            if (task != null) {
+              event.linkedTask.value = task;
+            } else {
+               final dbTask = await _isar.tasks.get(taskId);
+               if (dbTask != null) event.linkedTask.value = dbTask;
+            }
+          }
+          eventsToRestore.add(event);
         }
       }
     }
@@ -146,7 +176,9 @@ class BackupService {
     if (backupData['books'] != null && backupData['books'] is List) {
       for (var e in (backupData['books'] as List)) {
         if (e is Map<String, dynamic>) {
-          booksToRestore.add(Book.fromJson(e)..id = Isar.autoIncrement);
+          final book = Book.fromJson(e);
+          if (e['id'] != null) book.id = e['id'];
+          booksToRestore.add(book);
         }
       }
     }
@@ -155,7 +187,9 @@ class BackupService {
     if (backupData['medications'] != null && backupData['medications'] is List) {
       for (var e in (backupData['medications'] as List)) {
         if (e is Map<String, dynamic>) {
-          medicationsToRestore.add(Medication.fromJson(e)..id = Isar.autoIncrement);
+          final med = Medication.fromJson(e);
+          if (e['id'] != null) med.id = e['id'];
+          medicationsToRestore.add(med);
         }
       }
     }
@@ -164,7 +198,9 @@ class BackupService {
     if (backupData['stepLogs'] != null && backupData['stepLogs'] is List) {
       for (var e in (backupData['stepLogs'] as List)) {
         if (e is Map<String, dynamic>) {
-          stepLogsToRestore.add(StepLog.fromJson(e)..id = Isar.autoIncrement);
+          final step = StepLog.fromJson(e);
+          if (e['id'] != null) step.id = e['id'];
+          stepLogsToRestore.add(step);
         }
       }
     }
@@ -182,7 +218,32 @@ class BackupService {
     if (backupData['attendanceLogs'] != null && backupData['attendanceLogs'] is List) {
       for (var e in (backupData['attendanceLogs'] as List)) {
         if (e is Map<String, dynamic>) {
-          attendanceLogsToRestore.add(AttendanceLog.fromJson(e)..id = Isar.autoIncrement);
+          final log = AttendanceLog.fromJson(e);
+          if (e['id'] != null) log.id = e['id'];
+          attendanceLogsToRestore.add(log);
+        }
+      }
+    }
+
+    // Process Appointments
+    if (backupData['appointments'] != null && backupData['appointments'] is List) {
+      for (var e in (backupData['appointments'] as List)) {
+        if (e is Map<String, dynamic>) {
+          final appt = Appointment(
+            patientName: e['patientName'] ?? '',
+            doctorName: e['doctorName'] ?? '',
+            clinicName: e['clinicName'],
+            clinicLocation: e['clinicLocation'],
+            note: e['note'],
+            scheduledAt: e['scheduledAt'] != null ? DateTime.parse(e['scheduledAt']) : DateTime.now(),
+            status: AppointmentStatus.values[(e['status'] ?? 0).clamp(0, 2)],
+            remindersEnabled: e['remindersEnabled'] ?? true,
+            alarmEnabled: e['alarmEnabled'] ?? false,
+            reminderOffsets: (e['reminderOffsets'] as List?)?.cast<int>() ?? [60],
+            color: e['color'],
+          );
+          if (e['id'] != null) appt.id = e['id'];
+          appointmentsToRestore.add(appt);
         }
       }
     }
@@ -199,6 +260,13 @@ class BackupService {
       if (stepLogsToRestore.isNotEmpty) await _isar.stepLogs.putAll(stepLogsToRestore);
       if (workProfilesToRestore.isNotEmpty) await _isar.workProfiles.putAll(workProfilesToRestore);
       if (attendanceLogsToRestore.isNotEmpty) await _isar.attendanceLogs.putAll(attendanceLogsToRestore);
+      if (appointmentsToRestore.isNotEmpty) await _isar.appointments.putAll(appointmentsToRestore);
+
+      // Re-link Calendar Events to Tasks
+      for (var event in eventsToRestore) {
+        if (event.linkedTask.value == null) continue;
+        await event.linkedTask.save();
+      }
     });
   }
 }

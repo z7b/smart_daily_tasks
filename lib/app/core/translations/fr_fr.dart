@@ -205,6 +205,12 @@ const Map<String, String> frFR = {
   'assistant_next_appointment': 'Votre prochain rendez-vous est avec Dr. @doctor — @countdown',
   'assistant_medications_summary': 'Vous avez @count médicaments actifs',
   'assistant_next_medication': 'Prochain : @name à @time (@countdown)',
+
+  // Salary Notifications
+  'salary_notify_title': 'Jour de paie ! 💰',
+  'salary_notify_body': 'Aujourd\'hui est votre jour de paie ! C\'est l\'heure de célébrer.',
+  'salary_notify_title_early': 'Salaire à venir',
+  'salary_notify_body_early': 'Plus que @days jours avant votre salaire ! ⏳',
   'assistant_overview': '📋 Votre aperçu quotidien :',
   'assistant_nothing_scheduled': 'Rien de prévu ! Votre journée est libre. ✨',
   'assistant_create_task_prompt': 'Bien sûr ! Quel nom souhaitez-vous donner à la tâche ?',
@@ -796,4 +802,6 @@ const Map<String, String> frFR = {
   'small_step_now': 'Un petit pas maintenant',
   'time_to_move': 'Il est temps de bouger !',
   'notification_permissions_missing': 'Veuillez accorder toutes les autorisations de notifications',
+  'reorder_cards': 'Réorganiser',
+  'save_order': 'Sauvegarder',
 };

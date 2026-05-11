@@ -93,6 +93,11 @@ class JobController extends GetxController {
 
       _calculateSalaryCountdown();
       await _loadAnalytics();
+
+      // ✅ Re-schedule shift reminders on app start to survive OEM task killers
+      if (profile.value.remindersEnabled) {
+        await _scheduleShiftReminders(profile.value);
+      }
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 JobController Refresh Error');
     } finally {
@@ -142,7 +147,7 @@ class JobController extends GetxController {
     final updated = profile.value.copyWith(employmentStatus: EmploymentStatus.unemployed);
     await _repository.updateWorkProfile(updated);
     profile.value = updated;
-    _cancelShiftReminders();
+    await _cancelShiftReminders();
     _resetAllMetrics();
     talker.info('⚠️ Employment status → Unemployed');
   }
@@ -200,6 +205,53 @@ class JobController extends GetxController {
     salaryProgress.value = totalDays > 0
         ? (elapsedDays / totalDays).clamp(0.0, 1.0)
         : 0.0;
+
+    _scheduleSalaryNotifications(nextSalary, daysUntilSalary.value);
+  }
+
+  Future<void> _scheduleSalaryNotifications(DateTime nextSalary, int daysUntil) async {
+    final service = Get.find<NotificationService>();
+    final now = DateTime.now();
+
+    // Clear old salary notifications
+    for (int i = 0; i <= 3; i++) {
+      await service.cancelNotification(NotificationService.salaryOffset + i);
+    }
+
+    // Determine notification time (e.g., 09:00 AM)
+    final salaryDayTime = DateTime(nextSalary.year, nextSalary.month, nextSalary.day, 9, 0);
+
+    // Schedule for exactly the salary day
+    if (salaryDayTime.isAfter(now)) {
+      await service.scheduleNotification(
+        id: NotificationService.salaryOffset + 0,
+        title: 'salary_notify_title'.tr,
+        body: 'salary_notify_body'.tr,
+        scheduledTime: salaryDayTime,
+      );
+    }
+
+    // Schedule for 1 day before
+    final oneDayBefore = salaryDayTime.subtract(const Duration(days: 1));
+    if (oneDayBefore.isAfter(now)) {
+      await service.scheduleNotification(
+        id: NotificationService.salaryOffset + 1,
+        title: 'salary_notify_title_early'.tr,
+        body: 'salary_notify_body_early'.trParams({'days': '1'}),
+        scheduledTime: oneDayBefore,
+      );
+    }
+
+    // Schedule for 3 days before
+    final threeDaysBefore = salaryDayTime.subtract(const Duration(days: 3));
+    if (threeDaysBefore.isAfter(now)) {
+      await service.scheduleNotification(
+        id: NotificationService.salaryOffset + 3,
+        title: 'salary_notify_title_early'.tr,
+        body: 'salary_notify_body_early'.trParams({'days': '3'}),
+        scheduledTime: threeDaysBefore,
+      );
+    }
   }
 
   Future<void> _loadAnalytics() async {
@@ -573,7 +625,7 @@ class JobController extends GetxController {
       if (updated.remindersEnabled) {
         await _scheduleShiftReminders(updated);
       } else {
-        _cancelShiftReminders();
+        await _cancelShiftReminders();
       }
       talker.info('⚙️ Job Profile updated successfully');
     } catch (e, stack) {
@@ -698,7 +750,7 @@ class JobController extends GetxController {
   }
 
   Future<void> _scheduleShiftReminders(WorkProfile p) async {
-    _cancelShiftReminders(); // Clear old ones first
+    await _cancelShiftReminders(); // Clear old ones first
 
     final service = Get.find<NotificationService>();
 
@@ -707,31 +759,71 @@ class JobController extends GetxController {
       // ✅ Read distinct start minutes for this specific day using custom schedules logic
       final startMinGlobal = getStartMinutesForDay(day);
 
-      // ✅ Suggestion: Notify 15 minutes before the shift begins
-      final notifyMinutes = startMinGlobal - 15;
-      final scheduleMin = notifyMinutes < 0 ? 0 : notifyMinutes;
+      // 1. 🔔 Early Notification (-15 mins) - Normal Notification
+      int notifyDay = day;
+      int notifyMinutes = startMinGlobal - 15;
+      if (notifyMinutes < 0) {
+        notifyMinutes = (24 * 60) + notifyMinutes;
+        notifyDay = (day - 1) < 0 ? 6 : (day - 1);
+      }
 
-      final startHour = scheduleMin ~/ 60;
-      final startMin = scheduleMin % 60;
+      final startHour = notifyMinutes ~/ 60;
+      final startMin = notifyMinutes % 60;
 
-      // Logic: id = SHIFT_OFFSET + day
       await service.scheduleWeeklyNotification(
         id: NotificationService.shiftOffset + day,
         title: 'job_reminder_title'.tr, // "Work Duty"
         body: 'job_reminder_msg'.trParams({
           'time': formatMinutes(startMinGlobal),
         }), // Tells actual shift time
-        dayOfWeek: day == 0 ? 7 : day,
+        dayOfWeek: notifyDay == 0 ? 7 : notifyDay,
         hour: startHour,
         minute: startMin,
+        isAlarm: false, // Normal
+      );
+
+      // 2. 🚨 Exact Start Time - Continuous Alarm
+      final exactHour = startMinGlobal ~/ 60;
+      final exactMin = startMinGlobal % 60;
+
+      await service.scheduleWeeklyNotification(
+        id: NotificationService.shiftOffset + 10 + day,
+        title: '${'job_reminder_title'.tr} 🚨',
+        body: 'حان الآن وقت بداية الدوام!',
+        dayOfWeek: day == 0 ? 7 : day,
+        hour: exactHour,
+        minute: exactMin,
+        isAlarm: true, // Continuous ringing
+      );
+
+      // 3. 🚨 Exact End Time - Continuous Alarm
+      final endMinGlobal = getEndMinutesForDay(day);
+      int endDay = day;
+      if (endMinGlobal < startMinGlobal) {
+        endDay = (day + 1) % 7; // Night shift wraps to next day
+      }
+      
+      final endHour = endMinGlobal ~/ 60;
+      final endMin = endMinGlobal % 60;
+
+      await service.scheduleWeeklyNotification(
+        id: NotificationService.shiftOffset + 20 + day,
+        title: 'انتهاء الدوام 🚨',
+        body: 'حان الآن وقت نهاية الدوام!',
+        dayOfWeek: endDay == 0 ? 7 : endDay,
+        hour: endHour,
+        minute: endMin,
+        isAlarm: true, // Continuous ringing
       );
     }
   }
 
-  void _cancelShiftReminders() {
+  Future<void> _cancelShiftReminders() async {
     final service = Get.find<NotificationService>();
     for (int i = 0; i <= 7; i++) {
-      service.cancelNotification(NotificationService.shiftOffset + i);
+      await service.cancelNotification(NotificationService.shiftOffset + i);
+      await service.cancelNotification(NotificationService.shiftOffset + 10 + i);
+      await service.cancelNotification(NotificationService.shiftOffset + 20 + i);
     }
   }
 

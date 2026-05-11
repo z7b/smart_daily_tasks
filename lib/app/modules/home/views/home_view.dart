@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'dart:ui';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
@@ -15,6 +16,8 @@ import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
+import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -74,121 +77,151 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
+        // Glassmorphism Toggle Button
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildMoodSection(context),
-          ),
+          child: _buildReorderToggle(context),
         ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildSalaryHomeCard(context),
-          ),
-        ),
+        // Reorderable Cards
+        Obx(() {
+          // ── only rebuild the sliver when the *list itself* changes ──
+          final order = controller.cardOrder.toList();
+          return SliverReorderableList(
+            itemCount: order.length,
+            onReorder: controller.reorderCards,
+            itemBuilder: (context, index) {
+              final key = order[index];
+              final child = _buildCardByKey(key, context);
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildNextShiftHomeCard(context),
-          ),
-        ),
+              // ── Each item reacts to reorder-mode independently ──
+              return Obx(key: ValueKey(key), () {
+                final active = controller.isReorderMode.value;
+                return ReorderableDragStartListener(
+                  index: index,
+                  enabled: active,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: EdgeInsets.only(
+                      left: active ? 8 : 0,
+                      right: active ? 8 : 0,
+                      top: active ? 4 : 0,
+                      bottom: active ? 4 : 0,
+                    ),
+                    decoration: active
+                        ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                              )
+                            ],
+                          )
+                        : const BoxDecoration(),
+                    child: child,
+                  ),
+                );
+              });
+            },
+          );
+        }),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildActivityHomeCard(context),
-          ),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+      ],
+    );
+  }
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildMedicationHomeCard(context),
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildTaskHomeCard(context),
-          ),
-        ),
-        
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildAppointmentHomeCard(context),
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildReadingCard(context),
-          ),
-        ),
-
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          sliver: SliverToBoxAdapter(
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio:
-                  1.2, // ✅ Phase 4: More defensive ratio for large fonts
-              children: [
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'notes'.tr,
-                    '${controller.noteCount.value.f} ${'entries'.tr}',
-                    Icons.edit_note,
-                    const Color(0xFFFF9500),
-                    Routes.NOTES,
+  Widget _buildReorderToggle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Obx(() {
+      final isReorder = controller.isReorderMode.value;
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
+          child: GestureDetector(
+            onTap: controller.toggleReorderMode,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isReorder 
+                        ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
+                        : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isReorder 
+                          ? Theme.of(context).primaryColor.withValues(alpha: 0.4)
+                          : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isReorder ? Icons.check_circle_outline : Icons.swap_vert_rounded,
+                        size: 16,
+                        color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isReorder ? 'save_order'.tr : 'reorder_cards'.tr,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'journal'.tr,
-                    '${controller.journalCount.value.f} ${'logs'.tr}',
-                    Icons.book,
-                    const Color(0xFF34C759),
-                    Routes.JOURNAL,
-                  ),
-                ),
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'bookmarks'.tr,
-                    '${controller.bookmarkCount.value.f} ${'saved'.tr}',
-                    Icons.bookmark,
-                    const Color(0xFFFF3B30),
-                    Routes.BOOKMARKS,
-                  ),
-                ),
-
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'calendar'.tr,
-                    '${controller.calendarEventCount.value.f} ${'events'.tr}',
-                    Icons.calendar_month,
-                    const Color(0xFFBF5AF2),
-                    Routes.CALENDAR,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
+      );
+    });
+  }
 
-        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+  Widget _buildCardByKey(String key, BuildContext context) {
+    Widget child;
+    switch (key) {
+      case 'mood': child = _buildMoodSection(context); break;
+      case 'salary': child = _buildSalaryHomeCard(context); break;
+      case 'next_shift': child = _buildNextShiftHomeCard(context); break;
+      case 'activity': child = _buildActivityHomeCard(context); break;
+      case 'medication': child = _buildMedicationHomeCard(context); break;
+      case 'task': child = _buildTaskHomeCard(context); break;
+      case 'appointment': child = _buildAppointmentHomeCard(context); break;
+      case 'reading': child = _buildReadingCard(context); break;
+      case 'bento': child = _buildBentoGrid(context); break;
+      default: child = const SizedBox.shrink();
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: child,
+    );
+  }
+
+  Widget _buildBentoGrid(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.2,
+      children: [
+        Obx(() => _buildBentoItem(context, 'notes'.tr, '${controller.noteCount.value.f} ${'entries'.tr}', Icons.edit_note, const Color(0xFFFF9500), Routes.NOTES)),
+        Obx(() => _buildBentoItem(context, 'journal'.tr, '${controller.journalCount.value.f} ${'logs'.tr}', Icons.book, const Color(0xFF34C759), Routes.JOURNAL)),
+        Obx(() => _buildBentoItem(context, 'bookmarks'.tr, '${controller.bookmarkCount.value.f} ${'saved'.tr}', Icons.bookmark, const Color(0xFFFF3B30), Routes.BOOKMARKS)),
+        Obx(() => _buildBentoItem(context, 'calendar'.tr, '${controller.calendarEventCount.value.f} ${'events'.tr}', Icons.calendar_month, const Color(0xFFBF5AF2), Routes.CALENDAR)),
       ],
     );
   }
@@ -240,6 +273,14 @@ class HomeView extends GetView<HomeController> {
                 ],
               ),
             ),
+            // ✨ Premium Ad-Free badge (between texts and assistant icon)
+            Obx(() {
+              final sub = Get.find<SubscriptionService>();
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: _AdFreeBadge(isPremium: sub.isPremium.value),
+              );
+            }),
             IconButton(
               onPressed: () => Get.toNamed('/assistant'),
               icon: const Icon(
@@ -1076,6 +1117,8 @@ class HomeView extends GetView<HomeController> {
 
     return Obx(() {
       try {
+        // Force rebuild every minute for live time countdown
+        controller.minuteTick.value;
         if (!jobCtrl.isEmployed) {
           return GestureDetector(
             onTap: () => Get.toNamed(Routes.JOB),
@@ -1345,8 +1388,9 @@ class HomeView extends GetView<HomeController> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const medColor = Colors.redAccent;
 
-    return Obx(
-      () => GestureDetector(
+    return Obx(() {
+      controller.minuteTick.value;
+      return GestureDetector(
         onTap: () => Get.toNamed('/medication'),
         child: Container(
           padding: const EdgeInsets.all(24),
@@ -1509,16 +1553,17 @@ class HomeView extends GetView<HomeController> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildTaskHomeCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const accentColor = Color(0xFF007AFF);
 
-    return Obx(
-      () => GestureDetector(
+    return Obx(() {
+      controller.minuteTick.value;
+      return GestureDetector(
         onTap: () => Get.toNamed(Routes.TASKS),
         child: Container(
           padding: const EdgeInsets.all(24),
@@ -1693,8 +1738,8 @@ class HomeView extends GetView<HomeController> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildWelcomeCard(BuildContext context) {
@@ -1895,6 +1940,7 @@ class HomeView extends GetView<HomeController> {
     const accentColor = Color(0xFF007AFF);
 
     return Obx(() {
+      controller.minuteTick.value; // Force live time update
       final appt = controller.nextAppointment.value;
 
       // ✅ Empty state: show "add appointment" prompt
@@ -1902,12 +1948,12 @@ class HomeView extends GetView<HomeController> {
         return GestureDetector(
           onTap: () => Get.toNamed(Routes.APPOINTMENTS),
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.03)
-                  : accentColor.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(32),
+                  : accentColor.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.08)
@@ -1918,15 +1964,15 @@ class HomeView extends GetView<HomeController> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: accentColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(CupertinoIcons.doc_person_fill,
-                      color: accentColor, size: 18),
+                  child: const Icon(CupertinoIcons.calendar_badge_plus,
+                      color: accentColor, size: 24),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1934,8 +1980,9 @@ class HomeView extends GetView<HomeController> {
                       Text(
                         'doctor_appointments'.tr,
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           fontSize: 16,
+                          letterSpacing: -0.5,
                           color: theme.textTheme.titleLarge?.color,
                         ),
                       ),
@@ -1944,9 +1991,9 @@ class HomeView extends GetView<HomeController> {
                         'no_appointments'.tr,
                         style: TextStyle(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.3)
-                              : Colors.black.withValues(alpha: 0.3),
-                          fontWeight: FontWeight.w500,
+                              ? Colors.white.withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.4),
+                          fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
@@ -1954,12 +2001,19 @@ class HomeView extends GetView<HomeController> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: accentColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Icon(CupertinoIcons.add, color: accentColor, size: 16),
+                  child: const Icon(CupertinoIcons.add, color: Colors.white, size: 18),
                 ),
               ],
             ),
@@ -1968,193 +2022,349 @@ class HomeView extends GetView<HomeController> {
       }
 
       // ✅ Active appointment card (Premium Medical Design)
-      final medicalBlue = const Color(0xFF4A90E2);
-      
       return GestureDetector(
         onTap: () => Get.toNamed(Routes.APPOINTMENTS),
-        child: Stack(
-          children: [
-            // Card Container
-            Container(
+        child: Builder(
+          builder: (context) {
+            final timeService = Get.find<AppointmentTimeService>();
+            final badgeColor = timeService.getBadgeColor(appt.scheduledAt, appt.status, theme);
+            final smartLabel = timeService.getSmartTimeLabel(appt.scheduledAt, appt.status);
+            
+            return Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.white,
+                color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : medicalBlue.withValues(alpha: 0.1),
+                  color: isDark ? badgeColor.withValues(alpha: 0.15) : badgeColor.withValues(alpha: 0.1),
                   width: 1.5,
                 ),
                 boxShadow: [
-                  BoxShadow(
-                    color: (isDark ? Colors.black : medicalBlue).withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
+                  if (!isDark)
+                    BoxShadow(
+                      color: badgeColor.withValues(alpha: 0.06),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
                 ],
               ),
-              child: Stack(
-                children: [
-                  // Decorative Background Icon
-                  Positioned(
-                    right: -20,
-                    bottom: -20,
-                    child: Icon(
-                      CupertinoIcons.heart_circle_fill,
-                      size: 120,
-                      color: medicalBlue.withValues(alpha: isDark ? 0.03 : 0.05),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Stack(
+                  children: [
+                    // Decorative Background Icon
+                    Positioned(
+                      right: -24,
+                      bottom: -24,
+                      child: Icon(
+                        CupertinoIcons.heart_circle_fill,
+                        size: 140,
+                        color: badgeColor.withValues(alpha: isDark ? 0.03 : 0.04),
+                      ),
                     ),
-                  ),
-                  
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header Section
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: medicalBlue.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(CupertinoIcons.doc_person_fill,
-                                  color: medicalBlue, size: 18),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'next_appointment'.tr,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                letterSpacing: 0.5,
-                                color: medicalBlue.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(CupertinoIcons.chevron_right,
-                                size: 14, color: medicalBlue),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Doctor Info Section
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (appt.patientName.isNotEmpty) ...[
-                                    Text(
-                                      '${'patient'.tr}: ${appt.patientName}',
-                                      style: TextStyle(
-                                        color: medicalBlue.withValues(alpha: 0.6),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                  ],
-                                  Text(
-                                    appt.doctorName,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  if (appt.clinicName?.isNotEmpty ?? false) ...[
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        Icon(CupertinoIcons.building_2_fill,
-                                            size: 14, color: theme.disabledColor),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            appt.clinicName!,
-                                            style: TextStyle(
-                                              color: theme.disabledColor,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        const SizedBox(height: 24),
-
-                        // Time & Date Section
-                        Builder(
-                          builder: (context) {
-                            final timeService = Get.find<AppointmentTimeService>();
-                            final badgeColor = timeService.getBadgeColor(appt.scheduledAt, appt.status, theme);
-                            final smartLabel = timeService.getSmartTimeLabel(appt.scheduledAt, appt.status);
-                            
-                            return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: badgeColor.withValues(alpha: 0.15),
-                                  width: 1,
+                    
+                    Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // TOP SECTION: TIME & LABEL
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Time Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: badgeColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: badgeColor.withValues(alpha: 0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(CupertinoIcons.time_solid, size: 16, color: badgeColor),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(CupertinoIcons.clock_fill, size: 16, color: badgeColor),
+                                    const SizedBox(width: 8),
+                                    Text(
                                       smartLabel,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         color: badgeColor,
-                                        fontSize: 14,
+                                        fontSize: 13,
+                                        letterSpacing: -0.3,
                                       ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                              // Header Label
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (appt.alarmEnabled) ...[
+                                    Icon(CupertinoIcons.bell_fill, size: 14, color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3)),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    'next_appointment'.tr,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.4),
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                  if (appt.alarmEnabled)
-                                    Icon(CupertinoIcons.alarm_fill, size: 16, color: badgeColor),
                                 ],
                               ),
-                            );
-                          }
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // DOCTOR INFO SECTION
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Avatar/Icon
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      badgeColor.withValues(alpha: 0.8),
+                                      badgeColor,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: badgeColor.withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(CupertinoIcons.doc_person_fill, color: Colors.white, size: 28),
+                              ),
+                              const SizedBox(width: 16),
+                              // Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    RichText(
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: Get.locale?.languageCode == 'ar' ? 'الدكتور: ' : 'Dr: ',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: theme.textTheme.titleLarge?.color?.withValues(alpha: 0.6),
+                                              fontFamily: theme.textTheme.titleLarge?.fontFamily,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: appt.doctorName,
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: -0.5,
+                                              color: theme.textTheme.titleLarge?.color,
+                                              fontFamily: theme.textTheme.titleLarge?.fontFamily,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (appt.clinicName?.isNotEmpty ?? false) ...[
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(CupertinoIcons.location_solid, size: 12, color: theme.disabledColor),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              appt.clinicName!,
+                                              style: TextStyle(
+                                                color: theme.disabledColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
+
+                        // PATIENT INFO (IF EXISTS)
+                        if (appt.patientName.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(CupertinoIcons.person_fill, size: 14, color: theme.disabledColor),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${'patient'.tr}:',
+                                  style: TextStyle(
+                                    color: theme.disabledColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    appt.patientName,
+                                    style: TextStyle(
+                                      color: theme.textTheme.bodyMedium?.color,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              ),
+            );
+          }
         ),
       ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.05, curve: Curves.easeOutBack);
     });
+  }
+}
+
+// ─── Ad-Free Glassmorphism Badge (Premium Upsell) ──────
+
+class _AdFreeBadge extends StatefulWidget {
+  final bool isPremium;
+  const _AdFreeBadge({required this.isPremium});
+
+  @override
+  State<_AdFreeBadge> createState() => _AdFreeBadgeState();
+}
+
+class _AdFreeBadgeState extends State<_AdFreeBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.to(() => const PremiumView(), transition: Transition.downToUp),
+      child: _AdFreeShimmerBadge(controller: _shimmer, isPremium: widget.isPremium),
+    );
+  }
+}
+
+/// ✅ Lifecycle-safe shimmer widget for Ad-Free badge
+class _AdFreeShimmerBadge extends AnimatedWidget {
+  final bool isPremium;
+  const _AdFreeShimmerBadge({required AnimationController controller, required this.isPremium})
+      : super(listenable: controller);
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = listenable as AnimationController;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Colors based on subscription status
+    final Color color1 = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
+    final Color color2 = isPremium ? const Color(0xFFFFA500) : const Color(0xFFFFD700);
+    final Color color3 = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
+    final Color borderColor = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
+    final Color iconColor = isPremium ? const Color(0xFFFFB800) : const Color(0xFF9E9E9E);
+    final Color textColor = isPremium 
+        ? (isDark ? const Color(0xFFFFD700) : const Color(0xFFB8860B))
+        : (isDark ? const Color(0xFFE0E0E0) : const Color(0xFF757575));
+
+    final double shimmerAlpha = isPremium ? (isDark ? 0.20 : 0.10) : (isDark ? 0.70 : 0.60);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              colors: [
+                color1.withValues(alpha: isDark ? 0.25 : 0.15),
+                color2.withValues(alpha: shimmerAlpha),
+                color3.withValues(alpha: isDark ? 0.25 : 0.15),
+              ],
+              stops: [
+                (controller.value - 0.3).clamp(0.0, 1.0),
+                controller.value,
+                (controller.value + 0.3).clamp(0.0, 1.0),
+              ],
+            ),
+            border: Border.all(
+              color: borderColor.withValues(alpha: 0.35),
+              width: 0.6,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.workspace_premium_rounded, size: 9, color: iconColor),
+              const SizedBox(width: 2),
+              Text(
+                'PRO',
+                style: TextStyle(
+                  fontSize: 7,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../models/task_model.dart';
 import '../../core/helpers/result.dart';
 import '../../core/extensions/date_time_extensions.dart';
+import 'package:get/get.dart';
+import '../../core/services/notification_service.dart';
 
 class TaskRepository {
   final Isar _isar;
@@ -14,12 +16,35 @@ class TaskRepository {
     talker.info('📋 TaskRepository initialized');
   }
 
+  NotificationService get _notifService => Get.find<NotificationService>();
+
+  Future<void> _handleTaskNotification(Task task) async {
+    final notifId = NotificationService.taskOffset + task.id;
+    await _notifService.cancelNotification(notifId);
+
+    if (task.status == TaskStatus.active && task.isNotificationEnabled) {
+      if (task.scheduledAt.isAfter(DateTime.now())) {
+        await _notifService.scheduleNotification(
+          id: notifId,
+          title: '📌 ${task.title}',
+          body: task.note ?? 'حان موعد هذه المهمة',
+          scheduledTime: task.scheduledAt,
+          isAlarm: true,
+          channelId: 'system_alarms_channel',
+          channelName: 'System Alarms',
+        );
+      }
+    }
+  }
+
   /// Create a new task with success result
   Future<Result<int>> addTask(Task task) async {
     try {
       final id = await _isar.writeTxn(() async {
         return await _isar.tasks.put(task);
       });
+      task.id = id;
+      await _handleTaskNotification(task);
       return Result.success(id);
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Add): $e');
@@ -117,6 +142,7 @@ class TaskRepository {
       await _isar.writeTxn(() async {
         await _isar.tasks.put(task);
       });
+      await _handleTaskNotification(task);
       return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Update): $e');
@@ -136,6 +162,10 @@ class TaskRepository {
           await _isar.tasks.put(nextTask);
         }
       });
+      await _handleTaskNotification(currentTask);
+      if (nextTask != null) {
+        await _handleTaskNotification(nextTask);
+      }
       return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Complete & Spawn): $e');
@@ -152,6 +182,7 @@ class TaskRepository {
       await _isar.writeTxn(() async {
         await _isar.tasks.delete(id);
       });
+      await _notifService.cancelNotification(NotificationService.taskOffset + id);
       return Result.successVoid();
     } on IsarError catch (e) {
       talker.error('🔴 Isar Database Error (Delete): $e');
