@@ -137,6 +137,22 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   final weeklyLabels = <String>[].obs;
 
+  // Reorderable Dashboard
+  final isReorderMode = false.obs;
+  final cardOrder = <String>[
+    'mood', 'salary', 'next_shift', 'activity', 'medication', 'task', 'appointment', 'reading', 'bento'
+  ].obs;
+
+  void toggleReorderMode() {
+    isReorderMode.value = !isReorderMode.value;
+  }
+
+  void reorderCards(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    final item = cardOrder.removeAt(oldIndex);
+    cardOrder.insert(newIndex, item);
+    GetStorage().write('dashboard_card_order', cardOrder.toList());
+  }
 
   @override
   void onInit() {
@@ -152,6 +168,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       _isar,
     );
     _pillarService = HomePillarService(_isar);
+
+    // Load reorder list
+    final savedOrder = GetStorage().read<List>('dashboard_card_order');
+    if (savedOrder != null) {
+      cardOrder.assignAll(savedOrder.cast<String>());
+    }
 
     _updateGreeting();
     _setupStaticListeners(); 

@@ -77,121 +77,151 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
+        // Glassmorphism Toggle Button
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildMoodSection(context),
-          ),
+          child: _buildReorderToggle(context),
         ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildSalaryHomeCard(context),
-          ),
-        ),
+        // Reorderable Cards
+        Obx(() {
+          // ── only rebuild the sliver when the *list itself* changes ──
+          final order = controller.cardOrder.toList();
+          return SliverReorderableList(
+            itemCount: order.length,
+            onReorder: controller.reorderCards,
+            itemBuilder: (context, index) {
+              final key = order[index];
+              final child = _buildCardByKey(key, context);
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildNextShiftHomeCard(context),
-          ),
-        ),
+              // ── Each item reacts to reorder-mode independently ──
+              return Obx(key: ValueKey(key), () {
+                final active = controller.isReorderMode.value;
+                return ReorderableDragStartListener(
+                  index: index,
+                  enabled: active,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: EdgeInsets.only(
+                      left: active ? 8 : 0,
+                      right: active ? 8 : 0,
+                      top: active ? 4 : 0,
+                      bottom: active ? 4 : 0,
+                    ),
+                    decoration: active
+                        ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                              )
+                            ],
+                          )
+                        : const BoxDecoration(),
+                    child: child,
+                  ),
+                );
+              });
+            },
+          );
+        }),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildActivityHomeCard(context),
-          ),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+      ],
+    );
+  }
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildMedicationHomeCard(context),
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildTaskHomeCard(context),
-          ),
-        ),
-        
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildAppointmentHomeCard(context),
-          ),
-        ),
-
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: _buildReadingCard(context),
-          ),
-        ),
-
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          sliver: SliverToBoxAdapter(
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio:
-                  1.2, // ✅ Phase 4: More defensive ratio for large fonts
-              children: [
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'notes'.tr,
-                    '${controller.noteCount.value.f} ${'entries'.tr}',
-                    Icons.edit_note,
-                    const Color(0xFFFF9500),
-                    Routes.NOTES,
+  Widget _buildReorderToggle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Obx(() {
+      final isReorder = controller.isReorderMode.value;
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
+          child: GestureDetector(
+            onTap: controller.toggleReorderMode,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isReorder 
+                        ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
+                        : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isReorder 
+                          ? Theme.of(context).primaryColor.withValues(alpha: 0.4)
+                          : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isReorder ? Icons.check_circle_outline : Icons.swap_vert_rounded,
+                        size: 16,
+                        color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isReorder ? 'save_order'.tr : 'reorder_cards'.tr,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'journal'.tr,
-                    '${controller.journalCount.value.f} ${'logs'.tr}',
-                    Icons.book,
-                    const Color(0xFF34C759),
-                    Routes.JOURNAL,
-                  ),
-                ),
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'bookmarks'.tr,
-                    '${controller.bookmarkCount.value.f} ${'saved'.tr}',
-                    Icons.bookmark,
-                    const Color(0xFFFF3B30),
-                    Routes.BOOKMARKS,
-                  ),
-                ),
-
-                Obx(
-                  () => _buildBentoItem(
-                    context,
-                    'calendar'.tr,
-                    '${controller.calendarEventCount.value.f} ${'events'.tr}',
-                    Icons.calendar_month,
-                    const Color(0xFFBF5AF2),
-                    Routes.CALENDAR,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
+      );
+    });
+  }
 
-        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+  Widget _buildCardByKey(String key, BuildContext context) {
+    Widget child;
+    switch (key) {
+      case 'mood': child = _buildMoodSection(context); break;
+      case 'salary': child = _buildSalaryHomeCard(context); break;
+      case 'next_shift': child = _buildNextShiftHomeCard(context); break;
+      case 'activity': child = _buildActivityHomeCard(context); break;
+      case 'medication': child = _buildMedicationHomeCard(context); break;
+      case 'task': child = _buildTaskHomeCard(context); break;
+      case 'appointment': child = _buildAppointmentHomeCard(context); break;
+      case 'reading': child = _buildReadingCard(context); break;
+      case 'bento': child = _buildBentoGrid(context); break;
+      default: child = const SizedBox.shrink();
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: child,
+    );
+  }
+
+  Widget _buildBentoGrid(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.2,
+      children: [
+        Obx(() => _buildBentoItem(context, 'notes'.tr, '${controller.noteCount.value.f} ${'entries'.tr}', Icons.edit_note, const Color(0xFFFF9500), Routes.NOTES)),
+        Obx(() => _buildBentoItem(context, 'journal'.tr, '${controller.journalCount.value.f} ${'logs'.tr}', Icons.book, const Color(0xFF34C759), Routes.JOURNAL)),
+        Obx(() => _buildBentoItem(context, 'bookmarks'.tr, '${controller.bookmarkCount.value.f} ${'saved'.tr}', Icons.bookmark, const Color(0xFFFF3B30), Routes.BOOKMARKS)),
+        Obx(() => _buildBentoItem(context, 'calendar'.tr, '${controller.calendarEventCount.value.f} ${'events'.tr}', Icons.calendar_month, const Color(0xFFBF5AF2), Routes.CALENDAR)),
       ],
     );
   }

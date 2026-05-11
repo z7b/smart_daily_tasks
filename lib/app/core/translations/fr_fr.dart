@@ -802,4 +802,6 @@ const Map<String, String> frFR = {
   'small_step_now': 'Un petit pas maintenant',
   'time_to_move': 'Il est temps de bouger !',
   'notification_permissions_missing': 'Veuillez accorder toutes les autorisations de notifications',
+  'reorder_cards': 'Réorganiser',
+  'save_order': 'Sauvegarder',
 };

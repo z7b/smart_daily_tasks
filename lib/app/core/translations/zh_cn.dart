@@ -874,4 +874,6 @@ const Map<String, String> zhCN = {
   'premium_not_available_title': '不可用',
   'premium_not_available_desc': '无法加载订阅计划。请检查您的网络连接。',
   'premium_terms': '自动续订。随时可以在设置中取消。',
+  'reorder_cards': '重新排序',
+  'save_order': '保存顺序',
 };

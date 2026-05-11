@@ -540,4 +540,6 @@ const Map<String, String> ruRU = {
   'premium_not_available_title': 'Недоступно',
   'premium_not_available_desc': 'Планы подписки не загружены. Проверьте подключение к Интернету.',
   'premium_terms': 'Продлевается автоматически. Отмените в любое время в настройках.',
+  'reorder_cards': 'Изменить порядок',
+  'save_order': 'Сохранить',
 };

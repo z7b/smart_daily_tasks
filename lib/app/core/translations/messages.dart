@@ -813,6 +813,8 @@ class Messages extends Translations {
       'premium_not_available_title': 'Not Available',
       'premium_not_available_desc': 'Subscription plans could not be loaded. Check your internet connection.',
       'premium_terms': 'Renews automatically. Cancel anytime in store settings.',
+      'reorder_cards': 'Reorder',
+      'save_order': 'Save Order',
     },
     'ar': {
       'title': 'مهامي الذكية',
@@ -1643,6 +1645,8 @@ class Messages extends Translations {
       'premium_not_available_title': 'غير متاح حالياً',
       'premium_not_available_desc': 'لم يتم تحميل خطط الاشتراك. تأكد من اتصالك بالإنترنت.',
       'premium_terms': 'يتم التجديد تلقائيًا. يمكنك الإلغاء في أي وقت من إعدادات المتجر.',
+      'reorder_cards': 'إعادة ترتيب',
+      'save_order': 'حفظ الترتيب',
 },
     'zh_CN': zhCN,
     'zh_TW': zhTW,
