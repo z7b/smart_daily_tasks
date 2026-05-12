@@ -67,6 +67,8 @@ class TasksView extends GetView<TaskListController> {
                     final picked = await showDatePicker(
                       context: context,
                       helpText: 'select_date'.tr,
+                      cancelText: 'cancel'.tr,
+                      confirmText: 'confirm'.tr,
                       initialDate: controller.selectedDate.value,
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2100),
