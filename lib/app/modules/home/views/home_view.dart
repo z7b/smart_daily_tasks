@@ -94,35 +94,38 @@ class HomeView extends GetView<HomeController> {
               final child = _buildCardByKey(key, context);
 
               // ── Each item reacts to reorder-mode independently ──
-              return Obx(key: ValueKey(key), () {
-                final active = controller.isReorderMode.value;
-                return ReorderableDragStartListener(
-                  index: index,
-                  enabled: active,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: EdgeInsets.only(
-                      left: active ? 8 : 0,
-                      right: active ? 8 : 0,
-                      top: active ? 4 : 0,
-                      bottom: active ? 4 : 0,
+              return KeyedSubtree(
+                key: ValueKey(key),
+                child: Obx(() {
+                  final active = controller.isReorderMode.value;
+                  return ReorderableDragStartListener(
+                    index: index,
+                    enabled: active,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: EdgeInsets.only(
+                        left: active ? 8 : 0,
+                        right: active ? 8 : 0,
+                        top: active ? 4 : 0,
+                        bottom: active ? 4 : 0,
+                      ),
+                      decoration: active
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(32),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                )
+                              ],
+                            )
+                          : const BoxDecoration(),
+                      child: child,
                     ),
-                    decoration: active
-                        ? BoxDecoration(
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                              )
-                            ],
-                          )
-                        : const BoxDecoration(),
-                    child: child,
-                  ),
-                );
-              });
+                  );
+                }),
+              );
             },
           );
         }),
