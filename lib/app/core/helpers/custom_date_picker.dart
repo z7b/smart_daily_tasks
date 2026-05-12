@@ -57,6 +57,26 @@ class CustomDatePicker {
                         ),
                       );
                     },
+                    dowBuilder: (context, day) {
+                      final text = DateFormat.E(Get.locale?.languageCode).format(day);
+                      final isWeekend = day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
+                      return Center(
+                        child: Transform.rotate(
+                          angle: -0.610865, // -35 degrees in radians
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              text,
+                              style: TextStyle(
+                                color: isWeekend ? const Color(0xFFFF3B30) : theme.textTheme.bodySmall?.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                     defaultBuilder: (context, day, focusedDay) {
                       return Center(
                         child: Text(
