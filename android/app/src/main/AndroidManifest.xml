@@ -55,7 +55,7 @@
     <uses-permission android:name="com.google.android.gms.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
 
     <application
-        android:label="smart_daily_tasks"
+        android:label="Rattib"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">

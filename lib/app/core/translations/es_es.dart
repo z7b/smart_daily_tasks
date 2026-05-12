@@ -1,6 +1,6 @@
 const Map<String, String> esES = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'Tareas Diarias',
+  'title': 'Rattib',
   'home': 'Inicio',
   'spaces': 'Espacios',
   'settings': 'Ajustes',

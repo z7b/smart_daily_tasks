@@ -1,6 +1,6 @@
 const Map<String, String> hiIN = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'स्मार्ट दैनिक कार्य',
+  'title': 'Rattib',
   'home': 'होम',
   'spaces': 'कार्यक्षेत्र',
   'settings': 'सेटिंग्स',

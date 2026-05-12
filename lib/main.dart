@@ -349,7 +349,7 @@ class MainApp extends StatelessWidget {
 
     return Obx(
       () => GetMaterialApp(
-        title: 'Smart Daily Tasks',
+        title: 'Rattib',
         debugShowCheckedModeBanner: false,
         theme: themeService.currentTheme,
         darkTheme: themeService.currentDarkTheme,

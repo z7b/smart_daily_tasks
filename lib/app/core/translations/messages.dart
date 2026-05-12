@@ -9,7 +9,7 @@ class Messages extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
     'en': {
-      'title': 'Smart Daily Tasks',
+      'title': 'Rattib',
       'home': 'Home',
       'spaces': 'Workspaces',
       'settings': 'Settings',
@@ -313,7 +313,7 @@ class Messages extends Translations {
       'security_required': 'Screen Lock Required',
       'health_security_desc': 'Health Connect requires a secured lock screen (PIN, Pattern, or Password) to encrypt and protect your health data. Please set a screen lock in your device settings.',
       'health_manual_title': 'Manual Activation Required',
-      'health_manual_desc': 'Since this app is not yet available on Google Play, Android requires you to manually grant Health Connect permissions.\n\nGo to Settings > Privacy > Health Connect, tap App Permissions, find Smart Daily Tasks, and enable "Read Steps".',
+      'health_manual_desc': 'Since this app is not yet available on Google Play, Android requires you to manually grant Health Connect permissions.\n\nGo to Settings > Privacy > Health Connect, tap App Permissions, find Rattib, and enable "Read Steps".',
       'update_required': 'Update Required',
       'health_update_desc': 'Health Connect system service needs to be updated to work with this app.',
       'open_settings': 'Open Settings',
@@ -818,7 +818,7 @@ class Messages extends Translations {
       'save_order': 'Save Order',
     },
     'ar': {
-      'title': 'مهامي الذكية',
+      'title': 'رتّب',
       'home': 'الرئيسية',
       'spaces': 'مساحات العمل',
       'settings': 'الإعدادات',

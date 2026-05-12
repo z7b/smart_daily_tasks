@@ -1,6 +1,6 @@
 const Map<String, String> frFR = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'Tâches Quotidiennes',
+  'title': 'Rattib',
   'home': 'Accueil',
   'spaces': 'Espaces',
   'settings': 'Paramètres',

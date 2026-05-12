@@ -1,6 +1,6 @@
 const Map<String, String> ruRU = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'Умные Задачи',
+  'title': 'Rattib',
   'home': 'Главная',
   'spaces': 'Рабочие области',
   'settings': 'Настройки',
