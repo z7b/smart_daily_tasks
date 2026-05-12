@@ -358,8 +358,9 @@ class MainApp extends StatelessWidget {
         initialBinding: InitialBinding(),
         getPages: AppPages.routes,
         translations: Messages(),
-        locale: Locale(themeService.getLocale().languageCode),
+        locale: themeService.getLocale(),
         fallbackLocale: const Locale('en'),
+        supportedLocales: ThemeService.supportedLocales.values.toList(),
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
