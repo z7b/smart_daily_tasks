@@ -469,6 +469,7 @@ class AddTaskView extends GetView<TaskFormController> {
   Future<void> _getDateFromUser(BuildContext context) async {
     DateTime? pickerDate = await showDatePicker(
       context: context,
+      helpText: 'select_date'.tr,
       initialDate: controller.selectedDate.value,
       firstDate: DateTime(2015),
       lastDate: DateTime(2100),

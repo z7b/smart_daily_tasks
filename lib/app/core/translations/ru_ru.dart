@@ -47,6 +47,7 @@ const Map<String, String> ruRU = {
   'cancelled': 'Отменено',
   'none': 'Нет',
   'date': 'Дата',
+  'select_date': 'Выбрать дату',
   'refresh': 'Обновить',
   'retry': 'Повторить',
   'confirm': 'Подтвердить',

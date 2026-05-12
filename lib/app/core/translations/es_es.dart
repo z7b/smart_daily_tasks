@@ -47,6 +47,7 @@ const Map<String, String> esES = {
   'cancelled': 'Cancelado',
   'none': 'Ninguno',
   'date': 'Fecha',
+  'select_date': 'Seleccionar fecha',
   'refresh': 'Actualizar',
   'retry': 'Reintentar',
   'confirm': 'Confirmar',

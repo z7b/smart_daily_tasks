@@ -173,6 +173,7 @@ const Map<String, String> zhTW = {
   'event_added': '事件新增成功',
   'event_deleted': '事件刪除成功',
   'date': '日期',
+  'select_date': '選擇日期',
   'greet_dawn': '寧靜的黎明，',
   'greet_morning': '早安，',
   'greet_afternoon': '午安，',

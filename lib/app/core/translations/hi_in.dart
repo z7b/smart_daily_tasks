@@ -47,6 +47,7 @@ const Map<String, String> hiIN = {
   'cancelled': 'रद्द',
   'none': 'कोई नहीं',
   'date': 'तारीख',
+  'select_date': 'तारीख चुनें',
   'refresh': 'ताज़ा करें',
   'retry': 'पुन: प्रयास',
   'confirm': 'पुष्टि करें',

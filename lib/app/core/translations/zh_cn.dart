@@ -173,6 +173,7 @@ const Map<String, String> zhCN = {
   'event_added': '事件添加成功',
   'event_deleted': '事件删除成功',
   'date': '日期',
+  'select_date': '选择日期',
   'greet_dawn': '宁静的黎明，',
   'greet_morning': '早上好，',
   'greet_afternoon': '下午好，',
