@@ -25,9 +25,9 @@ class CustomDatePicker {
           title: Text('select_date'.tr, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.titleLarge?.color)),
           content: SizedBox(
             width: 320,
-            height: 380,
-            child: StatefulBuilder(
-              builder: (context, setState) {
+            child: SingleChildScrollView(
+              child: StatefulBuilder(
+                builder: (context, setState) {
                 return TableCalendar(
                   firstDay: firstDate,
                   lastDay: lastDate,
@@ -106,6 +106,7 @@ class CustomDatePicker {
                   ),
                 );
               }
+            ),
             ),
           ),
           actions: [
