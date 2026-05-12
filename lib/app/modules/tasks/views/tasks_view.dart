@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/helpers/bottom_sheet_helper.dart';
+import '../../../core/helpers/custom_date_picker.dart';
 import '../../../data/models/task_model.dart';
 import '../controllers/task_list_controller.dart';
 import '../controllers/task_form_controller.dart';
@@ -64,11 +65,8 @@ class TasksView extends GetView<TaskListController> {
                     size: 22,
                   ),
                   onPressed: () async {
-                    final picked = await showDatePicker(
+                    final picked = await CustomDatePicker.show(
                       context: context,
-                      helpText: 'select_date'.tr,
-                      cancelText: 'cancel'.tr,
-                      confirmText: 'confirm'.tr,
                       initialDate: controller.selectedDate.value,
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2100),
