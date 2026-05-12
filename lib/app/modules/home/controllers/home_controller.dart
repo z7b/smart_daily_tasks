@@ -129,6 +129,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final nextTaskTimeLeft = ''.obs;
   final nextTaskFullDate = ''.obs;
   final nextTaskPriority = TaskPriority.medium.obs;
+  final nextTaskKind = NextTaskKind.upcoming.obs;
 
   // Raw DateTimes for live countdown recalculation
   final _nextTaskAt = Rxn<DateTime>();
@@ -283,6 +284,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextTaskTimeLeft.value = stats.nextTimeLeft;
       nextTaskFullDate.value = stats.nextFullDate;
       nextTaskPriority.value = stats.nextPriority;
+      nextTaskKind.value = stats.nextTaskKind;
       _nextTaskAt.value = stats.nextScheduledAt;
 
       // ✅ SSOT: Update Today's Total Count
