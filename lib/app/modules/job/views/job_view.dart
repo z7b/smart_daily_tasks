@@ -9,6 +9,7 @@ import '../controllers/job_controller.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../routes/app_routes.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/custom_date_picker.dart';
 
 class JobView extends GetView<JobController> {
   const JobView({super.key});
@@ -1429,7 +1430,7 @@ class JobView extends GetView<JobController> {
   // ─── Manual log picker ────────────────────────────────────────
   void _showManualLogPicker(BuildContext context) async {
     final theme = Theme.of(context);
-    final picked = await showDatePicker(
+    final picked = await CustomDatePicker.show(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
