@@ -1,5 +1,5 @@
 const Map<String, String> zhTW = {
-  'title': '智能日常任務',
+  'title': 'Rattib',
   'home': '首頁',
   'spaces': '工作區',
   'settings': '設定',
@@ -173,6 +173,7 @@ const Map<String, String> zhTW = {
   'event_added': '事件新增成功',
   'event_deleted': '事件刪除成功',
   'date': '日期',
+  'select_date': '選擇日期',
   'greet_dawn': '寧靜的黎明，',
   'greet_morning': '早安，',
   'greet_afternoon': '午安，',
@@ -302,7 +303,7 @@ const Map<String, String> zhTW = {
   'security_required': '需要螢幕鎖定',
   'health_security_desc': '健康連接需要安全的螢幕鎖定（PIN、圖案或密碼）來加密和保護您的健康資料。請在裝置設定中設定螢幕鎖定。',
   'health_manual_title': '需要手動啟用',
-  'health_manual_desc': '由於此應用程式尚未在 Google Play 上架，Android 需要您手動授予健康連接權限。\n\n請前往 設定 > 隱私權 > 健康連接，點擊 應用程式權限，找到 Smart Daily Tasks，然後啟用「讀取步數」。',
+  'health_manual_desc': '由於此應用程式尚未在 Google Play 上架，Android 需要您手動授予健康連接權限。\n\n請前往 設定 > 隱私權 > 健康連接，點擊 應用程式權限，找到 Rattib，然後啟用「讀取步數」。',
   'update_required': '需要更新',
   'health_update_desc': '健康連接系統服務需要更新才能與此應用程式配合使用。',
   'open_settings': '打開設定',

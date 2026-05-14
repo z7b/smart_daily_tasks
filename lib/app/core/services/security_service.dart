@@ -9,7 +9,7 @@ import '../config/storage_keys.dart';
 /// SecurityService - Uses native MethodChannel to prevent screenshots safely
 class SecurityService extends GetxService {
   final _box = GetStorage();
-  static const platform = MethodChannel('com.example.smart_daily_tasks/security');
+  static const platform = MethodChannel('com.rattib.app/security');
 
   RxBool isScreenshotPrevented = false.obs;
   RxBool isRooted = false.obs;

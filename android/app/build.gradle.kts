@@ -1,11 +1,21 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// ✅ Load signing credentials from key.properties
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.smart_daily_tasks"
+    namespace = "com.rattib.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -19,8 +29,18 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // ✅ Upload Signing Config for Google Play
+    signingConfigs {
+        create("upload") {
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
+            storeFile = keystoreProperties["storeFile"]?.let { file(it as String) }
+            storePassword = keystoreProperties["storePassword"] as String? ?: ""
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.example.smart_daily_tasks"
+        applicationId = "com.rattib.app"
         minSdk = 26
         targetSdk = 36
         versionCode = flutter.versionCode
@@ -29,13 +49,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("upload")
         }
     }
 }

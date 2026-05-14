@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سياسة الخصوصية — تطبيق رتّب (Rattib)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            line-height: 1.85;
+            padding: 0;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: #8b8fa3;
+            font-size: 0.95rem;
+        }
+        
+        .header .date {
+            margin-top: 12px;
+            color: #6c63ff;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+        
+        .intro {
+            background: rgba(108, 99, 255, 0.06);
+            border: 1px solid rgba(108, 99, 255, 0.15);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 36px;
+            font-size: 1.05rem;
+            color: #c0c4d6;
+        }
+        
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 36px 0 16px;
+            padding-right: 16px;
+            border-right: 3px solid #6c63ff;
+        }
+        
+        h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #d0d4e8;
+            margin: 20px 0 10px;
+        }
+        
+        p, li {
+            color: #b0b4c8;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+        
+        ul {
+            padding-right: 24px;
+            margin-bottom: 16px;
+        }
+        
+        li { margin-bottom: 8px; }
+        
+        .highlight {
+            color: #6c63ff;
+            font-weight: 700;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(108, 99, 255, 0.12);
+            color: #8b85ff;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 16px 0;
+        }
+        
+        .card-title {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.9rem;
+        }
+        
+        th {
+            background: rgba(108, 99, 255, 0.1);
+            color: #c0c4ff;
+            padding: 12px 16px;
+            text-align: right;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #a0a4b8;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 32px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: #6b6f83;
+            font-size: 0.85rem;
+        }
+        
+        .lang-switch {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .lang-switch a {
+            color: #6c63ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            border: 1px solid rgba(108,99,255,0.3);
+            padding: 6px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .lang-switch a:hover {
+            background: rgba(108,99,255,0.1);
+        }
+
+        .section-en { display: none; }
+        .section-ar { display: block; }
+        
+        body.en .section-en { display: block; }
+        body.en .section-ar { display: none; }
+        body.en { direction: ltr; text-align: left; }
+        body.en h2 { border-right: none; border-left: 3px solid #6c63ff; padding-right: 0; padding-left: 16px; }
+        body.en ul { padding-right: 0; padding-left: 24px; }
+        body.en th { text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔒 سياسة الخصوصية</h1>
+        <div class="subtitle">تطبيق رتّب (Rattib) — مدير المهام اليومية الذكي</div>
+        <div class="date">آخر تحديث: 13 مايو 2026</div>
+    </div>
+
+    <div class="container">
+        <div class="lang-switch">
+            <a href="#" onclick="document.body.classList.toggle('en'); return false;">
+                Switch to English / التبديل للإنجليزية
+            </a>
+        </div>
+
+        <!-- ==================== ARABIC ==================== -->
+        <div class="section-ar">
+            <div class="intro">
+                نلتزم في تطبيق <strong>"رتّب (Rattib)"</strong> بحماية خصوصيتك وبياناتك الشخصية. يعمل تطبيقنا بالكامل بشكل <span class="highlight">محلي على جهازك</span> — لا نرسل بياناتك إلى أي خوادم خارجية. توضح هذه السياسة كيف نتعامل مع بياناتك وفقاً لسياسات Google Play لعام 2026.
+            </div>
+
+            <h2>1. البيانات التي نصل إليها</h2>
+
+            <div class="card">
+                <div class="card-title">📊 بيانات الصحة واللياقة <span class="badge">Health Connect</span></div>
+                <p>يتصل التطبيق ببروتوكول <strong>Health Connect</strong> (Android) للوصول إلى:</p>
+                <ul>
+                    <li><strong>الخطوات اليومية</strong> — لعرض نشاطك البدني</li>
+                    <li><strong>السعرات الحرارية المحروقة</strong> — لتتبع استهلاك الطاقة</li>
+                    <li><strong>المسافة المقطوعة</strong> — لقياس مسافة المشي/الجري</li>
+                </ul>
+                <p><strong>الغرض:</strong> عرض هذه البيانات لك فقط داخل لوحة تحكم التطبيق لمساعدتك في تتبع أهدافك الصحية.</p>
+                <p>✅ <strong>لا يتم</strong> إرسال هذه البيانات إلى أي خادم خارجي أو طرف ثالث.</p>
+                <p>✅ <strong>لا يتم</strong> بيع أو مشاركة بيانات صحتك لأغراض إعلانية مطلقاً.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔐 المصادقة البيومترية <span class="badge">قفل التطبيق</span></div>
+                <p>يوفر التطبيق ميزة قفل التطبيق عبر <strong>بصمة الإصبع أو التعرف على الوجه</strong>.</p>
+                <p>✅ التطبيق <strong>لا يجمع ولا يخزن</strong> بياناتك البيومترية. نعتمد على نظام المصادقة الآمن المدمج في نظام التشغيل (Android BiometricPrompt / iOS LocalAuthentication) للتحقق من هويتك فقط.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📚 الملفات (قارئ الكتب)</div>
+                <p>يطلب التطبيق الوصول إلى ملفات PDF التي <strong>تختارها أنت يدوياً</strong> لغرض القراءة وإدارة مكتبتك الشخصية داخل التطبيق.</p>
+                <p>✅ لا يقوم التطبيق بفحص أو الوصول إلى أي ملفات أخرى على جهازك.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🤖 المساعد الذكي</div>
+                <p>يحتوي التطبيق على مساعد ذكي يعمل <strong>بالكامل محلياً على جهازك</strong>.</p>
+                <p>✅ <strong>لا يتم</strong> إرسال أي من محادثاتك أو بياناتك إلى خوادم خارجية أو خدمات ذكاء اصطناعي سحابية.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔔 الإشعارات</div>
+                <p>يستخدم التطبيق الإشعارات المحلية لتذكيرك بمهامك ومواعيدك. هذه الإشعارات تعمل محلياً بالكامل ولا تتطلب اتصالاً بالإنترنت.</p>
+            </div>
+
+            <h2>2. تخزين البيانات</h2>
+            <p>جميع بياناتك — المهام، المذكرات، سجلات الصحة، تقدم القراءة، والإعدادات — يتم تخزينها <strong>محلياً فقط</strong> على جهازك باستخدام قاعدة بيانات مشفرة (Isar). لا يتم رفع أي بيانات إلى خوادم خارجية.</p>
+
+            <h2>3. الاشتراكات والمشتريات</h2>
+            <p>يوفر التطبيق اشتراكات مميزة (شهرية وسنوية) عبر <strong>Google Play Billing</strong>. تتم معالجة جميع عمليات الدفع بشكل آمن من خلال Google Play ولا نطلع على بيانات بطاقتك البنكية أو معلومات الدفع الخاصة بك.</p>
+
+            <h2>4. الإعلانات</h2>
+            <p>قد يتم مستقبلاً دمج شبكات إعلانية (مثل Google AdMob). في حال تفعيل الإعلانات:</p>
+            <ul>
+                <li>قد يتم جمع <strong>معرّف الإعلانات</strong> (Advertising ID) الخاص بجهازك لتقديم إعلانات ملائمة</li>
+                <li>يمكنك إعادة ضبط معرّف الإعلانات أو إلغاء تخصيص الإعلانات من إعدادات جهازك</li>
+                <li>بيانات الصحة <strong>لن تُستخدم أبداً</strong> لأغراض الاستهداف الإعلاني</li>
+            </ul>
+
+            <h2>5. الأذونات المطلوبة</h2>
+            <table>
+                <tr><th>الإذن</th><th>الغرض</th></tr>
+                <tr><td>Health Connect</td><td>قراءة بيانات الخطوات والسعرات الحرارية</td></tr>
+                <tr><td>البصمة / الوجه</td><td>قفل التطبيق (اختياري)</td></tr>
+                <tr><td>الإشعارات</td><td>تذكيرات المهام والمواعيد</td></tr>
+                <tr><td>التخزين</td><td>استيراد ملفات PDF للقراءة</td></tr>
+                <tr><td>الإنترنت</td><td>الاشتراكات والإعلانات فقط</td></tr>
+                <tr><td>التنبيه الدقيق</td><td>ضمان دقة التذكيرات المجدولة</td></tr>
+                <tr><td>التشغيل عند الإقلاع</td><td>استعادة التذكيرات بعد إعادة تشغيل الجهاز</td></tr>
+            </table>
+
+            <h2>6. الشفافية والموافقة</h2>
+            <p>يتبع تطبيق "رتّب" مبدأ <strong>الإفصاح البارز (Prominent Disclosure)</strong>. لن يتم الوصول إلى بيانات الصحة أو الملفات أو البصمة إلا بعد عرض رسالة واضحة تشرح سبب الحاجة والحصول على موافقتك الصريحة.</p>
+
+            <h2>7. حماية البيانات</h2>
+            <ul>
+                <li>قاعدة بيانات محلية مشفرة (Isar)</li>
+                <li>حماية من لقطات الشاشة (اختيارية)</li>
+                <li>تشفير الكود باستخدام R8/ProGuard</li>
+                <li>لا توجد خوادم خارجية تخزن بياناتك</li>
+            </ul>
+
+            <h2>8. حقوق المستخدم</h2>
+            <ul>
+                <li>✅ يمكنك <strong>حذف جميع بياناتك</strong> في أي وقت من إعدادات التطبيق أو بحذف التطبيق</li>
+                <li>✅ يمكنك <strong>إلغاء أي إذن</strong> في أي وقت من إعدادات النظام</li>
+                <li>✅ يمكنك <strong>إلغاء ربط Health Connect</strong> من إعدادات Health Connect في جهازك</li>
+                <li>✅ يمكنك <strong>استعادة مشترياتك</strong> من داخل التطبيق</li>
+            </ul>
+
+            <h2>9. بيانات الأطفال</h2>
+            <p>تطبيق "رتّب" غير موجه للأطفال تحت سن 13 عاماً ولا نجمع بيانات من أطفال عن قصد.</p>
+
+            <h2>10. تحديثات السياسة</h2>
+            <p>قد نقوم بتحديث هذه السياسة من وقت لآخر. سيتم إشعارك بأي تغييرات جوهرية عبر التطبيق. استمرارك في استخدام التطبيق بعد التحديث يعني موافقتك على السياسة المحدثة.</p>
+
+            <h2>11. التواصل معنا</h2>
+            <p>إذا كان لديك أي استفسار حول سياسة الخصوصية أو بياناتك، تواصل معنا عبر:</p>
+            <p>📧 البريد الإلكتروني: <strong>arbmax1@gmail.com</strong></p>
+        </div>
+
+        <!-- ==================== ENGLISH ==================== -->
+        <div class="section-en">
+            <div class="intro">
+                At <strong>"Rattib (رتّب)"</strong>, we are committed to protecting your privacy and personal data. Our app operates <span class="highlight">entirely locally on your device</span> — we do not send your data to any external servers. This policy explains how we handle your data in compliance with Google Play 2026 policies.
+            </div>
+
+            <h2>1. Data We Access</h2>
+
+            <div class="card">
+                <div class="card-title">📊 Health & Fitness Data <span class="badge">Health Connect</span></div>
+                <p>The app connects to <strong>Health Connect</strong> (Android) to access:</p>
+                <ul>
+                    <li><strong>Daily Steps</strong> — to display your physical activity</li>
+                    <li><strong>Calories Burned</strong> — to track energy expenditure</li>
+                    <li><strong>Distance Traveled</strong> — to measure walking/running distance</li>
+                </ul>
+                <p><strong>Purpose:</strong> To display this data to you within the app's dashboard to help you track your health goals.</p>
+                <p>✅ This data is <strong>never</strong> sent to any external server or third party.</p>
+                <p>✅ Your health data is <strong>never</strong> sold or shared for advertising purposes.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔐 Biometric Authentication <span class="badge">App Lock</span></div>
+                <p>The app provides an app lock feature via <strong>fingerprint or facial recognition</strong>.</p>
+                <p>✅ The app <strong>does not collect or store</strong> your biometric data. We rely on the secure built-in authentication system of the operating system (Android BiometricPrompt / iOS LocalAuthentication) to verify your identity only.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📚 Files (Book Reader)</div>
+                <p>The app requests access to PDF files that <strong>you manually select</strong> for reading and managing your personal library within the app.</p>
+                <p>✅ The app does not scan or access any other files on your device.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🤖 Smart Assistant</div>
+                <p>The app includes a smart assistant that works <strong>entirely locally on your device</strong>.</p>
+                <p>✅ <strong>None</strong> of your conversations or data are sent to external servers or cloud AI services.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔔 Notifications</div>
+                <p>The app uses local notifications to remind you of your tasks and appointments. These notifications work entirely locally and do not require an internet connection.</p>
+            </div>
+
+            <h2>2. Data Storage</h2>
+            <p>All your data — tasks, journals, health logs, reading progress, and settings — is stored <strong>locally only</strong> on your device using an encrypted database (Isar). No data is uploaded to external servers.</p>
+
+            <h2>3. Subscriptions & Purchases</h2>
+            <p>The app offers premium subscriptions (monthly and yearly) through <strong>Google Play Billing</strong>. All payment processing is handled securely by Google Play. We never access your credit card or payment information.</p>
+
+            <h2>4. Advertising</h2>
+            <p>Advertising networks (such as Google AdMob) may be integrated in the future. If ads are enabled:</p>
+            <ul>
+                <li>Your device's <strong>Advertising ID</strong> may be collected to serve relevant ads</li>
+                <li>You can reset your Advertising ID or opt out of ad personalization in your device settings</li>
+                <li>Health data will <strong>never</strong> be used for ad targeting</li>
+            </ul>
+
+            <h2>5. Permissions Required</h2>
+            <table>
+                <tr><th>Permission</th><th>Purpose</th></tr>
+                <tr><td>Health Connect</td><td>Read steps and calorie data</td></tr>
+                <tr><td>Fingerprint / Face</td><td>App lock (optional)</td></tr>
+                <tr><td>Notifications</td><td>Task and appointment reminders</td></tr>
+                <tr><td>Storage</td><td>Import PDF files for reading</td></tr>
+                <tr><td>Internet</td><td>Subscriptions and ads only</td></tr>
+                <tr><td>Exact Alarm</td><td>Ensure accuracy of scheduled reminders</td></tr>
+                <tr><td>Boot Completed</td><td>Restore reminders after device restart</td></tr>
+            </table>
+
+            <h2>6. Transparency & Consent</h2>
+            <p>Rattib follows the <strong>Prominent Disclosure</strong> principle. Health data, files, or biometrics will only be accessed after displaying a clear message explaining the need and obtaining your explicit consent.</p>
+
+            <h2>7. Data Protection</h2>
+            <ul>
+                <li>Encrypted local database (Isar)</li>
+                <li>Screenshot protection (optional)</li>
+                <li>Code obfuscation via R8/ProGuard</li>
+                <li>No external servers store your data</li>
+            </ul>
+
+            <h2>8. User Rights</h2>
+            <ul>
+                <li>✅ You can <strong>delete all your data</strong> at any time from the app settings or by uninstalling the app</li>
+                <li>✅ You can <strong>revoke any permission</strong> at any time from system settings</li>
+                <li>✅ You can <strong>disconnect Health Connect</strong> from Health Connect settings on your device</li>
+                <li>✅ You can <strong>restore your purchases</strong> from within the app</li>
+            </ul>
+
+            <h2>9. Children's Data</h2>
+            <p>Rattib is not directed at children under the age of 13, and we do not knowingly collect data from children.</p>
+
+            <h2>10. Policy Updates</h2>
+            <p>We may update this policy from time to time. You will be notified of any material changes through the app. Your continued use of the app after an update constitutes acceptance of the updated policy.</p>
+
+            <h2>11. Contact Us</h2>
+            <p>If you have any questions about this privacy policy or your data, contact us at:</p>
+            <p>📧 Email: <strong>arbmax1@gmail.com</strong></p>
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 Rattib (رتّب). All rights reserved.<br>
+        App ID: com.rattib.app
+    </div>
+</body>
+</html>

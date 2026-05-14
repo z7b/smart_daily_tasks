@@ -1,5 +1,5 @@
 const Map<String, String> zhCN = {
-  'title': '智能日常任务',
+  'title': 'Rattib',
   'home': '首页',
   'spaces': '工作区',
   'settings': '设置',
@@ -173,6 +173,7 @@ const Map<String, String> zhCN = {
   'event_added': '事件添加成功',
   'event_deleted': '事件删除成功',
   'date': '日期',
+  'select_date': '选择日期',
   'greet_dawn': '宁静的黎明，',
   'greet_morning': '早上好，',
   'greet_afternoon': '下午好，',
@@ -302,7 +303,7 @@ const Map<String, String> zhCN = {
   'security_required': '需要屏幕锁定',
   'health_security_desc': '健康连接需要安全的锁屏（PIN、图案或密码）来加密和保护您的健康数据。请在设备设置中设置屏幕锁定。',
   'health_manual_title': '需要手动激活',
-  'health_manual_desc': '由于此应用尚未在 Google Play 上架，Android 需要您手动授予健康连接权限。\n\n请前往 设置 > 隐私 > 健康连接，点击 应用权限，找到 Smart Daily Tasks，然后启用“读取步数”。',
+  'health_manual_desc': '由于此应用尚未在 Google Play 上架，Android 需要您手动授予健康连接权限。\n\n请前往 设置 > 隐私 > 健康连接，点击 应用权限，找到 Rattib，然后启用“读取步数”。',
   'update_required': '需要更新',
   'health_update_desc': '健康连接系统服务需要更新才能与此应用配合使用。',
   'open_settings': '打开设置',

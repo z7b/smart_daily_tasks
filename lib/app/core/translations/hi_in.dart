@@ -1,6 +1,6 @@
 const Map<String, String> hiIN = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'स्मार्ट दैनिक कार्य',
+  'title': 'Rattib',
   'home': 'होम',
   'spaces': 'कार्यक्षेत्र',
   'settings': 'सेटिंग्स',
@@ -47,6 +47,7 @@ const Map<String, String> hiIN = {
   'cancelled': 'रद्द',
   'none': 'कोई नहीं',
   'date': 'तारीख',
+  'select_date': 'तारीख चुनें',
   'refresh': 'ताज़ा करें',
   'retry': 'पुन: प्रयास',
   'confirm': 'पुष्टि करें',

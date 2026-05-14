@@ -10,7 +10,7 @@ import '../../../core/helpers/log_helper.dart';
 
 class BookController extends GetxController {
   final _isar = Get.find<Isar>();
-  static const platform = MethodChannel('com.example.smart_daily_tasks/security');
+  static const platform = MethodChannel('com.rattib.app/security');
   
   final books = <Book>[].obs;
   final isLoading = false.obs;

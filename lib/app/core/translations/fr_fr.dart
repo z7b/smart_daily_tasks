@@ -1,6 +1,6 @@
 const Map<String, String> frFR = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'Tâches Quotidiennes',
+  'title': 'Rattib',
   'home': 'Accueil',
   'spaces': 'Espaces',
   'settings': 'Paramètres',
@@ -47,6 +47,7 @@ const Map<String, String> frFR = {
   'cancelled': 'Annulé',
   'none': 'Aucun',
   'date': 'Date',
+  'select_date': 'Sélectionner une date',
   'refresh': 'Actualiser',
   'retry': 'Réessayer',
   'confirm': 'Confirmer',

@@ -80,7 +80,7 @@ class BackupService {
 
     await file.writeAsString(jsonString);
 
-    await Share.shareXFiles([XFile(file.path)], text: 'Smart Daily Tasks Backup');
+    await Share.shareXFiles([XFile(file.path)], text: 'Rattib Backup');
   }
 
   /// Restores data from a picked JSON file using a safe additive merge strategy.

@@ -18,6 +18,7 @@ import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dar
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
 import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
+import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart' show NextTaskKind;
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -94,35 +95,38 @@ class HomeView extends GetView<HomeController> {
               final child = _buildCardByKey(key, context);
 
               // ── Each item reacts to reorder-mode independently ──
-              return Obx(key: ValueKey(key), () {
-                final active = controller.isReorderMode.value;
-                return ReorderableDragStartListener(
-                  index: index,
-                  enabled: active,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: EdgeInsets.only(
-                      left: active ? 8 : 0,
-                      right: active ? 8 : 0,
-                      top: active ? 4 : 0,
-                      bottom: active ? 4 : 0,
+              return KeyedSubtree(
+                key: ValueKey(key),
+                child: Obx(() {
+                  final active = controller.isReorderMode.value;
+                  return ReorderableDragStartListener(
+                    index: index,
+                    enabled: active,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: EdgeInsets.only(
+                        left: active ? 8 : 0,
+                        right: active ? 8 : 0,
+                        top: active ? 4 : 0,
+                        bottom: active ? 4 : 0,
+                      ),
+                      decoration: active
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(32),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                )
+                              ],
+                            )
+                          : const BoxDecoration(),
+                      child: child,
                     ),
-                    decoration: active
-                        ? BoxDecoration(
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                              )
-                            ],
-                          )
-                        : const BoxDecoration(),
-                    child: child,
-                  ),
-                );
-              });
+                  );
+                }),
+              );
             },
           );
         }),
@@ -1559,10 +1563,37 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildTaskHomeCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accentColor = Color(0xFF007AFF);
+    const defaultAccent = Color(0xFF007AFF);
 
     return Obx(() {
       controller.minuteTick.value;
+      final kind = controller.nextTaskKind.value;
+      final hasTask = controller.nextTaskTitle.value.isNotEmpty;
+
+      // ── Dynamic color based on task state ──
+      final Color accentColor;
+      final IconData statusIcon;
+      final String statusLabel;
+
+      switch (kind) {
+        case NextTaskKind.activeNow:
+          accentColor = const Color(0xFF3B82F6); // Blue
+          statusIcon = CupertinoIcons.play_circle_fill;
+          statusLabel = 'active_now'.tr;
+          break;
+        case NextTaskKind.overdueToday:
+        case NextTaskKind.overduePast:
+          accentColor = const Color(0xFFEF4444); // Red
+          statusIcon = CupertinoIcons.exclamationmark_circle_fill;
+          statusLabel = 'overdue'.tr;
+          break;
+        case NextTaskKind.upcoming:
+          accentColor = defaultAccent;
+          statusIcon = CupertinoIcons.check_mark_circled_solid;
+          statusLabel = 'remaining'.tr;
+          break;
+      }
+
       return GestureDetector(
         onTap: () => Get.toNamed(Routes.TASKS),
         child: Container(
@@ -1598,8 +1629,8 @@ class HomeView extends GetView<HomeController> {
                       color: accentColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      CupertinoIcons.check_mark_circled_solid,
+                    child: Icon(
+                      statusIcon,
                       color: accentColor,
                       size: 16,
                     ),
@@ -1613,6 +1644,25 @@ class HomeView extends GetView<HomeController> {
                       letterSpacing: -0.5,
                     ),
                   ),
+                  // ── Smart status badge for overdue/active ──
+                  if (hasTask && kind != NextTaskKind.upcoming) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Builder(
                     builder: (_) {
@@ -1623,7 +1673,7 @@ class HomeView extends GetView<HomeController> {
                         activeTasks > 0
                             ? '${controller.completedTasksCount.value} / $activeTasks'
                             : '0',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           color: accentColor,
@@ -1634,7 +1684,7 @@ class HomeView extends GetView<HomeController> {
                 ],
               ),
               const SizedBox(height: 20),
-              if (controller.nextTaskTitle.value.isNotEmpty) ...[
+              if (hasTask) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -1654,13 +1704,15 @@ class HomeView extends GetView<HomeController> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${'remaining'.tr}: ${controller.nextTaskTimeLeft.value}',
+                            controller.nextTaskTimeLeft.value,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.4)
-                                  : Colors.black.withValues(alpha: 0.4),
+                              color: (kind == NextTaskKind.overdueToday || kind == NextTaskKind.overduePast)
+                                  ? accentColor.withValues(alpha: 0.8)
+                                  : (isDark
+                                      ? Colors.white.withValues(alpha: 0.4)
+                                      : Colors.black.withValues(alpha: 0.4)),
                             ),
                           ),
                         ],
@@ -1679,7 +1731,7 @@ class HomeView extends GetView<HomeController> {
                             controller.nextTaskEndTime.value.isNotEmpty
                                 ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
                                 : controller.nextTaskTime.value,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
                               color: accentColor,

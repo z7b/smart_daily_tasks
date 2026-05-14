@@ -61,7 +61,7 @@ class NotificationService extends GetxService {
       // Create channel for high importance notifications
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         'daily_tasks_channel', // id
-        'Smart Daily Tasks', // title
+        'Rattib', // title
         description: 'Notifications for your scheduled tasks', // description
         importance: Importance.high,
       );
@@ -271,7 +271,7 @@ class NotificationService extends GetxService {
         NotificationDetails(
           android: AndroidNotificationDetails(
             channelId ?? 'daily_tasks_channel',
-            channelName ?? 'Smart Daily Tasks',
+            channelName ?? 'Rattib',
             channelDescription: 'Notifications for scheduled tasks',
             importance: importance ?? Importance.max,
             priority: priority ?? Priority.high,

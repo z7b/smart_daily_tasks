@@ -1,6 +1,6 @@
 const Map<String, String> ruRU = {
   // ─── Core Navigation ─────────────────────────────
-  'title': 'Умные Задачи',
+  'title': 'Rattib',
   'home': 'Главная',
   'spaces': 'Рабочие области',
   'settings': 'Настройки',
@@ -47,6 +47,7 @@ const Map<String, String> ruRU = {
   'cancelled': 'Отменено',
   'none': 'Нет',
   'date': 'Дата',
+  'select_date': 'Выбрать дату',
   'refresh': 'Обновить',
   'retry': 'Повторить',
   'confirm': 'Подтвердить',

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../controllers/task_form_controller.dart';
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/custom_date_picker.dart';
 
 class AddTaskView extends GetView<TaskFormController> {
   const AddTaskView({super.key});
@@ -467,7 +468,7 @@ class AddTaskView extends GetView<TaskFormController> {
   }
 
   Future<void> _getDateFromUser(BuildContext context) async {
-    DateTime? pickerDate = await showDatePicker(
+    DateTime? pickerDate = await CustomDatePicker.show(
       context: context,
       initialDate: controller.selectedDate.value,
       firstDate: DateTime(2015),

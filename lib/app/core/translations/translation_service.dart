@@ -4,7 +4,7 @@ class TranslationService extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
     'en_US': {
-      'app_title': 'Smart Daily Tasks',
+      'app_title': 'Rattib',
       'hello': 'Hello',
       'tasks': 'Tasks',
       'notes': 'Notes',
@@ -59,7 +59,7 @@ class TranslationService extends Translations {
       'developer': 'Developer',
     },
     'ar_SA': {
-      'app_title': 'مهام يومي ذكية',
+      'app_title': 'رتّب',
       'hello': 'مرحبا',
       'tasks': 'المهام',
       'notes': 'الملاحظات',

@@ -29,7 +29,7 @@ class HealthService extends GetxService {
   final isHandshaking = false.obs;
   final lastSynced = Rxn<DateTime>(null);
   
-  static const MethodChannel _rationaleChannel = MethodChannel('com.example.smart_daily_tasks/health_rationale');
+  static const MethodChannel _rationaleChannel = MethodChannel('com.rattib.app/health_rationale');
 
   // ✅ Official Expert Mapping: Unified types for Google Fit, S-Health & Apple Health
   // We make these late/dynamic to handle platform incompatibilities (Google Standards)
