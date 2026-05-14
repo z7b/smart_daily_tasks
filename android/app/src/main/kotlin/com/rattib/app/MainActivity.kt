@@ -1,4 +1,4 @@
-package com.example.smart_daily_tasks
+package com.rattib.app
 
 import android.content.Intent
 import android.net.Uri
@@ -12,7 +12,7 @@ import java.io.File
 import java.lang.Exception
 
 class MainActivity : FlutterFragmentActivity() {
-    private val CHANNEL = "com.example.smart_daily_tasks/security"
+    private val CHANNEL = "com.rattib.app/security"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -64,7 +64,7 @@ class MainActivity : FlutterFragmentActivity() {
             
             // Notify Flutter that we need to show the Health Rationale screen
             flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
-                MethodChannel(messenger, "com.example.smart_daily_tasks/health_rationale")
+                MethodChannel(messenger, "com.rattib.app/health_rationale")
                     .invokeMethod("showRationale", null)
             }
         }
