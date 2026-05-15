@@ -82,6 +82,7 @@
 -dontwarn okio.**
 -dontwarn retrofit2.**
 -dontwarn org.conscrypt.**
+-dontwarn com.google.android.play.core.**
 
 # Remove logging in release
 -assumenosideeffects class android.util.Log {

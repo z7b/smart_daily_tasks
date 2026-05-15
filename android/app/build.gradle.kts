@@ -63,6 +63,7 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1") // ✅ Ensure core Kotlin extensions
     implementation("androidx.appcompat:appcompat:1.7.0") // ✅ Ensure UI compatibility
+    implementation("com.google.android.play:feature-delivery:2.1.0") // ✅ Ensure R8 can find Play Store split classes without legacy core
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 

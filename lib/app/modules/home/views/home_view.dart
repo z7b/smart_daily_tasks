@@ -56,6 +56,10 @@ class HomeView extends GetView<HomeController> {
   Widget _buildDashboard(BuildContext context) {
     return CustomScrollView(
       slivers: [
+        // ✅ SafeArea: Prevent content from going behind the status bar
+        SliverToBoxAdapter(
+          child: SizedBox(height: MediaQuery.of(context).padding.top),
+        ),
         _buildAppBar(context),
 
         SliverToBoxAdapter(

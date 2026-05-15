@@ -180,6 +180,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     _setupStaticListeners(); 
     _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
     _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
+    _bindStepLogStream();   // ✅ SSOT: Real-time Step Count (fixes Home vs Steps discrepancy)
     _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
     
     // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
@@ -187,12 +188,14 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       talker.info('🌅 Home: Day rotated to $newToday. Refreshing Dashboard.');
       selectedDate.value = newToday;
       _bindTaskStream();
+      _bindStepLogStream();
       _loadRealData();
     });
 
     // ✅ Architecture Fix: Re-bind dashboard when user changes the date
     ever(selectedDate, (_) {
       _bindTaskStream();
+      _bindStepLogStream();
       _loadRealData();
     });
   }
@@ -241,6 +244,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     _bookmarkSub?.cancel();
     _bookSub?.cancel();
     _stepLogSub?.cancel();
+    _stepLogReactiveSub?.cancel();
     _attendanceSub?.cancel();
     _medicationSub?.cancel();
     _appointmentSub?.cancel();
@@ -312,6 +316,40 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       } else {
         nextAppointment.value = null;
       }
+    });
+  }
+
+  /// ✅ SSOT: Real-time Step Log Stream (fixes discrepancy with StepsController)
+  /// Both Home and Steps pages now bind to the SAME reactive Isar stream,
+  /// ensuring step counts are always identical and update instantly.
+  StreamSubscription? _stepLogReactiveSub;
+
+  void _bindStepLogStream() {
+    _stepLogReactiveSub?.cancel();
+    final stepRepo = Get.find<StepRepository>();
+    final viewDate = selectedDate.value;
+
+    _stepLogReactiveSub = stepRepo.watchStepLog(viewDate).listen((StepLog? stepLog) {
+      stepsCount.value = stepLog?.steps ?? 0;
+      stepsGoal.value = stepLog?.goal ?? 10000;
+      stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
+      caloriesCount.value = stepLog?.calories ?? 0.0;
+      distanceCount.value = stepLog?.distance ?? 0.0;
+      isHealthVerified.value = stepLog?.isManual == false;
+
+      if (stepLog?.lastSyncedAt != null) {
+        final locale = Get.locale?.languageCode ?? 'en';
+        healthLastSync.value = DateFormat.jm(locale).format(stepLog!.lastSyncedAt!).f;
+      } else {
+        healthLastSync.value = '';
+      }
+
+      // Update body pillar reactively
+      final medScore = medExpectedDoses.value > 0
+          ? (medTakenDoses.value / medExpectedDoses.value).clamp(0.0, 1.0)
+          : 0.0;
+      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
+      _updateTotalProgress();
     });
   }
 
@@ -438,20 +476,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       currentBookTitle.value = healthStats.currentBookTitle;
       currentBookProgress.value = healthStats.currentBookProgress;
       
-      final stepLog = healthStats.todayStepLog;
-      stepsCount.value = stepLog?.steps ?? 0;
-      stepsGoal.value = stepLog?.goal ?? 10000;
-      stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
-      caloriesCount.value = stepLog?.calories ?? 0.0;
-      distanceCount.value = stepLog?.distance ?? 0.0;
-      
-      isHealthVerified.value = stepLog?.isManual == false;
-      if (stepLog?.lastSyncedAt != null) {
-        final locale = Get.locale?.languageCode ?? 'en';
-        healthLastSync.value = DateFormat.jm(locale).format(stepLog!.lastSyncedAt!).f;
-      } else {
-        healthLastSync.value = '';
-      }
+      // ✅ Step data is now handled by _bindStepLogStream() for real-time reactivity.
+      // No longer reading stepLog from the batched getHealthStats() call.
 
       final medScore = medStats.expected > 0 ? (medStats.taken / medStats.expected).clamp(0.0, 1.0) : 0.0;
       bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
