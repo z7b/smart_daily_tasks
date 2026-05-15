@@ -1,0 +1,3 @@
+bash
+    flutter build appbundle
+    
