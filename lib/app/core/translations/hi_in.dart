@@ -124,6 +124,7 @@ const Map<String, String> hiIN = {
 
   // ─── Tasks ───────────────────────────────────────
   'no_tasks_today': 'आज कोई कार्य नहीं!',
+  'yesterday': 'बीता हुआ कल',
   'no_notes_yet': 'अभी तक कोई नोट नहीं',
   'no_bookmarks_yet': 'अभी तक कोई बुकमार्क नहीं',
   'no_bookmarks_found': 'इस श्रेणी में कोई बुकमार्क नहीं',
@@ -455,6 +456,10 @@ const Map<String, String> hiIN = {
   'add_task_hint': 'अपना पहला कार्य जोड़ने के लिए + बटन पर टैप करें',
   'bookmark_added': 'बुकमार्क जोड़ा गया',
   'color': 'रंग',
+  'importance': 'महत्व',
+  'importance_normal': 'सामान्य',
+  'importance_high': 'उच्च',
+  'importance_medium': 'मध्यम',
 
   'AM': 'AM',
   'Error': 'त्रुटि',

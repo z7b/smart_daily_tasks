@@ -122,6 +122,7 @@ const Map<String, String> frFR = {
 
   // ─── Tasks ───────────────────────────────────────
   'no_tasks_today': 'Aucune tâche aujourd\'hui !',
+  'yesterday': 'Hier',
   'no_notes_yet': 'Pas encore de notes',
   'no_bookmarks_yet': 'Pas encore de favoris',
   'no_bookmarks_found': 'Aucun favori dans cette catégorie',
@@ -544,6 +545,10 @@ const Map<String, String> frFR = {
   'title_hint': 'Titre...',
   'notes_hint': 'Commencez à rédiger des notes...',
   'color': 'Couleur',
+  'importance': 'Importance',
+  'importance_normal': 'Normale',
+  'importance_high': 'Haute',
+  'importance_medium': 'Moyenne',
   'edit_note': 'Modifier la note',
   'add_note': 'Nouvelle remarque',
   'arabic_numbers': 'Arabe (١٢٣)',

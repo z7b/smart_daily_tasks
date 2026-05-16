@@ -89,7 +89,7 @@ class TaskTimeService extends GetxService {
       case TaskStatusUI.active:
         return const Color(0xFF3B82F6); // Blue 500
       case TaskStatusUI.upcoming:
-        return const Color(0xFF6B7280); // Gray 500
+        return const Color(0xFF8B5CF6); // Violet 500 — planned/future
       case TaskStatusUI.overdue:
         return const Color(0xFFEF4444); // Red 500
       case TaskStatusUI.completed:

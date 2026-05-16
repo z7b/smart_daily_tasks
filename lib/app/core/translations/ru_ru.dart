@@ -124,6 +124,7 @@ const Map<String, String> ruRU = {
 
   // ─── Tasks ───────────────────────────────────────
   'no_tasks_today': 'Сегодня нет задач!',
+  'yesterday': 'Вчера',
   'no_notes_yet': 'Пока нет заметок',
   'no_bookmarks_yet': 'Пока нет закладок',
   'no_bookmarks_found': 'Нет закладок в этой категории',
@@ -403,6 +404,10 @@ const Map<String, String> ruRU = {
   // ─── Tasks Module ──────────────────────────────────
   'add_task_hint': 'Добавьте новую задачу...',
   'color': 'Цвет',
+  'importance': 'Важность',
+  'importance_normal': 'Обычная',
+  'importance_high': 'Высокая',
+  'importance_medium': 'Средняя',
   'complete': 'Завершить',
   'failed_to_delete': 'Не удалось удалить',
   'failed_to_save': 'Не удалось сохранить',

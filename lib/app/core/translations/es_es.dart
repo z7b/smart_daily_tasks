@@ -124,6 +124,7 @@ const Map<String, String> esES = {
 
   // ─── Tasks ───────────────────────────────────────
   'no_tasks_today': '¡Sin tareas hoy!',
+  'yesterday': 'Ayer',
   'no_notes_yet': 'Aún sin notas',
   'no_bookmarks_yet': 'Aún sin marcadores',
   'no_bookmarks_found': 'Sin marcadores en esta categoría',
@@ -334,6 +335,10 @@ const Map<String, String> esES = {
   'Required': 'Requerido',
   'Success': 'Éxito',
   'color': 'Color',
+  'importance': 'Importancia',
+  'importance_normal': 'Normal',
+  'importance_high': 'Alta',
+  'importance_medium': 'Media',
   'complete': 'Completar',
   'day': 'Día @day',
   'days': 'días',

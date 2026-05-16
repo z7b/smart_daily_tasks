@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -13,6 +12,8 @@ import '../controllers/task_form_controller.dart';
 import 'widgets/task_tile.dart';
 import 'widgets/task_section_header.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/services/time_service.dart';
+import '../../../core/extensions/date_time_extensions.dart';
 
 class TasksView extends GetView<TaskListController> {
   const TasksView({super.key});
@@ -72,6 +73,7 @@ class TasksView extends GetView<TaskListController> {
                       lastDate: DateTime(2100),
                     );
                     if (picked != null) {
+                      controller.isDateFiltering.value = true;
                       controller.selectedDate.value = picked;
                     }
                   },
@@ -88,58 +90,76 @@ class TasksView extends GetView<TaskListController> {
               ],
             ),
 
-            // Search & Date Navigation Strip
+            // Search Bar & Dynamic Date
             SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: CupertinoSearchTextField(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Column(
+                  children: [
+                    CupertinoSearchTextField(
                       placeholder: 'search_tasks'.tr,
                       style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                       onChanged: (val) => controller.searchQuery.value = val,
                     ),
-                  ),
-                  Obx(() => Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(CupertinoIcons.chevron_left_circle, size: 24),
-                          onPressed: controller.previousDay,
-                          color: AppTheme.primary.withValues(alpha: 0.6),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: controller.resetToToday,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  DateFormat.yMMMMEEEEd(Get.locale?.languageCode).format(controller.selectedDate.value).f,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.textTheme.titleMedium?.color,
-                                  ),
-                                ),
-                              ),
+                    const SizedBox(height: 16),
+                    Obx(() {
+                      final selectedDate = controller.selectedDate.value.normalized;
+                      final now = Get.find<TimeService>().now.normalized;
+                      final diff = selectedDate.difference(now).inDays;
+                      
+                      String prefix;
+                      if (diff == 0) {
+                        prefix = 'today'.tr;
+                      } else if (diff == 1) {
+                        prefix = 'tomorrow'.tr;
+                      } else if (diff == -1) {
+                        prefix = 'yesterday'.tr;
+                      } else {
+                        prefix = DateFormat.EEEE(Get.locale?.languageCode).format(selectedDate);
+                      }
+
+                      final dateStr = DateFormat('dd / MM / yyyy').format(selectedDate).f;
+
+                      final isFiltering = controller.isDateFiltering.value;
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$prefix : ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isFiltering
+                                  ? AppTheme.primary.withValues(alpha: 0.6)
+                                  : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(CupertinoIcons.chevron_right_circle, size: 24),
-                          onPressed: controller.nextDay,
-                          color: AppTheme.primary.withValues(alpha: 0.6),
-                        ),
-                      ],
-                    ),
-                  )),
-                ],
+                          Text(
+                            dateStr,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          if (isFiltering) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: controller.resetToToday,
+                              child: Icon(
+                                CupertinoIcons.xmark_circle_fill,
+                                size: 16,
+                                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    }),
+                  ],
+                ),
               ),
             ),
 
@@ -156,24 +176,6 @@ class TasksView extends GetView<TaskListController> {
 
               return SliverMainAxisGroup(
                 slivers: [
-                  // 🚨 Overdue Section
-                  if (overdue.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: TaskSectionHeader(
-                        title: 'tasks_overdue'.tr,
-                        icon: CupertinoIcons.exclamationmark_triangle_fill,
-                        color: const Color(0xFFEF4444),
-                        count: overdue.length,
-                      ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildTaskTile(context, overdue[index]),
-                        childCount: overdue.length,
-                      ),
-                    ),
-                  ],
-
                   // ⚡ Active Now Section
                   if (active.isNotEmpty) ...[
                     SliverToBoxAdapter(
@@ -188,6 +190,24 @@ class TasksView extends GetView<TaskListController> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _buildTaskTile(context, active[index]),
                         childCount: active.length,
+                      ),
+                    ),
+                  ],
+
+                  // 🚨 Overdue Section
+                  if (overdue.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: TaskSectionHeader(
+                        title: 'tasks_overdue'.tr,
+                        icon: CupertinoIcons.exclamationmark_triangle_fill,
+                        color: const Color(0xFFEF4444),
+                        count: overdue.length,
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildTaskTile(context, overdue[index]),
+                        childCount: overdue.length,
                       ),
                     ),
                   ],
@@ -249,7 +269,7 @@ class TasksView extends GetView<TaskListController> {
       onCompleted: (val) => controller.markTaskCompleted(task),
       onCancel: () => controller.cancelTask(task),
       onDelete: () => controller.deleteTask(task),
-    ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.02);
+    );
   }
 
   Widget _buildEmptyState(ThemeData theme) {
@@ -285,7 +305,7 @@ class TasksView extends GetView<TaskListController> {
               ),
             ),
           ],
-        ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)),
+        ),
       ),
     );
   }
