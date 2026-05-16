@@ -527,6 +527,7 @@ const Map<String, String> esES = {
   'premium_not_available_title': 'No disponible',
   'premium_not_available_desc': 'No se pudieron cargar los planes. Comprueba tu conexión a Internet.',
   'premium_terms': 'Se renueva automáticamente. Cancela en cualquier momento en la configuración.',
+  'premium_active': 'Eres Premium ✨',
   'reorder_cards': 'Reordenar',
   'save_order': 'Guardar',
 };

@@ -401,8 +401,8 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
       children: [
         Expanded(child: _planCard(
           label: 'premium_yearly'.tr,
-          price: _sub.getYearlyMonthlyEquivalent(),
-          period: 'premium_month_short'.tr,
+          price: _sub.getYearlyPrice(),
+          period: '',
           savings: 'premium_save_29'.tr,
           isSelected: _selectedPlan.value == 'yearly',
           isDark: isDark,

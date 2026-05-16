@@ -578,6 +578,7 @@ const Map<String, String> hiIN = {
   'premium_not_available_title': 'उपलब्ध नहीं',
   'premium_not_available_desc': 'सदस्यता योजनाएं लोड नहीं हो सकीं। अपना इंटरनेट कनेक्शन जांचें।',
   'premium_terms': 'स्वतः नवीनीकरण। सेटिंग्स में कभी भी रद्द करें।',
+  'premium_active': 'आप प्रीमियम हैं ✨',
   'reorder_cards': 'क्रम बदलें',
   'save_order': 'क्रम सहेजें',
 };

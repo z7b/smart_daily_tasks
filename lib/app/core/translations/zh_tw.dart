@@ -875,6 +875,7 @@ const Map<String, String> zhTW = {
   'premium_not_available_title': '不可用',
   'premium_not_available_desc': '無法載入訂閱計劃。請檢查您的網路連線。',
   'premium_terms': '自動續訂。隨時可以在設定中取消。',
+  'premium_active': '您已是高級會員 ✨',
   'reorder_cards': '重新排序',
   'save_order': '儲存順序',
 };
