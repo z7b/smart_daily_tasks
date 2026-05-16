@@ -202,15 +202,15 @@
             <h2>1. البيانات التي نصل إليها</h2>
 
             <div class="card">
-                <div class="card-title">📊 بيانات الصحة واللياقة <span class="badge">Health Connect</span></div>
-                <p>يتصل التطبيق ببروتوكول <strong>Health Connect</strong> (Android) للوصول إلى:</p>
+                <div class="card-title">📊 بيانات الصحة واللياقة <span class="badge">Health Connect / Google Fit</span></div>
+                <p>يقوم التطبيق بقراءة وسحب بيانات الصحة الخاصة بك مباشرة من جهازك عبر بروتوكول <strong>Health Connect</strong> (و/أو <strong>Google Fit</strong>) وتشمل:</p>
                 <ul>
-                    <li><strong>الخطوات اليومية</strong> — لعرض نشاطك البدني</li>
-                    <li><strong>السعرات الحرارية المحروقة</strong> — لتتبع استهلاك الطاقة</li>
-                    <li><strong>المسافة المقطوعة</strong> — لقياس مسافة المشي/الجري</li>
+                    <li><strong>الخطوات اليومية</strong> — لعرض نشاطك البدني وتتبع أهداف المشي</li>
+                    <li><strong>السعرات الحرارية المحروقة</strong> — لتتبع استهلاك الطاقة اليومي</li>
+                    <li><strong>المسافة المقطوعة</strong> — لقياس مسافة المشي أو الجري</li>
                 </ul>
-                <p><strong>الغرض:</strong> عرض هذه البيانات لك فقط داخل لوحة تحكم التطبيق لمساعدتك في تتبع أهدافك الصحية.</p>
-                <p>✅ <strong>لا يتم</strong> إرسال هذه البيانات إلى أي خادم خارجي أو طرف ثالث.</p>
+                <p><strong>الغرض الأساسي:</strong> عرض هذه البيانات لك فقط داخل لوحة تحكم التطبيق لتمكينك من متابعة إنجازاتك وصحتك اليومية كجزء من أداة تتبع العادات.</p>
+                <p>✅ <strong>لا يتم</strong> إرسال هذه البيانات إلى أي خادم خارجي أو طرف ثالث (تُحفظ محلياً فقط في جهازك).</p>
                 <p>✅ <strong>لا يتم</strong> بيع أو مشاركة بيانات صحتك لأغراض إعلانية مطلقاً.</p>
             </div>
 
@@ -233,8 +233,11 @@
             </div>
 
             <div class="card">
-                <div class="card-title">🔔 الإشعارات</div>
-                <p>يستخدم التطبيق الإشعارات المحلية لتذكيرك بمهامك ومواعيدك. هذه الإشعارات تعمل محلياً بالكامل ولا تتطلب اتصالاً بالإنترنت.</p>
+                <div class="card-title">🔔 الإشعارات والتنبيهات الدقيقة</div>
+                <p>يستخدم التطبيق نظام الإشعارات لتذكيرك بمهامك اليومية، مواعيدك، وأوقات الأدوية الخاصة بك.</p>
+                <p><strong>إذن الإشعارات:</strong> نطلب هذا الإذن (POST_NOTIFICATIONS) لعرض التنبيهات على شاشتك عند حلول وقت المهمة.</p>
+                <p><strong>إذن التنبيه الدقيق (SCHEDULE_EXACT_ALARM):</strong> بما أن التطبيق يحتوي على تذكيرات حساسة للوقت (مثل مواعيد الأدوية والاجتماعات)، نستخدم هذا الإذن لضمان إطلاق التنبيه في الدقيقة والثانية المحددة بالضبط التي اخترتها، دون تأخير من نظام حفظ طاقة البطارية.</p>
+                <p>✅ جميع عمليات جدولة الإشعارات تتم <strong>محلياً بالكامل</strong> داخل هاتفك ولا تتطلب اتصالاً بالإنترنت.</p>
             </div>
 
             <h2>2. تخزين البيانات</h2>
@@ -251,16 +254,20 @@
                 <li>بيانات الصحة <strong>لن تُستخدم أبداً</strong> لأغراض الاستهداف الإعلاني</li>
             </ul>
 
-            <h2>5. الأذونات المطلوبة</h2>
+            <h2>5. الأذونات المطلوبة (Permissions)</h2>
+            <p>يطلب التطبيق الأذونات التالية لضمان عمل ميزاته الأساسية بفعالية. نحن نلتزم بالشفافية الكاملة:</p>
             <table>
-                <tr><th>الإذن</th><th>الغرض</th></tr>
-                <tr><td>Health Connect</td><td>قراءة بيانات الخطوات والسعرات الحرارية</td></tr>
-                <tr><td>البصمة / الوجه</td><td>قفل التطبيق (اختياري)</td></tr>
-                <tr><td>الإشعارات</td><td>تذكيرات المهام والمواعيد</td></tr>
-                <tr><td>التخزين</td><td>استيراد ملفات PDF للقراءة</td></tr>
-                <tr><td>الإنترنت</td><td>الاشتراكات والإعلانات فقط</td></tr>
-                <tr><td>التنبيه الدقيق</td><td>ضمان دقة التذكيرات المجدولة</td></tr>
-                <tr><td>التشغيل عند الإقلاع</td><td>استعادة التذكيرات بعد إعادة تشغيل الجهاز</td></tr>
+                <tr><th>الإذن (Permission)</th><th>الغرض من الاستخدام (Purpose)</th></tr>
+                <tr><td><strong>بيانات الصحة (Health Connect)</strong></td><td>قراءة وعرض الخطوات اليومية والسعرات المحروقة كجزء من أداة تتبع العادات.</td></tr>
+                <tr><td><strong>المصادقة (Biometrics)</strong></td><td>توفير طبقة أمان اختيارية (بصمة/وجه) لقفل التطبيق.</td></tr>
+                <tr><td><strong>الإشعارات (POST_NOTIFICATIONS)</strong></td><td>إرسال تنبيهات محلية لتذكيرك بمهامك ومواعيدك وأوقات أدويتك.</td></tr>
+                <tr><td><strong>التنبيه الدقيق (SCHEDULE_EXACT_ALARM)</strong></td><td>ضمان إطلاق تنبيهات الأدوية والمواعيد الحساسة في وقتها الدقيق بالثانية.</td></tr>
+                <tr><td><strong>تجاهل تحسين البطارية</strong></td><td>منع نظام أندرويد من إيقاف المنبهات والتذكيرات المهمة أثناء وضع السكون.</td></tr>
+                <tr><td><strong>الخلفية (Wake Lock / Foreground)</strong></td><td>السماح للتطبيق بمزامنة بيانات الصحة محلياً وإصدار التنبيهات دون انقطاع.</td></tr>
+                <tr><td><strong>التخزين (Storage)</strong></td><td>استيراد وقراءة ملفات الكتب (PDF) التي تختارها أنت، وتصدير النسخ الاحتياطية.</td></tr>
+                <tr><td><strong>الإنترنت (Internet)</strong></td><td>إدارة المشتريات (Google Play) والاشتراكات.</td></tr>
+                <tr><td><strong>التشغيل عند الإقلاع (Boot Completed)</strong></td><td>إعادة جدولة منبهات المهام تلقائياً بعد إعادة تشغيل الهاتف لضمان عدم ضياع التذكيرات.</td></tr>
+                <tr><td><strong>الموقع (Location - اختياري)</strong></td><td>إذن تقني إجباري في الأجهزة القديمة فقط لتشغيل مستشعرات عداد الخطوات.</td></tr>
             </table>
 
             <h2>6. الشفافية والموافقة</h2>
@@ -302,15 +309,15 @@
             <h2>1. Data We Access</h2>
 
             <div class="card">
-                <div class="card-title">📊 Health & Fitness Data <span class="badge">Health Connect</span></div>
-                <p>The app connects to <strong>Health Connect</strong> (Android) to access:</p>
+                <div class="card-title">📊 Health & Fitness Data <span class="badge">Health Connect / Google Fit</span></div>
+                <p>The app reads and pulls your health data directly from your device via <strong>Health Connect</strong> (and/or <strong>Google Fit</strong>), including:</p>
                 <ul>
-                    <li><strong>Daily Steps</strong> — to display your physical activity</li>
-                    <li><strong>Calories Burned</strong> — to track energy expenditure</li>
-                    <li><strong>Distance Traveled</strong> — to measure walking/running distance</li>
+                    <li><strong>Daily Steps</strong> — to display your physical activity and track walking goals</li>
+                    <li><strong>Calories Burned</strong> — to track your daily energy expenditure</li>
+                    <li><strong>Distance Traveled</strong> — to measure walking or running distance</li>
                 </ul>
-                <p><strong>Purpose:</strong> To display this data to you within the app's dashboard to help you track your health goals.</p>
-                <p>✅ This data is <strong>never</strong> sent to any external server or third party.</p>
+                <p><strong>Core Purpose:</strong> To display this data to you within the app's dashboard, empowering you to monitor your daily health achievements as part of the habit tracker.</p>
+                <p>✅ This data is <strong>never</strong> sent to any external server or third party (it is stored strictly locally on your device).</p>
                 <p>✅ Your health data is <strong>never</strong> sold or shared for advertising purposes.</p>
             </div>
 
@@ -333,8 +340,11 @@
             </div>
 
             <div class="card">
-                <div class="card-title">🔔 Notifications</div>
-                <p>The app uses local notifications to remind you of your tasks and appointments. These notifications work entirely locally and do not require an internet connection.</p>
+                <div class="card-title">🔔 Notifications & Exact Alarms</div>
+                <p>The app uses local notifications to remind you of your daily tasks, appointments, and medication schedules.</p>
+                <p><strong>Notifications Permission:</strong> We request this permission (POST_NOTIFICATIONS) to display alerts on your screen when a task is due.</p>
+                <p><strong>Exact Alarm Permission (SCHEDULE_EXACT_ALARM):</strong> Since the app manages time-sensitive reminders (like medication and meetings), we use this permission to ensure the notification fires exactly at the precise minute and second you scheduled, bypassing battery optimization delays.</p>
+                <p>✅ All scheduling and notification triggers operate <strong>entirely locally</strong> on your device and do not require an internet connection.</p>
             </div>
 
             <h2>2. Data Storage</h2>
@@ -352,15 +362,19 @@
             </ul>
 
             <h2>5. Permissions Required</h2>
+            <p>The app requests the following permissions to ensure its core features function effectively. We are committed to full transparency:</p>
             <table>
-                <tr><th>Permission</th><th>Purpose</th></tr>
-                <tr><td>Health Connect</td><td>Read steps and calorie data</td></tr>
-                <tr><td>Fingerprint / Face</td><td>App lock (optional)</td></tr>
-                <tr><td>Notifications</td><td>Task and appointment reminders</td></tr>
-                <tr><td>Storage</td><td>Import PDF files for reading</td></tr>
-                <tr><td>Internet</td><td>Subscriptions and ads only</td></tr>
-                <tr><td>Exact Alarm</td><td>Ensure accuracy of scheduled reminders</td></tr>
-                <tr><td>Boot Completed</td><td>Restore reminders after device restart</td></tr>
+                <tr><th>Permission</th><th>Purpose of Use</th></tr>
+                <tr><td><strong>Health Connect (Health Data)</strong></td><td>Read and display daily steps and burned calories as part of the habit tracker.</td></tr>
+                <tr><td><strong>Biometrics (Fingerprint/Face)</strong></td><td>Provide an optional security layer to lock/unlock the application.</td></tr>
+                <tr><td><strong>Notifications (POST_NOTIFICATIONS)</strong></td><td>Send local alerts to remind you of your tasks, appointments, and medication.</td></tr>
+                <tr><td><strong>Exact Alarm (SCHEDULE_EXACT_ALARM)</strong></td><td>Ensure time-sensitive alerts (like medication) fire precisely on schedule without delays.</td></tr>
+                <tr><td><strong>Ignore Battery Optimization</strong></td><td>Prevent the Android OS from delaying or suppressing critical alarms during sleep mode.</td></tr>
+                <tr><td><strong>Background (Wake Lock / Foreground)</strong></td><td>Allow the app to perform local health data syncs and trigger alarms efficiently.</td></tr>
+                <tr><td><strong>Storage (Read/Write)</strong></td><td>Import and read PDF books manually selected by you, and export local data backups.</td></tr>
+                <tr><td><strong>Internet</strong></td><td>Manage Google Play subscriptions and purchases.</td></tr>
+                <tr><td><strong>Boot Completed</strong></td><td>Automatically reschedule task alarms and reminders after device reboot to prevent missed alerts.</td></tr>
+                <tr><td><strong>Location (Legacy Only)</strong></td><td>Required strictly as a technical prerequisite on older devices to access physical step sensors.</td></tr>
             </table>
 
             <h2>6. Transparency & Consent</h2>

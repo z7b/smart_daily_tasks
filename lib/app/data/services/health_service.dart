@@ -369,18 +369,62 @@ class HealthService extends GetxService {
       final existing = await stepRepo.getStepLog(midnight);
       final currentGoal = _storage.read('daily_step_goal') ?? 10000;
       
+      // ✅ DEFENSIVE SYNC: Protect against 3 critical data corruption scenarios
+      int finalSteps = steps;
+      double finalCalories = calories;
+      double finalDistance = distance;
+      bool finalIsManual = false;
+
+      if (existing != null) {
+        // 🛡️ Guard 1: Zero-Overwrite Protection
+        // Health Connect sometimes returns 0 due to API delays or sensor batching.
+        // Never overwrite real data with zeros.
+        if (steps == 0 && existing.steps > 0) {
+          talker.warning('🛡️ Zero-Guard: Health Connect returned 0 but DB has ${existing.steps}. Keeping existing.');
+          finalSteps = existing.steps;
+          finalCalories = existing.calories;
+          finalDistance = existing.distance;
+        }
+
+        // 🛡️ Guard 2: Downward Protection
+        // Steps physically cannot decrease during a single day.
+        // If sensor returns a lower number (glitch/recalculation), keep the higher value.
+        if (finalSteps < existing.steps) {
+          talker.warning('🛡️ Regression-Guard: Sensor=$finalSteps < DB=${existing.steps}. Keeping higher value.');
+          finalSteps = existing.steps;
+        }
+
+        // 🛡️ Guard 3: Manual → Sensor Transition
+        // When sensor data arrives for a day that had manual entries,
+        // take the HIGHER value (trust sensor if it's higher, keep manual if user entered more).
+        // Then CLEAR the isManual flag so subsequent syncs don't re-trigger this guard.
+        if (existing.isManual && steps > 0) {
+          finalSteps = steps > existing.steps ? steps : existing.steps;
+          finalIsManual = false; // ✅ Sensor is now SSOT — clear manual flag permanently
+          talker.info('🛡️ Manual-Guard: Transition manual(${existing.steps}) → sensor($steps). Final=$finalSteps');
+        }
+
+        // Protect calories and distance from regression too
+        if (finalCalories < existing.calories && existing.calories > 0) {
+          finalCalories = existing.calories;
+        }
+        if (finalDistance < existing.distance && existing.distance > 0) {
+          finalDistance = existing.distance;
+        }
+      }
+
       final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
-        steps: steps,
-        calories: calories,
-        distance: distance,
+        steps: finalSteps,
+        calories: finalCalories,
+        distance: finalDistance,
         goal: currentGoal,
-        isManual: false, 
+        isManual: finalIsManual, 
         lastSyncedAt: now,
       );
       lastSynced.value = updated.lastSyncedAt;
       await stepRepo.saveStepLog(updated);
 
-      return steps;
+      return finalSteps;
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Error in Master pulse sync');
       return 0;
