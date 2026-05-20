@@ -20,6 +20,8 @@ import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/task_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
+import 'package:smart_daily_tasks/app/core/services/rewarded_ad_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
@@ -122,6 +124,9 @@ void main() {
 
       tz.initializeTimeZones();
       await GetStorage.init();
+
+      // ✅ Initialize Google Mobile Ads SDK
+      await MobileAds.instance.initialize();
 
       runApp(const AppBootstrapper());
     },
@@ -270,6 +275,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(AppointmentTimeService(), permanent: true);
       Get.put(TaskTimeService(), permanent: true);
       Get.put(SubscriptionService(), permanent: true);
+      Get.put(RewardedAdService(), permanent: true);
 
       // ✅ Phase 6: Register AI Assistant Services (Tool Execution)
       Get.put(

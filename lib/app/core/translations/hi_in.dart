@@ -390,6 +390,8 @@ const Map<String, String> hiIN = {
   'working_days': 'कार्य दिवस',
   'start_time': 'प्रारंभ समय',
   'end_time': 'समाप्ति समय',
+  'task_start_time': 'कार्य प्रारंभ समय',
+  'task_end_time': 'कार्य समाप्ति समय',
   'official_work_hours': 'आधिकारिक कार्य घंटे',
   'salary_day': 'वेतन का दिन (1-31)',
   'custom_schedules': 'कस्टम दैनिक अनुसूची',
@@ -486,6 +488,8 @@ const Map<String, String> hiIN = {
   'dose_taken': 'खुराक ली गई',
   'doses_remaining': 'शेष खुराक',
   'duplicate_intake': 'डुप्लिकेट खुराक',
+  'dose_spacing_warning_title': 'खुराक अंतराल चेतावनी',
+  'dose_spacing_warning_body': 'सुरक्षा कारणों से आस-पास की खुराक के बहुत करीब निर्धारित होने के कारण [@times] पर @count खुराक हटा दी गई थी।',
   'early': 'जल्दी',
   'edit_book': 'पुस्तक संपादित करें',
   'edit_entry': 'प्रविष्टि संपादित करें',
@@ -535,6 +539,8 @@ const Map<String, String> hiIN = {
   'start_writing_hint': 'लिखना शुरू करें...',
   'switch_to_employed': 'नियोजित पर स्विच करें',
   'task_deleted': 'कार्य हटा दिया गया',
+  'task_already_exists': 'कार्य "@title" इस दिन के लिए पहले से मौजूद है',
+  'appointment_already_exists': 'इस समय पर पहले से ही एक नियुक्ति निर्धारित है',
   'task_update_success': 'कार्य सफलतापूर्वक अपडेट किया गया',
   'tasks_active': 'सक्रिय',
   'tasks_completed': 'पूरे हुए',
@@ -564,6 +570,14 @@ const Map<String, String> hiIN = {
   'notification_permissions_missing': 'कृपया सभी सूचना अनुमतियाँ प्रदान करें',
   'data_imported_successfully': 'डेटा सफलतापूर्वक आयात किया गया।',
 
+  'postpone': 'स्थगित करें',
+  'postpone_appointment': 'नियुक्ति स्थगित करें',
+  'postpone_by': 'द्वारा स्थगित करें',
+  'custom': 'कस्टम तिथि',
+  'one_day': '1 दिन',
+  'one_week': '1 सप्ताह',
+  'appointment_postponed': 'नियुक्ति सफलतापूर्वक स्थगित',
+
   // ─── Premium & Subscription ──────────────────
   'premium_subtitle': 'असीमित अनुभव',
   'premium_feature_1_title': 'सभी विज्ञापन हटाएं',
@@ -586,4 +600,5 @@ const Map<String, String> hiIN = {
   'premium_active': 'आप प्रीमियम हैं ✨',
   'reorder_cards': 'क्रम बदलें',
   'save_order': 'क्रम सहेजें',
+  'beta_badge': 'बीटा',
 };

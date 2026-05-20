@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:workmanager/workmanager.dart';
 import '../../core/helpers/log_helper.dart';
 import '../models/step_log_model.dart';
@@ -127,6 +128,15 @@ class HealthService extends GetxService {
       final bool hadPriorConnection = _storage.read(_authIntentKey) ?? false;
       bool? hasHealth = await health.hasPermissions(types, permissions: permissions);
       
+      // ✅ Bug Fix: Explicitly check Activity Recognition for Android 10-12
+      // Android 10 allows notifications by default, but Activity Recognition is separate and required
+      if (Platform.isAndroid) {
+        final activityStatus = await Permission.activityRecognition.status;
+        if (!activityStatus.isGranted) {
+          hasHealth = false;
+        }
+      }
+
       talker.info('📊 Health Permission Check: hasHealth=$hasHealth, hadPriorConnection=$hadPriorConnection');
       
       if (hasHealth == true) {
@@ -218,9 +228,13 @@ class HealthService extends GetxService {
         }
       } catch (_) {}
 
-      // 2. Official Health Interface (Health Connect / HealthKit)
+      // 2. Official Health Interface (Health Connect / HealthKit) & Activity Recognition
       talker.info('🏥 Official Handshake: Requesting Health Connect/HealthKit access...');
       
+      if (Platform.isAndroid) {
+        await Permission.activityRecognition.request();
+      }
+
       bool granted = false;
       for (int i = 0; i < 3; i++) {
         granted = await health.requestAuthorization(types, permissions: permissions);

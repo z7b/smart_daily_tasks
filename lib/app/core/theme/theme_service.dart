@@ -12,7 +12,7 @@ class ThemeService extends GetxService {
   final _numberFormatKey = 'useArabicNumbers';
 
   // Reactive state so UI can observe
-  final isDarkModeRx = true.obs;
+  final isDarkModeRx = false.obs;
   final fontTypeRx = 'Rubik'.obs;
   final fontSizeRx = 'medium'.obs;
   final useArabicNumbersRx = false.obs;
@@ -37,10 +37,10 @@ class ThemeService extends GetxService {
 
   bool _loadThemeFromBox() {
     try {
-      return _box.read(_key) ?? true;
+      return _box.read(_key) ?? false;
     } catch (e) {
       debugPrint('⚠️ Error reading theme from storage: $e');
-      return true;
+      return false;
     }
   }
 
@@ -81,7 +81,9 @@ class ThemeService extends GetxService {
     try {
       _box.write(_numberFormatKey, useArabic);
       useArabicNumbersRx.value = useArabic;
-      debugPrint('🔢 Number format changed: ${useArabic ? "Arabic" : "English"}');
+      debugPrint(
+        '🔢 Number format changed: ${useArabic ? "Arabic" : "English"}',
+      );
       Get.forceAppUpdate(); // ✅ Force immediate global refresh
     } catch (e) {
       debugPrint('⚠️ Error switching number format: $e');
@@ -91,7 +93,7 @@ class ThemeService extends GetxService {
   String replaceDigits(String input) {
     const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    
+
     if (useArabicNumbersRx.value) {
       input = input.replaceAllMapped(
         RegExp(r'[0-9]'),
@@ -108,14 +110,14 @@ class ThemeService extends GetxService {
 
   // ✅ Reactive Theme Getters for Root Rebuild
   ThemeData get currentTheme => AppTheme.buildTheme(
-    isDark: false, 
-    fontName: fontTypeRx.value, 
+    isDark: false,
+    fontName: fontTypeRx.value,
     fontSizeKey: fontSizeRx.value,
   );
 
   ThemeData get currentDarkTheme => AppTheme.buildTheme(
-    isDark: true, 
-    fontName: fontTypeRx.value, 
+    isDark: true,
+    fontName: fontTypeRx.value,
     fontSizeKey: fontSizeRx.value,
   );
 
@@ -129,7 +131,7 @@ class ThemeService extends GetxService {
     } catch (e) {
       debugPrint('⚠️ Error reading locale: $e');
     }
-    
+
     // Auto-detect device locale
     final deviceLocale = Get.deviceLocale;
     if (deviceLocale != null) {
@@ -156,6 +158,22 @@ class ThemeService extends GetxService {
     final savedLocale = _box.read(_localeKey);
     if (savedLocale != null && supportedLocales.containsKey(savedLocale)) {
       return savedLocale;
+    }
+    
+    // Auto-detect device locale key
+    final deviceLocale = Get.deviceLocale;
+    if (deviceLocale != null) {
+      final langCode = deviceLocale.languageCode;
+      final fullCode = '${langCode}_${deviceLocale.countryCode ?? ''}';
+      if (supportedLocales.containsKey(fullCode)) {
+        return fullCode;
+      }
+      if (supportedLocales.containsKey(langCode)) {
+        return langCode;
+      }
+      if (langCode == 'zh') {
+        return 'zh_CN';
+      }
     }
     return 'en';
   }

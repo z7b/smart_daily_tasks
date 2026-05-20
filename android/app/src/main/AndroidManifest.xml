@@ -118,6 +118,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- ✅ Google AdMob App ID (Required for Mobile Ads SDK) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8074008172106908~5905658284" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

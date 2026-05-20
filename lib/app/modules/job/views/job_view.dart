@@ -10,6 +10,7 @@ import '../../../data/models/attendance_log_model.dart';
 import '../../../routes/app_routes.dart';
 import '../../../core/helpers/number_extension.dart';
 import '../../../core/helpers/custom_date_picker.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 class JobView extends GetView<JobController> {
   const JobView({super.key});
@@ -134,6 +135,14 @@ class JobView extends GetView<JobController> {
 
               // ── Performance/Consistency Score ──
               SliverToBoxAdapter(child: _buildConsistencyScore(context)),
+
+              // ── Ad Banner ──
+              SliverToBoxAdapter(
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: AdBannerWidget(),
+                ),
+              ),
 
               // ── Period Selection ──
               SliverToBoxAdapter(child: _buildPeriodSelector(context)),

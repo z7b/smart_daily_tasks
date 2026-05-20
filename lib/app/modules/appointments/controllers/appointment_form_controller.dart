@@ -18,6 +18,9 @@ class AppointmentFormController extends GetxController {
   final alarmEnabled = false.obs;
   final reminderOffset = 60.obs; // Default 1 hour
 
+  // ✅ Bug Fix: Button Debounce & Loading State
+  final isLoading = false.obs;
+
   /// ✅ H-1: Edit Mode Support
   final isEditing = false.obs;
   int? _editingId;
@@ -43,6 +46,8 @@ class AppointmentFormController extends GetxController {
       Get.snackbar('error'.tr, 'please_enter_doctor_name'.tr);
       return;
     }
+    
+    if (isLoading.value) return;
 
     final scheduledAt = DateTime(
       selectedDate.value.year,
@@ -51,6 +56,24 @@ class AppointmentFormController extends GetxController {
       selectedTime.value.hour,
       selectedTime.value.minute,
     );
+
+    // ✅ Bug Fix: Duplicate Check (UX Governance)
+    isLoading.value = true;
+    try {
+      if (!isEditing.value) {
+        final existing = await _appointmentRepo.getAppointmentsForDay(scheduledAt);
+        final isDuplicate = existing.any((appt) => 
+            appt.doctorName.toLowerCase() == doctorNameController.text.trim().toLowerCase() && 
+            appt.scheduledAt.hour == scheduledAt.hour &&
+            appt.scheduledAt.minute == scheduledAt.minute
+        );
+        
+        if (isDuplicate) {
+          Get.snackbar('error'.tr, 'appointment_already_exists'.tr);
+          isLoading.value = false;
+          return;
+        }
+      }
 
     final appointment = Appointment(
       patientName: patientNameController.text,
@@ -70,8 +93,15 @@ class AppointmentFormController extends GetxController {
     }
 
     await _appointmentRepo.saveAppointment(appointment);
+    
+    isLoading.value = false;
     Get.back();
     Get.snackbar('success'.tr, 'appointment_saved'.tr);
+    
+    } catch (e) {
+      isLoading.value = false;
+      Get.snackbar('error'.tr, 'failed_to_save'.tr);
+    }
   }
 
   @override

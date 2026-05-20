@@ -8,6 +8,7 @@ import '../../../core/helpers/bottom_sheet_helper.dart';
 import '../controllers/medication_controller.dart';
 import '../../../data/models/medication_model.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 class MedicationView extends GetView<MedicationController> {
   const MedicationView({super.key});
@@ -107,6 +108,14 @@ class MedicationView extends GetView<MedicationController> {
                   ),
                 );
               }),
+            ),
+
+            // ── Ad Banner ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: AdBannerWidget(),
+              ),
             ),
 
             // ── Medication List ─────────────────────────────────

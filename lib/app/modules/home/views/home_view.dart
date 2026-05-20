@@ -19,6 +19,7 @@ import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
 import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart' show NextTaskKind;
+import 'package:smart_daily_tasks/app/widgets/ad_banner_widget.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -83,6 +84,12 @@ class HomeView extends GetView<HomeController> {
         ),
 
         // Glassmorphism Toggle Button
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: AdBannerWidget(),
+          ),
+        ),
         SliverToBoxAdapter(
           child: _buildReorderToggle(context),
         ),

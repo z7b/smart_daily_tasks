@@ -103,19 +103,24 @@ class AddAppointmentView extends GetView<AppointmentFormController> {
                   ),
                 ],
               ),
-              child: ElevatedButton(
-                onPressed: controller.saveAppointment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                ),
-                child: Text(
-                  'save'.tr,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-                ),
-              ),
+              child: Obx(() {
+                final isLoading = controller.isLoading.value;
+                return ElevatedButton(
+                  onPressed: isLoading ? null : controller.saveAppointment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  ),
+                  child: isLoading 
+                    ? const CupertinoActivityIndicator(color: Colors.white)
+                    : Text(
+                        'save'.tr,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                      ),
+                );
+              }),
             ),
             const SizedBox(height: 40),
           ],

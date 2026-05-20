@@ -150,7 +150,7 @@ class AddTaskView extends GetView<TaskFormController> {
                           Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
                           _buildModernListTile(
                             context,
-                            title: 'start_time'.tr,
+                            title: 'task_start_time'.tr,
                             icon: CupertinoIcons.time,
                             iconColor: const Color(0xFF007AFF),
                             trailing: Obx(() => _buildModernPickerPill(
@@ -162,7 +162,7 @@ class AddTaskView extends GetView<TaskFormController> {
                           Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
                           _buildModernListTile(
                             context,
-                            title: 'end_time'.tr,
+                            title: 'task_end_time'.tr,
                             icon: CupertinoIcons.time_solid,
                             iconColor: const Color(0xFF5E5CE6),
                             trailing: Obx(() {

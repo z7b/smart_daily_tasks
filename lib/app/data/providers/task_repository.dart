@@ -112,9 +112,14 @@ class TaskRepository {
     return _isar.tasks.watchLazy();
   }
 
-  /// ✅ Reactive stream of all tasks for calendar markers
+  /// ✅ Reactive stream of tasks for calendar markers (bounded to 1 year for performance)
+  /// Prevents memory bloat from accumulated recurring task instances over years of usage
   Stream<List<Task>> watchAllTasksData() {
-    return _isar.tasks.where().watch(fireImmediately: true);
+    final oneYearAgo = DateTime.now().subtract(const Duration(days: 365));
+    return _isar.tasks
+        .filter()
+        .scheduledAtGreaterThan(oneYearAgo)
+        .watch(fireImmediately: true);
   }
 
   /// ✅ Reactive stream of recurring templates for "Virtual" calendar display

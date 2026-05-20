@@ -11,6 +11,7 @@ import '../controllers/book_controller.dart';
 import '../../../data/models/book_model.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 class BookView extends GetView<BookController> {
   const BookView({super.key});
@@ -102,6 +103,14 @@ class BookView extends GetView<BookController> {
                   ),
                 );
               }),
+            ),
+
+            // ── Ad Banner ──
+            SliverToBoxAdapter(
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: AdBannerWidget(),
+              ),
             ),
 
             // ── Book grid ──

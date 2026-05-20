@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../widgets/ad_banner_widget.dart';
 import '../controllers/assistant_controller.dart';
 import '../../../core/services/assistant/message_model.dart';
 import 'widgets/response_card.dart';
@@ -26,6 +27,12 @@ class AssistantView extends GetView<AssistantController> {
               child: CustomScrollView(
                 slivers: [
                   const SliverToBoxAdapter(child: AssistantDashboard()),
+                  SliverToBoxAdapter(
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: AdBannerWidget(),
+                    ),
+                  ),
                   const _ChatSliverList(),
                 ],
               ),

@@ -14,6 +14,7 @@ import 'widgets/task_section_header.dart';
 import '../../../core/helpers/number_extension.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 class TasksView extends GetView<TaskListController> {
   const TasksView({super.key});
@@ -160,6 +161,13 @@ class TasksView extends GetView<TaskListController> {
                     }),
                   ],
                 ),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: AdBannerWidget(),
               ),
             ),
 

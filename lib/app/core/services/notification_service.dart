@@ -44,6 +44,7 @@ class NotificationService extends GetxService {
   Future<void> init() async {
     try {
       tz.initializeTimeZones();
+      _detectAndSetTimezone();
 
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -746,5 +747,52 @@ class NotificationService extends GetxService {
       titleKey: 'appointment_now_notif',
       isAlarm: alarmEnabled,
     );
+  }
+
+  /// 🌍 Best-effort timezone detection to ensure tz.local matches the device timezone
+  /// Prevents weekly notification scheduling from using UTC components
+  /// Falls back silently to UTC if detection fails (one-time notifications unaffected)
+  void _detectAndSetTimezone() {
+    try {
+      final deviceOffset = DateTime.now().timeZoneOffset;
+
+      // Fast path: check common timezones first (covers majority of users)
+      const priorityLocations = [
+        'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Shanghai',
+        'Asia/Tokyo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+        'America/New_York', 'America/Chicago', 'America/Denver',
+        'America/Los_Angeles', 'Africa/Cairo', 'Australia/Sydney',
+        'Asia/Karachi', 'Asia/Bangkok', 'Asia/Dhaka', 'Asia/Tehran',
+        'America/Sao_Paulo', 'Pacific/Auckland', 'Asia/Jakarta',
+        'Asia/Kuala_Lumpur', 'Asia/Singapore', 'Europe/Moscow',
+        'Europe/Istanbul', 'Asia/Baghdad', 'Asia/Amman',
+      ];
+
+      for (final name in priorityLocations) {
+        try {
+          final loc = tz.getLocation(name);
+          if (tz.TZDateTime.now(loc).timeZoneOffset == deviceOffset) {
+            tz.setLocalLocation(loc);
+            talker.info('🌍 Timezone detected: $name (offset: ${deviceOffset.inHours}h)');
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // Slow path: scan all timezone database locations
+      for (final entry in tz.timeZoneDatabase.locations.entries) {
+        try {
+          if (tz.TZDateTime.now(entry.value).timeZoneOffset == deviceOffset) {
+            tz.setLocalLocation(entry.value);
+            talker.info('🌍 Timezone detected (full scan): ${entry.key}');
+            return;
+          }
+        } catch (_) {}
+      }
+
+      talker.warning('⚠️ Could not detect device timezone — tz.local defaults to UTC');
+    } catch (e) {
+      talker.warning('⚠️ Timezone detection error: $e');
+    }
   }
 }
