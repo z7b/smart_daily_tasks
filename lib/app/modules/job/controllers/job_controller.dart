@@ -731,7 +731,12 @@ class JobController extends GetxController {
           final endMin = (s['end'] as num?)?.toInt() ?? profile.value.endMinutes;
           
           final shiftStart = DateTime(d.year, d.month, d.day, startMin ~/ 60, startMin % 60);
-          final shiftEnd = DateTime(d.year, d.month, d.day, endMin ~/ 60, endMin % 60);
+          DateTime shiftEnd = DateTime(d.year, d.month, d.day, endMin ~/ 60, endMin % 60);
+
+          // Fix for cross-midnight night shifts
+          if (endMin < startMin) {
+            shiftEnd = shiftEnd.add(const Duration(days: 1));
+          }
 
           if (now.isBefore(shiftEnd)) {
              return {
