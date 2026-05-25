@@ -377,6 +377,8 @@ class KeepView extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
+            _miniStat(Icons.notes_rounded, total.fc, Colors.lightBlueAccent, isDark),
+            const SizedBox(width: 8),
             _miniStat(Icons.push_pin_rounded, pinned.fc, Colors.amber, isDark),
             const SizedBox(width: 8),
             _miniStat(Icons.checklist_rounded, checklists.fc, Colors.lightGreenAccent, isDark),
@@ -386,8 +388,6 @@ class KeepView extends StatelessWidget {
             _miniStat(Icons.mic_none_rounded, voices.fc, Colors.orangeAccent, isDark),
             const SizedBox(width: 8),
             _miniStat(Icons.draw_outlined, drawings.fc, Colors.pinkAccent, isDark),
-            const SizedBox(width: 8),
-            _miniStat(Icons.notes_rounded, total.fc, Colors.lightBlueAccent, isDark),
           ],
         ),
       );
