@@ -208,7 +208,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     }
 
     final startRoute = AppPages.savedStartRoute;
-    if (startRoute != Routes.HOME) {
+    if (startRoute == '/keep') {
+      currentIndex.value = 0;
+    } else if (startRoute != Routes.HOME) {
       Get.toNamed(startRoute);
     }
 
@@ -607,6 +609,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   void changePage(int index) {
     currentIndex.value = index;
-    if (index == 0) _loadRealData();
+    if (index == 1) _loadRealData();
   }
 }

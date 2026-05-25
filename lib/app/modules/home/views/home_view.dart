@@ -13,6 +13,9 @@ import 'package:smart_daily_tasks/app/modules/home/widgets/quick_log_strip.dart'
 import 'package:smart_daily_tasks/app/modules/home/widgets/floating_navigation_bar.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
+import 'package:smart_daily_tasks/app/modules/keep/views/keep_view.dart';
+import 'package:smart_daily_tasks/app/modules/keep/controllers/keep_controller.dart';
+import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
@@ -29,6 +32,7 @@ class HomeView extends GetView<HomeController> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: theme.scaffoldBackgroundColor,
       extendBody: true,
       body: Stack(
@@ -36,19 +40,25 @@ class HomeView extends GetView<HomeController> {
           Obx(() {
             switch (controller.currentIndex.value) {
               case 0:
-                return _buildDashboard(context);
+                if (!Get.isRegistered<KeepController>()) {
+                  Get.put(KeepController(Get.find<NoteRepository>()));
+                }
+                return const KeepView();
               case 1:
-                return const SpacesView();
+                return _buildDashboard(context);
               case 2:
+                return const SpacesView();
+              case 3:
                 return const SettingsView();
               default:
-                return _buildDashboard(context);
+                return const KeepView();
             }
           }),
-          const Align(
-            alignment: Alignment.bottomCenter,
-            child: FloatingNavigationBar(),
-          ),
+          if (MediaQuery.of(context).viewInsets.bottom == 0)
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: FloatingNavigationBar(),
+            ),
         ],
       ),
     );
@@ -237,6 +247,7 @@ class HomeView extends GetView<HomeController> {
         Obx(() => _buildBentoItem(context, 'journal'.tr, '${controller.journalCount.value.f} ${'logs'.tr}', Icons.book, const Color(0xFF34C759), Routes.JOURNAL)),
         Obx(() => _buildBentoItem(context, 'bookmarks'.tr, '${controller.bookmarkCount.value.f} ${'saved'.tr}', Icons.bookmark, const Color(0xFFFF3B30), Routes.BOOKMARKS)),
         Obx(() => _buildBentoItem(context, 'calendar'.tr, '${controller.calendarEventCount.value.f} ${'events'.tr}', Icons.calendar_month, const Color(0xFFBF5AF2), Routes.CALENDAR)),
+        Obx(() => _buildBentoItem(context, 'keep'.tr, '${Get.isRegistered<KeepController>() ? Get.find<KeepController>().keepNotes.length : 0} ${'entries'.tr}', Icons.push_pin_rounded, const Color(0xFFFFB300), '', onTapOverride: () => controller.currentIndex.value = 0)),
       ],
     );
   }
@@ -489,12 +500,13 @@ class HomeView extends GetView<HomeController> {
     String subtitle,
     IconData icon,
     Color color,
-    String route,
-  ) {
+    String route, {
+    VoidCallback? onTapOverride,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => route.isNotEmpty ? Get.toNamed(route) : null,
+      onTap: onTapOverride ?? () => route.isNotEmpty ? Get.toNamed(route) : null,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(

@@ -14,6 +14,9 @@ class Note {
 
   bool isPinned = false;
   String? category;
+  
+  // Custom ordering for drag and drop
+  double orderIndex = 0.0;
 
   @Index()
   int? color;
@@ -35,6 +38,7 @@ class Note {
     this.color,
     this.isPinned = false,
     this.category,
+    this.orderIndex = 0.0,
   });
 
   Note copyWith({
@@ -46,6 +50,7 @@ class Note {
     int? color,
     bool? isPinned,
     String? category,
+    double? orderIndex,
   }) {
     return Note(
       id: id ?? this.id,
@@ -56,6 +61,7 @@ class Note {
       color: color ?? this.color,
       isPinned: isPinned ?? this.isPinned,
       category: category ?? this.category,
+      orderIndex: orderIndex ?? this.orderIndex,
     );
   }
 

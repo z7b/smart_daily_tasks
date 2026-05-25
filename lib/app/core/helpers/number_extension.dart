@@ -64,4 +64,23 @@ extension NumberLocalization on Object {
       return toString();
     }
   }
+
+  /// Compact formatter for very large numbers (e.g. 10,500 -> 10K)
+  String get fc {
+    try {
+      _cachedThemeService ??= Get.find<ThemeService>();
+      
+      num value = 0;
+      if (this is num) {
+        value = this as num;
+      } else {
+        value = num.tryParse(toString().replaceAll(',', '')) ?? 0;
+      }
+      
+      String input = NumberFormat.compact(locale: Get.locale?.languageCode).format(value);
+      return _cachedThemeService!.replaceDigits(input);
+    } catch (_) {
+      return toString();
+    }
+  }
 }
