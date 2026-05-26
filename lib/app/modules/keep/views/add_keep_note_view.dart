@@ -1170,11 +1170,11 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final primary = isDark ? Colors.blueAccent : Colors.blue;
     final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
     
-    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap) {
+    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap, {bool closeOnTap = true}) {
       return InkWell(
         onTap: () {
+          if (closeOnTap) Get.back();
           onTap();
-          Get.back();
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -1239,17 +1239,36 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   const SizedBox(height: 16),
                   
                   if (now.hour < 20)
-                    buildKeepStyleOption('remind_later_today', time8PM.format(context), Icons.schedule, () {
-                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day, 20, 0);
-                    }),
+                    buildKeepStyleOption('remind_later_today', time8PM.format(context), Icons.schedule, () async {
+                      // Close sheet first, then pick time
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: const TimeOfDay(hour: 20, minute: 0),
+                      );
+                      if (picked != null) {
+                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                      }
+                    }, closeOnTap: true),
                     
-                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(context), Icons.wb_sunny_outlined, () {
-                    _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, 8, 0);
-                  }),
+                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(context), Icons.wb_sunny_outlined, () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: const TimeOfDay(hour: 8, minute: 0),
+                    );
+                    if (picked != null) {
+                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, picked.hour, picked.minute);
+                    }
+                  }, closeOnTap: true),
                   
-                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(context), Icons.next_week_outlined, () {
-                    _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + daysUntilMonday, 8, 0);
-                  }),
+                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(context), Icons.next_week_outlined, () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: const TimeOfDay(hour: 8, minute: 0),
+                    );
+                    if (picked != null) {
+                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + daysUntilMonday, picked.hour, picked.minute);
+                    }
+                  }, closeOnTap: true),
                   
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
@@ -1257,16 +1276,14 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   ),
                   
                   buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () {
-                    Get.back();
                     _showCustomDateTimePickerBottomSheet(context);
-                  }),
+                  }, closeOnTap: true),
                   
                   Obx(() {
                     if (_ctrl.reminderAt.value != null) {
                       return buildKeepStyleOption('remove_reminder', '', Icons.delete_outline, () {
                         _ctrl.reminderAt.value = null;
-                        Get.back();
-                      });
+                      }, closeOnTap: true);
                     }
                     return const SizedBox.shrink();
                   }),
