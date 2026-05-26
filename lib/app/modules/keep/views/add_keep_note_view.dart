@@ -1170,31 +1170,28 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final primary = isDark ? Colors.blueAccent : Colors.blue;
     final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
     
-    Widget buildQuickOption(String title, IconData icon, VoidCallback onTap) {
+    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap) {
       return InkWell(
         onTap: () {
           onTap();
           Get.back();
         },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Row(
             children: [
-              Icon(icon, color: primary, size: 28),
-              const SizedBox(height: 8),
+              Icon(icon, color: tc.withValues(alpha: 0.6), size: 24),
+              const SizedBox(width: 24),
               Text(
                 title.tr,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: tc, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(color: tc.withValues(alpha: 0.9), fontSize: 16, fontWeight: FontWeight.w400),
               ),
+              const Spacer(),
+              if (timeStr.isNotEmpty)
+                Text(
+                  timeStr,
+                  style: TextStyle(color: tc.withValues(alpha: 0.5), fontSize: 14),
+                ),
             ],
           ),
         ),
@@ -1206,113 +1203,93 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
+        final now = DateTime.now();
+        final time8AM = const TimeOfDay(hour: 8, minute: 0);
+        final time8PM = const TimeOfDay(hour: 20, minute: 0);
+        
+        int daysUntilMonday = DateTime.monday - now.weekday;
+        if (daysUntilMonday <= 0) daysUntilMonday += 7;
+
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.only(top: 24, bottom: 24),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
+                color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
                 border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                    ),
                   ),
                   const SizedBox(height: 24),
-                  Icon(Icons.notifications_active_rounded, size: 42, color: primary.withValues(alpha: 0.8)),
-                  const SizedBox(height: 12),
-                  Text('set_reminder'.tr, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 24),
-                  
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.6,
-                    children: [
-                      buildQuickOption('remind_tomorrow', Icons.wb_sunny_outlined, () {
-                        final now = DateTime.now();
-                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, 9, 0);
-                      }),
-                      buildQuickOption('remind_next_week', Icons.next_week_outlined, () {
-                        final now = DateTime.now();
-                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 7, 9, 0);
-                      }),
-                      buildQuickOption('remind_10_days', Icons.event_repeat_outlined, () {
-                        final now = DateTime.now();
-                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 10, 9, 0);
-                      }),
-                      buildQuickOption('remind_next_month', Icons.calendar_month_outlined, () {
-                        final now = DateTime.now();
-                        _ctrl.reminderAt.value = DateTime(now.year, now.month + 1, now.day, 9, 0);
-                      }),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text('set_reminder'.tr, style: TextStyle(fontSize: 18, color: tc, fontWeight: FontWeight.w500)),
                   ),
-                  
                   const SizedBox(height: 16),
                   
-                  ListTile(
-                    leading: Icon(Icons.access_time_rounded, color: primary),
-                    title: Text('remind_custom'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    tileColor: primary.withValues(alpha: 0.1),
-                    onTap: () async {
-                      Get.back();
-                      if (!context.mounted) return;
-                      final now = DateTime.now();
-                      final initial = _ctrl.reminderAt.value ?? now;
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: initial.isBefore(now) ? now : initial,
-                        firstDate: now,
-                        lastDate: now.add(const Duration(days: 365 * 5)),
-                      );
-                      if (pickedDate != null && context.mounted) {
-                        final pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(initial),
-                        );
-                        if (pickedTime != null) {
-                          _ctrl.reminderAt.value = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                        }
-                      }
-                    },
+                  if (now.hour < 20)
+                    buildKeepStyleOption('remind_later_today', time8PM.format(context), Icons.schedule, () {
+                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day, 20, 0);
+                    }),
+                    
+                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(context), Icons.wb_sunny_outlined, () {
+                    _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, 8, 0);
+                  }),
+                  
+                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(context), Icons.next_week_outlined, () {
+                    _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + daysUntilMonday, 8, 0);
+                  }),
+                  
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Divider(height: 1, indent: 64),
                   ),
+                  
+                  buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () async {
+                    if (!context.mounted) return;
+                    final initial = _ctrl.reminderAt.value ?? now;
+                    final pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: initial.isBefore(now) ? now : initial,
+                      firstDate: now,
+                      lastDate: now.add(const Duration(days: 365 * 5)),
+                    );
+                    if (pickedDate != null && context.mounted) {
+                      final pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(initial),
+                      );
+                      if (pickedTime != null) {
+                        _ctrl.reminderAt.value = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                      }
+                    }
+                  }),
                   
                   Obx(() {
                     if (_ctrl.reminderAt.value != null) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: ListTile(
-                          leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          title: Text('remove_reminder'.tr, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          tileColor: Colors.redAccent.withValues(alpha: 0.1),
-                          onTap: () {
-                            _ctrl.reminderAt.value = null;
-                            Get.back();
-                          },
-                        ),
-                      );
+                      return buildKeepStyleOption('remove_reminder', '', Icons.delete_outline, () {
+                        _ctrl.reminderAt.value = null;
+                      });
                     }
                     return const SizedBox.shrink();
                   }),
-                  
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
