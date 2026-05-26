@@ -1256,36 +1256,16 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                     child: Divider(height: 1, indent: 64),
                   ),
                   
-                  buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () async {
-                    if (!context.mounted) return;
-                    final initial = _ctrl.reminderAt.value ?? now;
-                    final pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: initial.isBefore(now) ? now : initial,
-                      firstDate: now,
-                      lastDate: now.add(const Duration(days: 365 * 5)),
-                    );
-                    if (pickedDate != null && context.mounted) {
-                      final pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(initial),
-                      );
-                      if (pickedTime != null) {
-                        _ctrl.reminderAt.value = DateTime(
-                          pickedDate.year,
-                          pickedDate.month,
-                          pickedDate.day,
-                          pickedTime.hour,
-                          pickedTime.minute,
-                        );
-                      }
-                    }
+                  buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () {
+                    Get.back();
+                    _showCustomDateTimePickerBottomSheet(context);
                   }),
                   
                   Obx(() {
                     if (_ctrl.reminderAt.value != null) {
                       return buildKeepStyleOption('remove_reminder', '', Icons.delete_outline, () {
                         _ctrl.reminderAt.value = null;
+                        Get.back();
                       });
                     }
                     return const SizedBox.shrink();
@@ -1294,6 +1274,163 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCustomDateTimePickerBottomSheet(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? Colors.blueAccent : Colors.blue;
+    final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
+
+    final now = DateTime.now();
+    DateTime selectedDate = _ctrl.reminderAt.value ?? now;
+    TimeOfDay selectedTime = _ctrl.reminderAt.value != null ? TimeOfDay.fromDateTime(_ctrl.reminderAt.value!) : const TimeOfDay(hour: 8, minute: 0);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final dateStr = "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+            final timeStr = selectedTime.format(context);
+
+            return ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(context).padding.bottom + 24, left: 24, right: 24),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text('remind_pick_date_time'.tr, style: TextStyle(fontSize: 18, color: tc, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: selectedDate,
+                                  firstDate: now.subtract(const Duration(days: 1)),
+                                  lastDate: now.add(const Duration(days: 365 * 5)),
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedDate = picked);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.calendar_today_rounded, color: primary, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text('remind_date'.tr, style: TextStyle(fontSize: 14, color: tc)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(dateStr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primary)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: selectedTime,
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedTime = picked);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.access_time_rounded, color: primary, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text('remind_time'.tr, style: TextStyle(fontSize: 14, color: tc)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(timeStr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primary)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _ctrl.reminderAt.value = DateTime(
+                              selectedDate.year,
+                              selectedDate.month,
+                              selectedDate.day,
+                              selectedTime.hour,
+                              selectedTime.minute,
+                            );
+                            Get.back();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          child: Text('remind_save'.tr, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
