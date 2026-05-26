@@ -1169,139 +1169,241 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? Colors.blueAccent : Colors.blue;
     final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
-    // Capture the root context BEFORE the sheet opens
     final rootCtx = context;
-    
-    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap) {
-      return InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              Icon(icon, color: tc.withValues(alpha: 0.6), size: 24),
-              const SizedBox(width: 24),
-              Text(
-                title.tr,
-                style: TextStyle(color: tc.withValues(alpha: 0.9), fontSize: 16, fontWeight: FontWeight.w400),
-              ),
-              const Spacer(),
-              if (timeStr.isNotEmpty)
-                Text(
-                  timeStr,
-                  style: TextStyle(color: tc.withValues(alpha: 0.5), fontSize: 14),
-                ),
-            ],
-          ),
-        ),
-      );
+
+    final now = DateTime.now();
+    int daysUntilMonday = DateTime.monday - now.weekday;
+    if (daysUntilMonday <= 0) daysUntilMonday += 7;
+
+    // Detect which preset matches the current reminderAt
+    String _detectSelected(DateTime? dt) {
+      if (dt == null) return '';
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      final nextMonday = today.add(Duration(days: daysUntilMonday));
+      final dtDay = DateTime(dt.year, dt.month, dt.day);
+      if (dtDay == today) return 'later_today';
+      if (dtDay == tomorrow) return 'tomorrow';
+      if (dtDay == nextMonday) return 'next_week';
+      return 'custom';
     }
-    
+
     await showModalBottomSheet(
       context: rootCtx,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetCtx) {
-        final now = DateTime.now();
-        final time8AM = const TimeOfDay(hour: 8, minute: 0);
-        final time8PM = const TimeOfDay(hour: 20, minute: 0);
-        
-        int daysUntilMonday = DateTime.monday - now.weekday;
-        if (daysUntilMonday <= 0) daysUntilMonday += 7;
+        // Local state inside the sheet
+        String selectedKey = _detectSelected(_ctrl.reminderAt.value);
+        TimeOfDay selectedTime = _ctrl.reminderAt.value != null
+            ? TimeOfDay.fromDateTime(_ctrl.reminderAt.value!)
+            : const TimeOfDay(hour: 8, minute: 0);
 
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(sheetCtx).padding.bottom + 24),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
-                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Widget buildOption(
+              String key,
+              String titleKey,
+              TimeOfDay defaultTime,
+              IconData icon,
+              DateTime Function(TimeOfDay t) makeDate,
+            ) {
+              final isSelected = selectedKey == key;
+              final displayTime = isSelected
+                  ? selectedTime.format(sheetCtx)
+                  : defaultTime.format(sheetCtx);
+
+              return InkWell(
+                onTap: () async {
+                  // Open time picker using root context
+                  final picked = await showTimePicker(
+                    context: rootCtx,
+                    initialTime: isSelected ? selectedTime : defaultTime,
+                  );
+                  if (picked != null) {
+                    final dt = makeDate(picked);
+                    _ctrl.reminderAt.value = dt;
+                    setSheetState(() {
+                      selectedKey = key;
+                      selectedTime = picked;
+                    });
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isSelected ? primary.withValues(alpha: 0.12) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon,
+                          color: isSelected ? primary : tc.withValues(alpha: 0.5),
+                          size: 24),
+                      const SizedBox(width: 20),
+                      Text(
+                        titleKey.tr,
+                        style: TextStyle(
+                          color: isSelected ? primary : tc.withValues(alpha: 0.9),
+                          fontSize: 16,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        displayTime,
+                        style: TextStyle(
+                          color: isSelected ? primary : tc.withValues(alpha: 0.45),
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: EdgeInsets.only(
+                      top: 24,
+                      bottom: MediaQuery.of(sheetCtx).padding.bottom + 24),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E1E1E).withValues(alpha: 0.85)
+                        : Colors.white.withValues(alpha: 0.95),
+                    border: Border(
+                        top: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.2))),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(2)),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text('set_reminder'.tr,
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: tc,
+                                fontWeight: FontWeight.w500)),
+                      ),
+                      const SizedBox(height: 8),
+
+                      if (now.hour < 20)
+                        buildOption(
+                          'later_today',
+                          'remind_later_today',
+                          const TimeOfDay(hour: 20, minute: 0),
+                          Icons.schedule,
+                          (t) => DateTime(now.year, now.month, now.day, t.hour, t.minute),
+                        ),
+
+                      buildOption(
+                        'tomorrow',
+                        'remind_tomorrow_morning',
+                        const TimeOfDay(hour: 8, minute: 0),
+                        Icons.wb_sunny_outlined,
+                        (t) => DateTime(now.year, now.month, now.day + 1, t.hour, t.minute),
+                      ),
+
+                      buildOption(
+                        'next_week',
+                        'remind_next_week_keep',
+                        const TimeOfDay(hour: 8, minute: 0),
+                        Icons.next_week_outlined,
+                        (t) => DateTime(now.year, now.month, now.day + daysUntilMonday, t.hour, t.minute),
+                      ),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+                        child: Divider(height: 1),
+                      ),
+
+                      // Custom date & time
+                      InkWell(
+                        onTap: () {
+                          Get.back();
+                          if (!rootCtx.mounted) return;
+                          _showCustomDateTimePickerBottomSheet(rootCtx);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          child: Row(
+                            children: [
+                              Icon(Icons.access_time_rounded,
+                                  color: selectedKey == 'custom' ? primary : tc.withValues(alpha: 0.5),
+                                  size: 24),
+                              const SizedBox(width: 20),
+                              Text(
+                                'remind_pick_date_time'.tr,
+                                style: TextStyle(
+                                  color: selectedKey == 'custom' ? primary : tc.withValues(alpha: 0.9),
+                                  fontSize: 16,
+                                  fontWeight: selectedKey == 'custom' ? FontWeight.w600 : FontWeight.w400,
+                                ),
+                              ),
+                              if (selectedKey == 'custom') ...[
+                                const Spacer(),
+                                Text(
+                                  '${_ctrl.reminderAt.value?.day}/${_ctrl.reminderAt.value?.month}  ${selectedTime.format(sheetCtx)}',
+                                  style: TextStyle(color: primary, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      if (_ctrl.reminderAt.value != null)
+                        InkWell(
+                          onTap: () {
+                            _ctrl.reminderAt.value = null;
+                            setSheetState(() => selectedKey = '');
+                            Get.back();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline,
+                                    color: Colors.redAccent.withValues(alpha: 0.8), size: 24),
+                                const SizedBox(width: 20),
+                                Text('remove_reminder'.tr,
+                                    style: TextStyle(
+                                        color: Colors.redAccent.withValues(alpha: 0.8),
+                                        fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text('set_reminder'.tr, style: TextStyle(fontSize: 18, color: tc, fontWeight: FontWeight.w500)),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  if (now.hour < 20)
-                    buildKeepStyleOption('remind_later_today', time8PM.format(sheetCtx), Icons.schedule, () async {
-                      Get.back(); // close sheet first
-                      if (!rootCtx.mounted) return;
-                      final picked = await showTimePicker(
-                        context: rootCtx,
-                        initialTime: const TimeOfDay(hour: 20, minute: 0),
-                      );
-                      if (picked != null) {
-                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-                      }
-                    }),
-                    
-                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(sheetCtx), Icons.wb_sunny_outlined, () async {
-                    Get.back();
-                    if (!rootCtx.mounted) return;
-                    final picked = await showTimePicker(
-                      context: rootCtx,
-                      initialTime: const TimeOfDay(hour: 8, minute: 0),
-                    );
-                    if (picked != null) {
-                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, picked.hour, picked.minute);
-                    }
-                  }),
-                  
-                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(sheetCtx), Icons.next_week_outlined, () async {
-                    Get.back();
-                    if (!rootCtx.mounted) return;
-                    final picked = await showTimePicker(
-                      context: rootCtx,
-                      initialTime: const TimeOfDay(hour: 8, minute: 0),
-                    );
-                    if (picked != null) {
-                      _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + daysUntilMonday, picked.hour, picked.minute);
-                    }
-                  }),
-                  
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Divider(height: 1, indent: 64),
-                  ),
-                  
-                  buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () {
-                    Get.back();
-                    if (!rootCtx.mounted) return;
-                    _showCustomDateTimePickerBottomSheet(rootCtx);
-                  }),
-                  
-                  Obx(() {
-                    if (_ctrl.reminderAt.value != null) {
-                      return buildKeepStyleOption('remove_reminder', '', Icons.delete_outline, () {
-                        _ctrl.reminderAt.value = null;
-                        Get.back();
-                      });
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                ],
-              ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
+
 
   Future<void> _showCustomDateTimePickerBottomSheet(BuildContext context) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
