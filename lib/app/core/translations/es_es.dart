@@ -587,4 +587,11 @@ const Map<String, String> esES = {
   'keep_empty_note': 'Nota Vacía',
   'keep_format': 'Formato de Texto',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': 'Editado',
+      'keep_drawing_tools': 'Herramientas de dibujo',
+      'keep_undo': 'Deshacer',
+      'keep_redo': 'Rehacer',
+      'keep_clear': 'Borrar',
+      'keep_stroke_width': 'Grosor del trazo',
 };

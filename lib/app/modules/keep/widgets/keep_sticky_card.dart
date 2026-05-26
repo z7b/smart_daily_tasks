@@ -27,13 +27,6 @@ class KeepStickyCard extends StatelessWidget {
     required this.onColorChange,
   });
 
-  // Deterministic slight rotation per card for corkboard realism
-  double _getRotation() {
-    final seed = note.id ^ (note.title.hashCode);
-    final rng = Random(seed);
-    return (rng.nextDouble() - 0.5) * 0.06; // -3° to +3°
-  }
-
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<KeepController>();
@@ -53,6 +46,7 @@ class KeepStickyCard extends StatelessWidget {
 
     return Obx(() {
       final isSelected = ctrl.selectedNoteIds.contains(note.id);
+      final bool isVisualOnly = (note.title.isEmpty || note.title == 'keep_untitled'.tr) && contentBlocks.isEmpty && (heroBlock != null || isImageBg);
       
       return GestureDetector(
         onTap: () {
@@ -62,11 +56,9 @@ class KeepStickyCard extends StatelessWidget {
             onTap();
           }
         },
-        child: Transform.rotate(
-          angle: _getRotation(),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
               // ── Card body ─────────────────────────────────
               Container(
                 decoration: BoxDecoration(
@@ -116,22 +108,12 @@ class KeepStickyCard extends StatelessWidget {
                         if (heroBlock != null)
                           _buildHeroImage(heroBlock, textColor),
 
-                        // Top strip (slightly darker fold)
-                        if (heroBlock == null)
-                          Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: bgColor.withValues(alpha: 0.7),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(4),
-                                topRight: Radius.circular(4),
-                              ),
-                            ),
-                          ),
+
 
                         // Content
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
+                        if (!isVisualOnly)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min, // Masonry grid relies on dynamic height
@@ -171,22 +153,16 @@ class KeepStickyCard extends StatelessWidget {
                               else if (heroBlock == null)
                                 _emptyHint(textColor),
 
-                              const SizedBox(height: 8),
-
-                              // Date footer
-                              Text(
-                                '${note.updatedAt?.day ?? note.createdAt.day}/${note.updatedAt?.month ?? note.createdAt.month}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: textColor.withValues(alpha: 0.4),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              const SizedBox(height: 4),
                             ],
                           ),
-                        ),
+                        )
+                        else if (heroBlock == null && isImageBg)
+                          const SizedBox(height: 120, width: double.infinity),
                       ],
                     ),
+
+
                   ],
                 ),
               ),
@@ -213,12 +189,11 @@ class KeepStickyCard extends StatelessWidget {
                   color: textColor.withValues(alpha: 0.5),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  });
-}
+            ],
+          ),
+        );
+    });
+  }
 
   Widget _buildHeroImage(KeepBlock block, Color textColor) {
     final content = block.data as String?;
@@ -550,11 +525,32 @@ class _MiniCanvasPainter extends CustomPainter {
 
       for (final line in lines) {
         if (line.isEmpty) continue;
-        final coords = line.split(',');
+        
+        List<String> coords;
+        Paint strokePaint = paint;
+        
+        if (line.contains(';')) {
+          final strokeParts = line.split(';');
+          if (strokeParts.length >= 3) {
+            strokePaint = Paint()
+              ..color = Color(int.parse(strokeParts[0]))
+              ..strokeCap = StrokeCap.round
+              ..strokeWidth = double.parse(strokeParts[1]) * 0.4
+              ..style = PaintingStyle.stroke;
+            coords = strokeParts[2].split(',');
+          } else {
+            coords = line.split(',');
+          }
+        } else {
+          coords = line.split(',');
+        }
+        
+        if (coords.length < 4) continue;
+        
         for (int i = 0; i < coords.length - 3; i += 2) {
           final p1 = Offset(double.parse(coords[i]), double.parse(coords[i+1]));
           final p2 = Offset(double.parse(coords[i+2]), double.parse(coords[i+3]));
-          canvas.drawLine(p1, p2, paint);
+          canvas.drawLine(p1, p2, strokePaint);
         }
       }
     } catch (_) {}

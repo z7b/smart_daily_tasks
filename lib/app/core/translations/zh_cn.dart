@@ -928,4 +928,11 @@ const Map<String, String> zhCN = {
   'keep_empty_note': '空笔记',
   'keep_format': '文本格式',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': '已编辑',
+      'keep_drawing_tools': '绘图工具',
+      'keep_undo': '撤销',
+      'keep_redo': '重做',
+      'keep_clear': '清除',
+      'keep_stroke_width': '笔画宽度',
 };

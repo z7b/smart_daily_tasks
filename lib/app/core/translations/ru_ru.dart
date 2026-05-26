@@ -594,4 +594,11 @@ const Map<String, String> ruRU = {
   'keep_empty_note': 'Пустая заметка',
   'keep_format': 'Форматирование текста',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': 'Изменено',
+      'keep_drawing_tools': 'Инструменты для рисования',
+      'keep_undo': 'Отменить',
+      'keep_redo': 'Повторить',
+      'keep_clear': 'Очистить',
+      'keep_stroke_width': 'Толщина линии',
 };

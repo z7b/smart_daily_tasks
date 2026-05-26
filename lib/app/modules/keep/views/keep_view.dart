@@ -581,7 +581,7 @@ class KeepView extends StatelessWidget {
 
   void _openNote(Note note) {
     Get.to(
-      () => AddKeepNoteView(existingNote: note),
+      () => AddKeepNoteView(existingNote: note, viewOnly: true),
       transition: Transition.downToUp,
       duration: const Duration(milliseconds: 350),
     );

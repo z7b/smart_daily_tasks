@@ -17,7 +17,9 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class AddKeepNoteView extends StatefulWidget {
   final Note? existingNote;
-  const AddKeepNoteView({super.key, this.existingNote});
+  /// When true, opens in read-only view mode (no editing allowed).
+  final bool viewOnly;
+  const AddKeepNoteView({super.key, this.existingNote, this.viewOnly = false});
 
   @override
   State<AddKeepNoteView> createState() => _AddKeepNoteViewState();
@@ -31,10 +33,12 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
   bool _isFilePickerActive = false;
   late final AnimationController _animCtrl;
   late final Animation<double> _scaleAnim;
+  late bool _isViewOnly;
 
   @override
   void initState() {
     super.initState();
+    _isViewOnly = widget.viewOnly;
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
@@ -204,7 +208,16 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
         canPop: false,
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
-          await _ctrl.saveNote(existing: widget.existingNote);
+          if (_isViewOnly) {
+            Get.back();
+          } else {
+            if (widget.viewOnly) {
+              await _ctrl.saveNote(existing: widget.existingNote, popAfterSave: false);
+              setState(() => _isViewOnly = true);
+            } else {
+              await _ctrl.saveNote(existing: widget.existingNote, popAfterSave: true);
+            }
+          }
         },
         child: Stack(
           children: [
@@ -235,51 +248,89 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Row(
                         children: [
-                          _buildGlassButton(Icons.arrow_back_ios_new_rounded, isDark, () => _ctrl.saveNote(existing: widget.existingNote)),
+                          _buildGlassButton(
+                            Icons.arrow_back_ios_new_rounded,
+                            isDark,
+                            () async {
+                              if (_isViewOnly) {
+                                Get.back();
+                              } else {
+                                if (widget.viewOnly) {
+                                  await _ctrl.saveNote(existing: widget.existingNote, popAfterSave: false);
+                                  setState(() => _isViewOnly = true);
+                                } else {
+                                  await _ctrl.saveNote(existing: widget.existingNote, popAfterSave: true);
+                                }
+                              }
+                            },
+                          ),
                           const Spacer(),
+                          // Pin button — always visible
                           _buildGlassButton(
                             _ctrl.isPinned.value ? Icons.push_pin : Icons.push_pin_outlined,
                             isDark,
-                            () {
-                              _ctrl.isPinned.value = !_ctrl.isPinned.value;
-                              HapticFeedback.lightImpact();
-                            },
+                            _isViewOnly
+                                ? () {} // read-only: no-op
+                                : () {
+                                    _ctrl.isPinned.value = !_ctrl.isPinned.value;
+                                    HapticFeedback.lightImpact();
+                                  },
                             color: _ctrl.isPinned.value ? (isDark ? Colors.redAccent : Colors.red) : null,
                           ),
                           const SizedBox(width: 8),
+                          // Notifications button — always visible
                           Obx(() => _buildGlassButton(
-                            _ctrl.reminderAt.value != null ? Icons.notifications_active_rounded : Icons.notifications_none_outlined,
+                            _ctrl.reminderAt.value != null
+                                ? Icons.notifications_active_rounded
+                                : Icons.notifications_none_outlined,
                             isDark,
-                            () => _pickReminder(context),
-                            color: _ctrl.reminderAt.value != null ? (isDark ? Colors.blueAccent : Colors.blue) : null,
+                            _isViewOnly ? () {} : () => _pickReminder(context),
+                            color: _ctrl.reminderAt.value != null
+                                ? (isDark ? Colors.blueAccent : Colors.blue)
+                                : null,
                           )),
-                          const SizedBox(width: 8),
-                          _buildGlassButton(Icons.archive_outlined, isDark, () {}),
+                          // Edit button — only in view mode
+                          if (_isViewOnly) ...[  
+                            const SizedBox(width: 8),
+                            _buildGlassButton(
+                              Icons.edit_outlined,
+                              isDark,
+                              () {
+                                setState(() {
+                                  _isViewOnly = false;
+                                });
+                              },
+                              color: isDark ? Colors.amberAccent : const Color(0xFFFF8F00),
+                            ),
+                          ],
                         ],
                       ),
                     ),
 
-                    // ── Form body ────────────────────────────
                     // ── Form body & Floating Toolbar ─────────────
                     Expanded(
                       child: Stack(
                         children: [
                           Positioned.fill(
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
+                              padding: EdgeInsets.fromLTRB(
+                                20, 8, 20,
+                                _isViewOnly ? 24 : 80,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Title
                                   TextField(
                                     controller: _ctrl.titleController,
+                                    readOnly: _isViewOnly,
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
                                       color: textColor,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText: 'title_hint'.tr,
+                                      hintText: _isViewOnly ? '' : 'title_hint'.tr,
                                       hintStyle: TextStyle(
                                         color: textColor.withValues(alpha: 0.35),
                                         fontSize: 24,
@@ -307,13 +358,34 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                             ),
                           ),
                           
-                          // ── Floating Bottom Toolbar ─────────────────────
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: _buildBottomToolbar(textColor, isDark),
-                          ),
+                          // ── Floating Bottom Toolbar (edit mode only) ────
+                          if (!_isViewOnly)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: _buildBottomToolbar(textColor, isDark),
+                            ),
+                            
+                          // ── Floating Last Edited Date (view mode only) ────
+                          if (_isViewOnly && widget.existingNote != null)
+                            Positioned(
+                              bottom: 16,
+                              left: 0,
+                              right: 0,
+                              child: IgnorePointer(
+                                child: Center(
+                                  child: Text(
+                                    '${'keep_edited'.tr} ${widget.existingNote!.updatedAt?.day ?? widget.existingNote!.createdAt.day}/${widget.existingNote!.updatedAt?.month ?? widget.existingNote!.createdAt.month}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -347,33 +419,73 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
         break;
     }
 
+    if (block.type == KeepNoteType.drawing) {
+      return Padding(
+        key: ValueKey(block.id),
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Stack(
+          children: [
+            content,
+            // Hide delete button in view-only mode
+            if (!_isViewOnly)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    child: InkWell(
+                      onTap: () => _ctrl.removeBlock(index),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       key: ValueKey(block.id),
       padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: content),
-          IconButton(
-            onPressed: () => _ctrl.removeBlock(index),
-            icon: Icon(Icons.close_rounded, size: 20, color: textColor.withValues(alpha: 0.3)),
-          )
-        ],
-      ),
+      child: _isViewOnly
+          ? content
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: content),
+                IconButton(
+                  onPressed: () => _ctrl.removeBlock(index),
+                  icon: Icon(Icons.close_rounded,
+                      size: 20, color: textColor.withValues(alpha: 0.3)),
+                )
+              ],
+            ),
     );
   }
 
   Widget _buildTextBlock(KeepBlock block, Color textColor) {
     final controller = _getQuillController(block.id, block.data as String? ?? '');
     
-    return Obx(() => quill.QuillEditor.basic(
-      controller: controller,
-      config: quill.QuillEditorConfig(
-        padding: EdgeInsets.zero,
-        placeholder: 'keep_text_hint'.tr,
-        customStyleBuilder: (attribute) {
-          if (attribute.key == 'size') {
-            final double? size = double.tryParse(attribute.value.toString());
+    return IgnorePointer(
+      ignoring: _isViewOnly,
+      child: Obx(() => quill.QuillEditor.basic(
+        controller: controller,
+        config: quill.QuillEditorConfig(
+          padding: EdgeInsets.zero,
+          placeholder: _isViewOnly ? '' : 'keep_text_hint'.tr,
+          customStyleBuilder: (attribute) {
+            if (attribute.key == 'size') {
+              final double? size = double.tryParse(attribute.value.toString());
             if (size != null) {
               return TextStyle(fontSize: size);
             }
@@ -394,7 +506,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
           ),
         ),
       ),
-    ));
+    )));
   }
 
   Widget _buildChecklistBlock(KeepBlock block, Color textColor) {
@@ -413,7 +525,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   item.isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                   color: item.isDone ? textColor.withValues(alpha: 0.4) : textColor.withValues(alpha: 0.7),
                 ),
-                onPressed: () {
+                onPressed: _isViewOnly ? () {} : () {
                   item.isDone = !item.isDone;
                   _ctrl.blocks.refresh();
                 },
@@ -421,6 +533,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
               Expanded(
                 child: TextField(
                   controller: tc,
+                  readOnly: _isViewOnly,
                   style: TextStyle(
                     fontSize: 15,
                     color: item.isDone ? textColor.withValues(alpha: 0.4) : textColor.withValues(alpha: 0.85),
@@ -433,24 +546,26 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   },
                 ),
               ),
-              IconButton(
-                icon: Icon(Icons.close_rounded, size: 18, color: textColor.withValues(alpha: 0.3)),
-                onPressed: () {
-                  items.removeAt(i);
-                  _ctrl.blocks.refresh();
-                },
-              ),
+              if (!_isViewOnly)
+                IconButton(
+                  icon: Icon(Icons.close_rounded, size: 18, color: textColor.withValues(alpha: 0.3)),
+                  onPressed: () {
+                    items.removeAt(i);
+                    _ctrl.blocks.refresh();
+                  },
+                ),
             ],
           );
         }),
-        TextButton.icon(
-          onPressed: () {
-            items.add(ChecklistItem(text: ''));
-            _ctrl.blocks.refresh();
-          },
-          icon: Icon(Icons.add_rounded, color: textColor.withValues(alpha: 0.6)),
-          label: Text('keep_add_item'.tr, style: TextStyle(color: textColor.withValues(alpha: 0.6))),
-        )
+        if (!_isViewOnly)
+          TextButton.icon(
+            onPressed: () {
+              items.add(ChecklistItem(text: ''));
+              _ctrl.blocks.refresh();
+            },
+            icon: Icon(Icons.add_rounded, color: textColor.withValues(alpha: 0.6)),
+            label: Text('keep_add_item'.tr, style: TextStyle(color: textColor.withValues(alpha: 0.6))),
+          )
       ],
     );
   }
@@ -459,6 +574,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final path = block.data as String? ?? '';
     final file = File(path);
     if (path.isEmpty || !file.existsSync()) {
+      if (_isViewOnly) return const SizedBox.shrink();
       return GestureDetector(
         onTap: () async {
           if (_isFilePickerActive) return;
@@ -511,14 +627,17 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
       textColor: textColor,
       initialData: block.data as String? ?? '',
       onDrawingChanged: (data) => _ctrl.updateBlockData(index, data),
+      viewOnly: widget.viewOnly,
     );
   }
 
   Widget _buildVoiceBlock(int index, KeepBlock block, Color textColor) {
+    if (widget.viewOnly && (block.data as String? ?? '').isEmpty) return const SizedBox.shrink();
     return _VoiceRecorderWidget(
       textColor: textColor,
       initialPath: block.data as String? ?? '',
       onPathChanged: (path) => _ctrl.updateBlockData(index, path),
+      viewOnly: widget.viewOnly,
     );
   }
 
@@ -526,13 +645,14 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final iconColor = color ?? (isDark ? Colors.white : Colors.black87);
     final bgColor = isDark ? Colors.black54 : Colors.white60;
 
-    return ClipOval(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
             color: bgColor,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: iconColor.withValues(alpha: 0.15), width: 1.2),
           ),
           child: IconButton(
@@ -563,7 +683,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.45),
@@ -1176,7 +1296,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     if (daysUntilMonday <= 0) daysUntilMonday += 7;
 
     // Detect which preset matches the current reminderAt
-    String _detectSelected(DateTime? dt) {
+    String detectSelected(DateTime? dt) {
       if (dt == null) return '';
       final today = DateTime(now.year, now.month, now.day);
       final tomorrow = today.add(const Duration(days: 1));
@@ -1194,7 +1314,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
       isScrollControlled: true,
       builder: (sheetCtx) {
         // Local state inside the sheet
-        String selectedKey = _detectSelected(_ctrl.reminderAt.value);
+        String selectedKey = detectSelected(_ctrl.reminderAt.value);
         TimeOfDay selectedTime = _ctrl.reminderAt.value != null
             ? TimeOfDay.fromDateTime(_ctrl.reminderAt.value!)
             : const TimeOfDay(hour: 8, minute: 0);
@@ -1572,11 +1692,13 @@ class _DrawingCanvas extends StatefulWidget {
   final Color textColor;
   final String initialData;
   final Function(String data) onDrawingChanged;
+  final bool viewOnly;
 
   const _DrawingCanvas({
     required this.textColor,
     this.initialData = '',
     required this.onDrawingChanged,
+    this.viewOnly = false,
   });
 
   @override
@@ -1699,7 +1821,7 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(15),
               child: GestureDetector(
-                onPanStart: (d) {
+                onPanStart: widget.viewOnly ? null : (d) {
                   setState(() {
                     _currentStroke = _Stroke(
                       points: [d.localPosition],
@@ -1709,10 +1831,10 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
                     _strokes.add(_currentStroke!);
                   });
                 },
-                onPanUpdate: (d) {
+                onPanUpdate: widget.viewOnly ? null : (d) {
                   setState(() => _currentStroke?.points.add(d.localPosition));
                 },
-                onPanEnd: (_) {
+                onPanEnd: widget.viewOnly ? null : (_) {
                   setState(() {
                     _currentStroke?.points.add(null);
                     _currentStroke = null;
@@ -1738,8 +1860,10 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
           ),
         ),
 
-        // ── Resize handle ──────────────────────────────────────────────
-        GestureDetector(
+        if (!widget.viewOnly) ...[
+          // ── Resize handle ──────────────────────────────────────────────
+          GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onVerticalDragUpdate: (d) {
             setState(() {
               _canvasHeight = (_canvasHeight + d.delta.dy)
@@ -1899,6 +2023,7 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
             ),
           ],
         ),
+        ],
       ],
     );
   }
@@ -1951,11 +2076,13 @@ class _VoiceRecorderWidget extends StatefulWidget {
   final Color textColor;
   final String initialPath;
   final ValueChanged<String> onPathChanged;
+  final bool viewOnly;
 
   const _VoiceRecorderWidget({
     required this.textColor,
     required this.initialPath,
     required this.onPathChanged,
+    this.viewOnly = false,
   });
 
   @override
@@ -2137,14 +2264,14 @@ class _VoiceRecorderState extends State<_VoiceRecorderWidget>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Re-record button (only when recorded/playing)
-            if (isRecorded || isPlaying) ...[
+            if (!widget.viewOnly && (isRecorded || isPlaying)) ...[
               GestureDetector(
                 onTap: _reRecord,
                 child: Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(16),
                     color: tc.withValues(alpha: 0.08),
                     border: Border.all(color: tc.withValues(alpha: 0.2)),
                   ),
@@ -2157,18 +2284,20 @@ class _VoiceRecorderState extends State<_VoiceRecorderWidget>
 
             // Main record / stop / play button
             GestureDetector(
-              onTap: () {
-                if (_state == _RecorderState.idle) _startRecording();
-                if (_state == _RecorderState.recording) _stopRecording();
-                if (_state == _RecorderState.recorded) _playRecording();
-                if (_state == _RecorderState.playing) _stopPlaying();
-              },
+              onTap: widget.viewOnly && (!isRecorded && !isPlaying)
+                  ? null
+                  : () {
+                      if (_state == _RecorderState.idle && !widget.viewOnly) _startRecording();
+                      if (_state == _RecorderState.recording && !widget.viewOnly) _stopRecording();
+                      if (_state == _RecorderState.recorded) _playRecording();
+                      if (_state == _RecorderState.playing) _stopPlaying();
+                    },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 width: isRecording ? 72 : 80,
                 height: isRecording ? 72 : 80,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(20),
                   color: isRecording
                       ? Colors.redAccent
                       : isPlaying

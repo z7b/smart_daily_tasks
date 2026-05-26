@@ -928,4 +928,11 @@ const Map<String, String> zhTW = {
   'keep_empty_note': '空筆記',
   'keep_format': '文字格式',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': '已編輯',
+      'keep_drawing_tools': '繪圖工具',
+      'keep_undo': '撤銷',
+      'keep_redo': '重做',
+      'keep_clear': '清除',
+      'keep_stroke_width': '筆畫寬度',
 };

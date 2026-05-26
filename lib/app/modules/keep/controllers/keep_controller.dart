@@ -295,7 +295,7 @@ class KeepController extends GetxController {
 
   void searchNotes(String query) => searchQuery.value = query;
 
-  Future<void> saveNote({Note? existing}) async {
+  Future<void> saveNote({Note? existing, bool popAfterSave = true}) async {
     if (isLoading.value) return;
     try {
       isLoading.value = true;
@@ -319,8 +319,10 @@ class KeepController extends GetxController {
       if (title.isEmpty && cleanedBlocks.isEmpty && !hasMedia) {
         isLoading.value = false;
         if (existing == null) {
-          Get.back();
-          _clearForm();
+          if (popAfterSave) {
+            Get.back();
+            _clearForm();
+          }
           return;
         } else {
           await _showDeleteConfirmation(existing);
@@ -391,8 +393,10 @@ class KeepController extends GetxController {
           Get.find<NotificationService>().cancelNotification(800000000 + note.id);
         }
 
-        Get.back();
-        _clearForm();
+        if (popAfterSave) {
+          Get.back();
+          _clearForm();
+        }
         Get.snackbar('success'.tr,
             existing == null ? 'note_added'.tr : 'note_updated'.tr,
             snackPosition: SnackPosition.TOP,

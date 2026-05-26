@@ -639,4 +639,11 @@ const Map<String, String> hiIN = {
   'keep_empty_note': 'खाली नोट',
   'keep_format': 'टेक्स्ट फ़ॉर्मेटिंग',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': 'संपादित',
+      'keep_drawing_tools': 'ड्राइंग टूल',
+      'keep_undo': 'पूर्ववत करें',
+      'keep_redo': 'फिर से करें',
+      'keep_clear': 'साफ़ करें',
+      'keep_stroke_width': 'स्ट्रोक की चौड़ाई',
 };

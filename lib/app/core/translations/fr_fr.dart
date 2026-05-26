@@ -876,4 +876,11 @@ const Map<String, String> frFR = {
   'keep_empty_note': 'Note Vide',
   'keep_format': 'Formatage du texte',
   'keep_blur': 'Blur (ضبابة)',
+
+      'keep_edited': 'Modifié',
+      'keep_drawing_tools': 'Outils de dessin',
+      'keep_undo': 'Annuler',
+      'keep_redo': 'Rétablir',
+      'keep_clear': 'Effacer',
+      'keep_stroke_width': 'Épaisseur du trait',
 };
