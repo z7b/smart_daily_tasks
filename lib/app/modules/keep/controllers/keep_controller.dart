@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/helpers/log_helper.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../data/models/note_model.dart';
 import '../../../data/providers/note_repository.dart';
 
@@ -87,6 +88,7 @@ class KeepNoteData {
   final bool? isItalic;
   final bool? isUnderline;
   final int? textColorIndex;
+  final DateTime? reminderAt;
 
   KeepNoteData({
     required this.blocks,
@@ -98,6 +100,7 @@ class KeepNoteData {
     this.isItalic,
     this.isUnderline,
     this.textColorIndex,
+    this.reminderAt,
   });
 
   factory KeepNoteData.fromJson(Map<String, dynamic> json) {
@@ -114,6 +117,7 @@ class KeepNoteData {
       isItalic: json['isItalic'] as bool?,
       isUnderline: json['isUnderline'] as bool?,
       textColorIndex: json['textColorIndex'] as int?,
+      reminderAt: json['reminderAt'] != null ? DateTime.tryParse(json['reminderAt'] as String) : null,
     );
   }
 
@@ -127,6 +131,7 @@ class KeepNoteData {
         'isItalic': isItalic,
         'isUnderline': isUnderline,
         'textColorIndex': textColorIndex,
+        if (reminderAt != null) 'reminderAt': reminderAt!.toIso8601String(),
       };
 }
 
@@ -202,6 +207,7 @@ class KeepController extends GetxController {
   final isUnderline = false.obs;
   final selectedTextColor = Rx<int?>(null);
   final isPinned = false.obs;
+  final reminderAt = Rx<DateTime?>(null);
 
   StreamSubscription? _notesSub;
 
@@ -332,6 +338,7 @@ class KeepController extends GetxController {
         isItalic: isItalic.value,
         isUnderline: isUnderline.value,
         textColorIndex: selectedTextColor.value,
+        reminderAt: reminderAt.value,
       );
       final contentJson = jsonEncode(noteData.toJson());
 
@@ -361,6 +368,23 @@ class KeepController extends GetxController {
       final result = existing == null
           ? await _repository.addNote(note)
           : await _repository.updateNote(note);
+
+      if (reminderAt.value != null && reminderAt.value!.isAfter(DateTime.now())) {
+        final notifId = 800000000 + note.id;
+        String previewText = 'keep_notes'.tr;
+        if (cleanedBlocks.isNotEmpty && cleanedBlocks.first.type == KeepNoteType.text) {
+          previewText = (cleanedBlocks.first.data as String).trim();
+          if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
+        }
+        await Get.find<NotificationService>().scheduleNotification(
+          id: notifId,
+          title: title.isNotEmpty ? title : 'keep_notes'.tr,
+          body: previewText,
+          scheduledTime: reminderAt.value!,
+        );
+      } else {
+        Get.find<NotificationService>().cancelNotification(800000000 + note.id);
+      }
 
       if (result.isSuccess) {
         Get.back();
@@ -664,6 +688,8 @@ class KeepController extends GetxController {
     isBold.value = noteData.isBold ?? false;
     isItalic.value = noteData.isItalic ?? false;
     isUnderline.value = noteData.isUnderline ?? false;
+    selectedTextColor.value = noteData.textColorIndex;
+    reminderAt.value = noteData.reminderAt;
     
     blocks.assignAll(noteData.blocks);
     
@@ -686,6 +712,7 @@ class KeepController extends GetxController {
     isUnderline.value = false;
     selectedTextColor.value = null;
     isPinned.value = false;
+    reminderAt.value = null;
   }
 
   /// Block manipulation helpers

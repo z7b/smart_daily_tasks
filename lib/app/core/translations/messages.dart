@@ -872,6 +872,9 @@ class Messages extends Translations {
       'keep_empty_note': 'Empty Note',
       'keep_format': 'Text Formatting',
       'keep_blur': 'Background Blur',
+      'set_reminder': 'Set Reminder',
+      'remove_reminder': 'Remove Reminder',
+      'pick_date_time': 'Pick Date & Time',
 
 
     },
@@ -1762,6 +1765,9 @@ class Messages extends Translations {
       'keep_empty_note': 'ملاحظة فارغة',
       'keep_format': 'تنسيق النص',
       'keep_blur': 'ضبابية (Blur)',
+      'set_reminder': 'تنبيه',
+      'remove_reminder': 'إزالة التنبيه',
+      'pick_date_time': 'اختر التاريخ والوقت',
     },
     'zh_CN': zhCN,
     'zh_TW': zhTW,
