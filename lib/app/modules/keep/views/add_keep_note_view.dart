@@ -1169,13 +1169,12 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? Colors.blueAccent : Colors.blue;
     final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
+    // Capture the root context BEFORE the sheet opens
+    final rootCtx = context;
     
-    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap, {bool closeOnTap = true}) {
+    Widget buildKeepStyleOption(String title, String timeStr, IconData icon, VoidCallback onTap) {
       return InkWell(
-        onTap: () {
-          if (closeOnTap) Get.back();
-          onTap();
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
@@ -1199,10 +1198,10 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     }
     
     await showModalBottomSheet(
-      context: context,
+      context: rootCtx,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) {
+      builder: (sheetCtx) {
         final now = DateTime.now();
         final time8AM = const TimeOfDay(hour: 8, minute: 0);
         final time8PM = const TimeOfDay(hour: 20, minute: 0);
@@ -1215,7 +1214,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
-              padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(context).padding.bottom + 24),
+              padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(sheetCtx).padding.bottom + 24),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
                 border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
@@ -1239,36 +1238,41 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   const SizedBox(height: 16),
                   
                   if (now.hour < 20)
-                    buildKeepStyleOption('remind_later_today', time8PM.format(context), Icons.schedule, () async {
-                      // Close sheet first, then pick time
+                    buildKeepStyleOption('remind_later_today', time8PM.format(sheetCtx), Icons.schedule, () async {
+                      Get.back(); // close sheet first
+                      if (!rootCtx.mounted) return;
                       final picked = await showTimePicker(
-                        context: context,
+                        context: rootCtx,
                         initialTime: const TimeOfDay(hour: 20, minute: 0),
                       );
                       if (picked != null) {
                         _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
                       }
-                    }, closeOnTap: true),
+                    }),
                     
-                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(context), Icons.wb_sunny_outlined, () async {
+                  buildKeepStyleOption('remind_tomorrow_morning', time8AM.format(sheetCtx), Icons.wb_sunny_outlined, () async {
+                    Get.back();
+                    if (!rootCtx.mounted) return;
                     final picked = await showTimePicker(
-                      context: context,
+                      context: rootCtx,
                       initialTime: const TimeOfDay(hour: 8, minute: 0),
                     );
                     if (picked != null) {
                       _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, picked.hour, picked.minute);
                     }
-                  }, closeOnTap: true),
+                  }),
                   
-                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(context), Icons.next_week_outlined, () async {
+                  buildKeepStyleOption('remind_next_week_keep', time8AM.format(sheetCtx), Icons.next_week_outlined, () async {
+                    Get.back();
+                    if (!rootCtx.mounted) return;
                     final picked = await showTimePicker(
-                      context: context,
+                      context: rootCtx,
                       initialTime: const TimeOfDay(hour: 8, minute: 0),
                     );
                     if (picked != null) {
                       _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + daysUntilMonday, picked.hour, picked.minute);
                     }
-                  }, closeOnTap: true),
+                  }),
                   
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
@@ -1276,14 +1280,17 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   ),
                   
                   buildKeepStyleOption('remind_pick_date_time', '', Icons.access_time_rounded, () {
-                    _showCustomDateTimePickerBottomSheet(context);
-                  }, closeOnTap: true),
+                    Get.back();
+                    if (!rootCtx.mounted) return;
+                    _showCustomDateTimePickerBottomSheet(rootCtx);
+                  }),
                   
                   Obx(() {
                     if (_ctrl.reminderAt.value != null) {
                       return buildKeepStyleOption('remove_reminder', '', Icons.delete_outline, () {
                         _ctrl.reminderAt.value = null;
-                      }, closeOnTap: true);
+                        Get.back();
+                      });
                     }
                     return const SizedBox.shrink();
                   }),
