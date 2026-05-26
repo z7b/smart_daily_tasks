@@ -1583,12 +1583,24 @@ class _DrawingCanvas extends StatefulWidget {
   State<_DrawingCanvas> createState() => _DrawingCanvasState();
 }
 
+// Each stroke stores its own color and width
+class _Stroke {
+  final List<Offset?> points;
+  final Color color;
+  final double width;
+  _Stroke({required this.points, required this.color, required this.width});
+}
+
 class _DrawingCanvasState extends State<_DrawingCanvas> {
-  final List<List<Offset?>> _strokes = [];
-  List<Offset?> _currentStroke = [];
+  final List<_Stroke> _strokes = [];
+  _Stroke? _currentStroke;
   Color _penColor = Colors.black;
   double _strokeWidth = 3.0;
   bool _isEraser = false;
+  double _canvasHeight = 240.0;
+
+  static const double _minHeight = 160.0;
+  static const double _maxHeight = 600.0;
 
   final List<Color> _palette = [
     Colors.black,
@@ -1619,32 +1631,41 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
         final lines = parts[2].split('|');
         for (final line in lines) {
           if (line.isEmpty) continue;
-          final coords = line.split(',');
-          final stroke = <Offset?>[];
-          for (int i = 0; i < coords.length - 1; i += 2) {
-            stroke.add(Offset(double.parse(coords[i]), double.parse(coords[i+1])));
+          // Format per stroke: "colorInt;width;x1,y1,x2,y2..."
+          List<String> strokeParts = line.split(';');
+          Color strokeColor = _penColor;
+          double strokeWidth = _strokeWidth;
+          String coordPart = line;
+          if (strokeParts.length == 3) {
+            strokeColor = Color(int.parse(strokeParts[0]));
+            strokeWidth = double.parse(strokeParts[1]);
+            coordPart = strokeParts[2];
           }
-          stroke.add(null);
-          _strokes.add(stroke);
+          final coords = coordPart.split(',');
+          final pts = <Offset?>[];
+          for (int i = 0; i < coords.length - 1; i += 2) {
+            pts.add(Offset(double.parse(coords[i]), double.parse(coords[i + 1])));
+          }
+          pts.add(null);
+          _strokes.add(_Stroke(points: pts, color: strokeColor, width: strokeWidth));
         }
       }
     } catch (e) {
-      debugPrint('Error deserializing drawing: $e');
+      debugPrint('Drawing deserialize error: $e');
     }
   }
 
   String _serialize() {
     if (_strokes.isEmpty) return '';
+    // New format: penColor:strokeWidth:colorInt;width;x,y,...|...
     final lines = <String>[];
     for (final stroke in _strokes) {
-      final points = <String>[];
-      for (final p in stroke) {
-        if (p != null) {
-          points.add('${p.dx.toStringAsFixed(1)},${p.dy.toStringAsFixed(1)}');
-        }
+      final pts = <String>[];
+      for (final p in stroke.points) {
+        if (p != null) pts.add('${p.dx.toStringAsFixed(1)},${p.dy.toStringAsFixed(1)}');
       }
-      if (points.isNotEmpty) {
-        lines.add(points.join(','));
+      if (pts.isNotEmpty) {
+        lines.add('${stroke.color.toARGB32()};${stroke.width.toStringAsFixed(1)};${pts.join(',')}');
       }
     }
     return '${_penColor.toARGB32()}:$_strokeWidth:${lines.join('|')}';
@@ -1653,108 +1674,150 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
   @override
   Widget build(BuildContext context) {
     final tc = widget.textColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Canvas
-        Container(
+        // ── Canvas with resizable height ───────────────────────────────
+        SizedBox(
+          height: _canvasHeight,
           width: double.infinity,
-          height: 260,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: tc.withValues(alpha: 0.15)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: GestureDetector(
-              onPanStart: (d) {
-                setState(() {
-                  _currentStroke = [d.localPosition];
-                  _strokes.add(_currentStroke);
-                });
-              },
-              onPanUpdate: (d) {
-                setState(() => _currentStroke.add(d.localPosition));
-              },
-              onPanEnd: (_) {
-                setState(() {
-                  _currentStroke.add(null);
-                  widget.onDrawingChanged(_serialize());
-                });
-              },
-              child: CustomPaint(
-                painter: _CanvasPainter(
-                  strokes: _strokes,
-                  penColor: _isEraser ? Colors.white : _penColor,
-                  strokeWidth: _isEraser ? 18 : _strokeWidth,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: tc.withValues(alpha: 0.15)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                child: _strokes.isEmpty
-                    ? Center(
-                        child: Text(
-                          'keep_draw_hint'.tr,
-                          style: TextStyle(
-                            color: Colors.grey.withValues(alpha: 0.4),
-                            fontSize: 14,
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: GestureDetector(
+                onPanStart: (d) {
+                  setState(() {
+                    _currentStroke = _Stroke(
+                      points: [d.localPosition],
+                      color: _isEraser ? Colors.white : _penColor,
+                      width: _isEraser ? 20.0 : _strokeWidth,
+                    );
+                    _strokes.add(_currentStroke!);
+                  });
+                },
+                onPanUpdate: (d) {
+                  setState(() => _currentStroke?.points.add(d.localPosition));
+                },
+                onPanEnd: (_) {
+                  setState(() {
+                    _currentStroke?.points.add(null);
+                    _currentStroke = null;
+                    widget.onDrawingChanged(_serialize());
+                  });
+                },
+                child: CustomPaint(
+                  painter: _CanvasPainter(strokes: _strokes),
+                  child: _strokes.isEmpty
+                      ? Center(
+                          child: Text(
+                            'keep_draw_hint'.tr,
+                            style: TextStyle(
+                              color: Colors.grey.withValues(alpha: 0.4),
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                      )
-                    : null,
+                        )
+                      : null,
+                ),
               ),
             ),
           ),
         ),
 
-        const SizedBox(height: 12),
-
-        // Toolbar
-        Row(
-          children: [
-            // Color palette
-            Flexible(
-              child: SizedBox(
-                height: 32,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  shrinkWrap: true,
-                  itemCount: _palette.length,
-                itemBuilder: (_, i) {
-                  final c = _palette[i];
-                  final isSelected = !_isEraser && _penColor == c;
-                  return GestureDetector(
-                    onTap: () => setState(() {
-                      _penColor = c;
-                      _isEraser = false;
-                    }),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: isSelected ? 30 : 24,
-                      height: isSelected ? 30 : 24,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? tc : Colors.grey.withValues(alpha: 0.3),
-                          width: isSelected ? 2 : 1,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+        // ── Resize handle ──────────────────────────────────────────────
+        GestureDetector(
+          onVerticalDragUpdate: (d) {
+            setState(() {
+              _canvasHeight = (_canvasHeight + d.delta.dy)
+                  .clamp(_minHeight, _maxHeight);
+            });
+          },
+          child: Container(
+            height: 24,
+            alignment: Alignment.center,
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: tc.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
+        ),
 
-            const Spacer(),
+        const SizedBox(height: 6),
+
+        // ── Toolbar ─────────────────────────────────────────────────────
+        Row(
+          children: [
+            // Color dots
+            Flexible(
+              child: SizedBox(
+                height: 36,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _palette.length,
+                  itemBuilder: (_, i) {
+                    final c = _palette[i];
+                    final isSelected = !_isEraser && _penColor == c;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _penColor = c;
+                        _isEraser = false;
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: isSelected ? 32 : 26,
+                        height: isSelected ? 32 : 26,
+                        margin: const EdgeInsets.only(right: 6),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: c,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? (isDark ? Colors.white : Colors.black87)
+                                : Colors.grey.withValues(alpha: 0.3),
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: c.withValues(alpha: 0.5),
+                                    blurRadius: 6,
+                                    spreadRadius: 1,
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: isSelected
+                            ? Icon(Icons.check,
+                                size: 14,
+                                color: c.computeLuminance() > 0.5
+                                    ? Colors.black
+                                    : Colors.white)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
 
             // Eraser
             GestureDetector(
@@ -1763,14 +1826,10 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: _isEraser
-                      ? tc.withValues(alpha: 0.15)
-                      : Colors.transparent,
+                  color: _isEraser ? tc.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: _isEraser
-                        ? tc.withValues(alpha: 0.3)
-                        : Colors.transparent,
+                    color: _isEraser ? tc.withValues(alpha: 0.3) : Colors.transparent,
                   ),
                 ),
                 child: Icon(Icons.auto_fix_high_rounded,
@@ -1779,6 +1838,23 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
             ),
 
             const SizedBox(width: 4),
+
+            // Undo
+            GestureDetector(
+              onTap: () => setState(() {
+                if (_strokes.isNotEmpty) {
+                  _strokes.removeLast();
+                  widget.onDrawingChanged(_serialize());
+                }
+              }),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(Icons.undo_rounded,
+                    size: 20, color: tc.withValues(alpha: 0.5)),
+              ),
+            ),
+
+            const SizedBox(width: 2),
 
             // Clear
             GestureDetector(
@@ -1795,7 +1871,7 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
           ],
         ),
 
-        // Stroke width slider
+        // ── Stroke width slider ─────────────────────────────────────────
         Row(
           children: [
             Icon(Icons.line_weight_rounded,
@@ -1804,11 +1880,21 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
               child: Slider(
                 value: _strokeWidth,
                 min: 1,
-                max: 12,
-                divisions: 11,
+                max: 16,
+                divisions: 15,
                 onChanged: (v) => setState(() => _strokeWidth = v),
-                activeColor: tc.withValues(alpha: 0.6),
+                activeColor: _isEraser ? Colors.grey : _penColor,
                 inactiveColor: tc.withValues(alpha: 0.15),
+              ),
+            ),
+            // Pen preview dot
+            Container(
+              width: _strokeWidth.clamp(6, 20),
+              height: _strokeWidth.clamp(6, 20),
+              margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(
+                color: _isEraser ? Colors.grey : _penColor,
+                shape: BoxShape.circle,
               ),
             ),
           ],
@@ -1820,29 +1906,23 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
 
 // ── Canvas Painter ──────────────────────────────────────────────────────────
 class _CanvasPainter extends CustomPainter {
-  final List<List<Offset?>> strokes;
-  final Color penColor;
-  final double strokeWidth;
+  final List<_Stroke> strokes;
 
-  _CanvasPainter({
-    required this.strokes,
-    required this.penColor,
-    required this.strokeWidth,
-  });
+  _CanvasPainter({required this.strokes});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = penColor
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
     for (final stroke in strokes) {
+      final paint = Paint()
+        ..color = stroke.color
+        ..strokeWidth = stroke.width
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+
       final path = Path();
       bool first = true;
-      for (final point in stroke) {
+      for (final point in stroke.points) {
         if (point == null) {
           first = true;
           continue;
@@ -1858,10 +1938,11 @@ class _CanvasPainter extends CustomPainter {
     }
   }
 
-
   @override
   bool shouldRepaint(_CanvasPainter old) => true;
 }
+
+
 
 // ── Voice Recorder Widget ──────────────────────────────────────────────────
 enum _RecorderState { idle, recording, recorded, playing }
