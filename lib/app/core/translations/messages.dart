@@ -875,6 +875,11 @@ class Messages extends Translations {
       'set_reminder': 'Set Reminder',
       'remove_reminder': 'Remove Reminder',
       'pick_date_time': 'Pick Date & Time',
+      'remind_tomorrow': 'Tomorrow',
+      'remind_next_week': 'Next Week',
+      'remind_10_days': 'In 10 Days',
+      'remind_next_month': 'Next Month',
+      'remind_custom': 'Custom Date & Time',
 
 
     },
@@ -1768,6 +1773,11 @@ class Messages extends Translations {
       'set_reminder': 'تنبيه',
       'remove_reminder': 'إزالة التنبيه',
       'pick_date_time': 'اختر التاريخ والوقت',
+      'remind_tomorrow': 'غداً',
+      'remind_next_week': 'بعد أسبوع',
+      'remind_10_days': 'بعد ١٠ أيام',
+      'remind_next_month': 'بعد شهر',
+      'remind_custom': 'تخصيص وقت محدد',
     },
     'zh_CN': zhCN,
     'zh_TW': zhTW,

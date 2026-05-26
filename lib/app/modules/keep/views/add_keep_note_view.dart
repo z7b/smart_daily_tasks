@@ -1168,6 +1168,38 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
   Future<void> _pickReminder(BuildContext context) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? Colors.blueAccent : Colors.blue;
+    final tc = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
+    
+    Widget buildQuickOption(String title, IconData icon, VoidCallback onTap) {
+      return InkWell(
+        onTap: () {
+          onTap();
+          Get.back();
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: primary, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                title.tr,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: tc, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     
     await showModalBottomSheet(
       context: context,
@@ -1181,7 +1213,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.85),
+                color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
                 border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
               ),
               child: Column(
@@ -1193,34 +1225,44 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                     decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
                   ),
                   const SizedBox(height: 24),
-                  Icon(Icons.notifications_active_rounded, size: 48, color: primary.withValues(alpha: 0.8)),
-                  const SizedBox(height: 16),
+                  Icon(Icons.notifications_active_rounded, size: 42, color: primary.withValues(alpha: 0.8)),
+                  const SizedBox(height: 12),
                   Text('set_reminder'.tr, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 24),
-                  Obx(() {
-                    if (_ctrl.reminderAt.value != null) {
-                      return Column(
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                            title: Text('remove_reminder'.tr, style: const TextStyle(color: Colors.redAccent)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            tileColor: Colors.redAccent.withValues(alpha: 0.1),
-                            onTap: () {
-                              _ctrl.reminderAt.value = null;
-                              Get.back();
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
+                  
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.6,
+                    children: [
+                      buildQuickOption('remind_tomorrow', Icons.wb_sunny_outlined, () {
+                        final now = DateTime.now();
+                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 1, 9, 0);
+                      }),
+                      buildQuickOption('remind_next_week', Icons.next_week_outlined, () {
+                        final now = DateTime.now();
+                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 7, 9, 0);
+                      }),
+                      buildQuickOption('remind_10_days', Icons.event_repeat_outlined, () {
+                        final now = DateTime.now();
+                        _ctrl.reminderAt.value = DateTime(now.year, now.month, now.day + 10, 9, 0);
+                      }),
+                      buildQuickOption('remind_next_month', Icons.calendar_month_outlined, () {
+                        final now = DateTime.now();
+                        _ctrl.reminderAt.value = DateTime(now.year, now.month + 1, now.day, 9, 0);
+                      }),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
                   ListTile(
                     leading: Icon(Icons.access_time_rounded, color: primary),
-                    title: Text('pick_date_time'.tr),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    title: Text('remind_custom'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     tileColor: primary.withValues(alpha: 0.1),
                     onTap: () async {
                       Get.back();
@@ -1250,7 +1292,27 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                       }
                     },
                   ),
-                  const SizedBox(height: 24),
+                  
+                  Obx(() {
+                    if (_ctrl.reminderAt.value != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: ListTile(
+                          leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          title: Text('remove_reminder'.tr, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          tileColor: Colors.redAccent.withValues(alpha: 0.1),
+                          onTap: () {
+                            _ctrl.reminderAt.value = null;
+                            Get.back();
+                          },
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
+                  
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
