@@ -1215,7 +1215,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
-              padding: const EdgeInsets.only(top: 24, bottom: 24),
+              padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(context).padding.bottom + 24),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
                 border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
