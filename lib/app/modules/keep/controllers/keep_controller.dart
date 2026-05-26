@@ -369,24 +369,28 @@ class KeepController extends GetxController {
           ? await _repository.addNote(note)
           : await _repository.updateNote(note);
 
-      if (reminderAt.value != null && reminderAt.value!.isAfter(DateTime.now())) {
-        final notifId = 800000000 + note.id;
-        String previewText = 'keep_notes'.tr;
-        if (cleanedBlocks.isNotEmpty && cleanedBlocks.first.type == KeepNoteType.text) {
-          previewText = (cleanedBlocks.first.data as String).trim();
-          if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
-        }
-        await Get.find<NotificationService>().scheduleNotification(
-          id: notifId,
-          title: title.isNotEmpty ? title : 'keep_notes'.tr,
-          body: previewText,
-          scheduledTime: reminderAt.value!,
-        );
-      } else {
-        Get.find<NotificationService>().cancelNotification(800000000 + note.id);
-      }
-
       if (result.isSuccess) {
+        // ✅ Schedule notification only after confirmed save (note.id is valid)
+        if (reminderAt.value != null && reminderAt.value!.isAfter(DateTime.now())) {
+          final notifId = 800000000 + note.id;
+          String previewText = 'keep_notes'.tr;
+          if (cleanedBlocks.isNotEmpty && cleanedBlocks.first.type == KeepNoteType.text) {
+            previewText = (cleanedBlocks.first.data as String).trim();
+            if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
+          }
+          await Get.find<NotificationService>().scheduleNotification(
+            id: notifId,
+            title: title.isNotEmpty ? title : 'keep_notes'.tr,
+            body: previewText,
+            scheduledTime: reminderAt.value!,
+            channelId: 'reminders_channel',
+            channelName: 'Reminders',
+          );
+          talker.info('🔔 Keep reminder scheduled: id=$notifId at ${reminderAt.value}');
+        } else {
+          Get.find<NotificationService>().cancelNotification(800000000 + note.id);
+        }
+
         Get.back();
         _clearForm();
         Get.snackbar('success'.tr,
