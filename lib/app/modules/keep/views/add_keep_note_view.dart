@@ -1849,4 +1849,4 @@ class _VoiceRecorderState extends State<_VoiceRecorderWidget>
       ],
     );
   }
-
+}
