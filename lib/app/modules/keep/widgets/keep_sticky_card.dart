@@ -10,6 +10,14 @@ import '../../../data/models/note_model.dart';
 import '../controllers/keep_controller.dart';
 
 class KeepStickyCard extends StatelessWidget {
+  // All possible saved 'untitled' strings from any language
+  static const _untitledValues = {
+    'بدون عنوان', 'Untitled', 'Sin título', 'Sans titre',
+    'Без названия', '無標題', '无标题', 'शीर्षकहीन',
+  };
+
+  static bool _isUntitled(String title) =>
+      title.isEmpty || _untitledValues.contains(title) || title == 'keep_untitled'.tr;
   final Note note;
   final int index;
   final VoidCallback onTap;
@@ -46,7 +54,7 @@ class KeepStickyCard extends StatelessWidget {
 
     return Obx(() {
       final isSelected = ctrl.selectedNoteIds.contains(note.id);
-      final bool isVisualOnly = (note.title.isEmpty || note.title == 'keep_untitled'.tr) && contentBlocks.isEmpty && (heroBlock != null || isImageBg);
+      final bool isVisualOnly = _isUntitled(note.title) && contentBlocks.isEmpty && (heroBlock != null || isImageBg);
       
       return GestureDetector(
         onTap: () {
@@ -113,14 +121,13 @@ class KeepStickyCard extends StatelessWidget {
                         // Content
                         if (!isVisualOnly)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
+                            padding: EdgeInsets.fromLTRB(12, 16, 12, noteData.reminderAt != null ? 34 : 10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min, // Masonry grid relies on dynamic height
                             children: [
                               // Title
-                              if (note.title.isNotEmpty &&
-                                  note.title != 'keep_untitled'.tr)
+                              if (!_isUntitled(note.title))
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 6),
                                   child: Text(
@@ -189,10 +196,92 @@ class KeepStickyCard extends StatelessWidget {
                   color: textColor.withValues(alpha: 0.5),
                 ),
               ),
+
+            // ── Reminder Badge ───────────────────────────────
+            if (noteData.reminderAt != null)
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: _buildReminderBadge(noteData.reminderAt!, isDark),
+              ),
             ],
           ),
         );
     });
+  }
+
+  Widget _buildReminderBadge(DateTime reminderAt, bool isDark) {
+    final now = DateTime.now();
+    final isActive = reminderAt.isAfter(now);
+    
+    // ✅ Calendar-day diff (midnight-to-midnight) — NOT Duration.inDays
+    // Duration.inDays truncates partial days (e.g. 6d 19h → 6, but also 5d 2h → 5)
+    // Calendar diff: "next Monday 8am" set on "Tuesday 1pm" = 6 calendar days, always.
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final reminderMidnight = DateTime(reminderAt.year, reminderAt.month, reminderAt.day);
+    final calendarDays = reminderMidnight.difference(todayMidnight).inDays;
+    
+    // For hours/minutes we still use real duration (only when same day)
+    final realDiff = isActive ? reminderAt.difference(now) : now.difference(reminderAt);
+    
+    String timeText;
+    if (!isActive) {
+      timeText = 'remind_expired'.tr;
+    } else if (calendarDays >= 7) {
+      final weeks = calendarDays ~/ 7;
+      final remaining = calendarDays % 7;
+      timeText = remaining > 0
+          ? 'remind_in_weeks_days'.trParams({'weeks': '$weeks', 'days': '$remaining'})
+          : 'remind_in_weeks'.trParams({'weeks': '$weeks'});
+    } else if (calendarDays > 0) {
+      timeText = 'remind_in_days'.trParams({'days': '$calendarDays'});
+    } else if (realDiff.inHours > 0) {
+      timeText = 'remind_in_hours'.trParams({'hours': '${realDiff.inHours}'});
+    } else if (realDiff.inMinutes > 0) {
+      timeText = 'remind_in_minutes'.trParams({'minutes': '${realDiff.inMinutes}'});
+    } else {
+      timeText = 'remind_now'.tr;
+    }
+
+    final color = isActive ? Colors.blueAccent : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
+    final bgColor = isDark ? Colors.black.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.5);
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? Icons.notifications_active_rounded : Icons.notifications_rounded,
+                size: 13,
+                color: color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                timeText,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildHeroImage(KeepBlock block, Color textColor) {

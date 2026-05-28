@@ -22,6 +22,7 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
+import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
@@ -208,9 +209,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     }
 
     final startRoute = AppPages.savedStartRoute;
-    if (startRoute == '/keep') {
+    if (startRoute == Routes.HOME) {
+      currentIndex.value = 1;
+    } else if (startRoute == '/keep') {
       currentIndex.value = 0;
-    } else if (startRoute != Routes.HOME) {
+    } else {
+      currentIndex.value = 1; // Default base to home
       Get.toNamed(startRoute);
     }
 
@@ -233,6 +237,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
           await _healthService.fetchAndPersistSteps();
           talker.info('⏱️ [Trace] Health Sync completed in ${sw.elapsedMilliseconds}ms');
         }
+      });
+
+      // 3️⃣ Fun Daily Reminders (Deferred by 6 seconds post-frame)
+      Future.delayed(const Duration(seconds: 6), () async {
+        talker.info('🐱 Scheduling Fun Daily Reminders...');
+        await Get.find<NotificationService>().scheduleFunDailyReminders();
       });
       
     });

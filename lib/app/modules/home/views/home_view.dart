@@ -247,7 +247,6 @@ class HomeView extends GetView<HomeController> {
         Obx(() => _buildBentoItem(context, 'journal'.tr, '${controller.journalCount.value.f} ${'logs'.tr}', Icons.book, const Color(0xFF34C759), Routes.JOURNAL)),
         Obx(() => _buildBentoItem(context, 'bookmarks'.tr, '${controller.bookmarkCount.value.f} ${'saved'.tr}', Icons.bookmark, const Color(0xFFFF3B30), Routes.BOOKMARKS)),
         Obx(() => _buildBentoItem(context, 'calendar'.tr, '${controller.calendarEventCount.value.f} ${'events'.tr}', Icons.calendar_month, const Color(0xFFBF5AF2), Routes.CALENDAR)),
-        Obx(() => _buildBentoItem(context, 'keep'.tr, '${Get.isRegistered<KeepController>() ? Get.find<KeepController>().keepNotes.length : 0} ${'entries'.tr}', Icons.push_pin_rounded, const Color(0xFFFFB300), '', onTapOverride: () => controller.currentIndex.value = 0)),
       ],
     );
   }
@@ -441,9 +440,7 @@ class HomeView extends GetView<HomeController> {
                               color: bookColor,
                             ),
                           ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                        ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -1337,25 +1334,23 @@ class HomeView extends GetView<HomeController> {
                         ),
                       ),
                       Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: jobColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                color: jobColor,
-                              ),
-                            ),
-                          )
-                          .animate(onPlay: (c) => c.repeat())
-                          .shimmer(duration: const Duration(seconds: 2)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: jobColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: jobColor,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -1528,9 +1523,7 @@ class HomeView extends GetView<HomeController> {
                               color: medColor,
                             ),
                           ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                        ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -1727,7 +1720,7 @@ class HomeView extends GetView<HomeController> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            controller.nextTaskTimeLeft.value,
+                            '${'remaining'.tr}: ${controller.nextTaskTimeLeft.value}',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -1760,9 +1753,7 @@ class HomeView extends GetView<HomeController> {
                               color: accentColor,
                             ),
                           ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                        ),
                   ],
                 ),
                 const SizedBox(height: 20),

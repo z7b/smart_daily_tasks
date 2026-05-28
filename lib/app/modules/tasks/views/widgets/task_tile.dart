@@ -306,10 +306,13 @@ class TaskTile extends StatelessWidget {
   }
 
   String _formatTimeRange() {
-    final locale = Get.locale?.languageCode ?? 'en';
-    final start = DateFormat.jm(locale).format(task.scheduledAt).f;
+    final start = DateFormat.jm('en').format(task.scheduledAt).f
+        .replaceAll('AM', 'am_short'.tr)
+        .replaceAll('PM', 'pm_short'.tr);
     if (task.scheduledEnd == null) return start;
-    final end = DateFormat.jm(locale).format(task.scheduledEnd!).f;
+    final end = DateFormat.jm('en').format(task.scheduledEnd!).f
+        .replaceAll('AM', 'am_short'.tr)
+        .replaceAll('PM', 'pm_short'.tr);
     return '$start - $end';
   }
 
@@ -329,13 +332,14 @@ class TaskTile extends StatelessWidget {
                 style: const TextStyle(color: CupertinoColors.systemOrange),
               ),
             ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Get.back();
-              onEdit();
-            },
-            child: Text('edit'.tr),
-          ),
+          if (task.status != TaskStatus.completed)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Get.back();
+                onEdit();
+              },
+              child: Text('edit'.tr),
+            ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () {

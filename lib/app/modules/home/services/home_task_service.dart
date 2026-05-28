@@ -172,8 +172,8 @@ class HomeTaskService extends GetxService {
       if (featuredTask != null) {
         nextTaskDate = featuredTask.scheduledAt;
         nextTitle = featuredTask.title;
-        nextTime = DateFormat.jm(locale).format(featuredTask.scheduledAt).f;
-        nextEndTime = featuredTask.scheduledEnd != null ? DateFormat.jm(locale).format(featuredTask.scheduledEnd!).f : '';
+        nextTime = DateFormat.jm('en').format(featuredTask.scheduledAt).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr);
+        nextEndTime = featuredTask.scheduledEnd != null ? DateFormat.jm('en').format(featuredTask.scheduledEnd!).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr) : '';
         nextPriority = featuredTask.priority;
         nextFullDate = '${DateFormat('dd MMMM yyyy', locale).format(featuredTask.scheduledAt).f} • $nextTime';
         

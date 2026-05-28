@@ -362,7 +362,7 @@ class TasksView extends GetView<TaskListController> {
                 const SizedBox(height: 24),
               ],
               _buildDetailItem(CupertinoIcons.time, 'time'.tr, 
-                "${DateFormat.jm(Get.locale?.languageCode).format(task.scheduledAt).f}${task.scheduledEnd != null ? ' - ${DateFormat.jm(Get.locale?.languageCode).format(task.scheduledEnd!).f}' : ''}"),
+                "${DateFormat.jm('en').format(task.scheduledAt).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr)}${task.scheduledEnd != null ? ' - ${DateFormat.jm('en').format(task.scheduledEnd!).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr)}' : ''}"),
               const SizedBox(height: 12),
               _buildDetailItem(CupertinoIcons.calendar, 'date'.tr, 
                 DateFormat.yMMMMd(Get.locale?.languageCode).format(task.scheduledAt).f),
@@ -376,23 +376,25 @@ class TasksView extends GetView<TaskListController> {
                       isCompleted ? Colors.grey : const Color(0xFF10B981),
                       () {
                         controller.markTaskCompleted(task);
-                        Get.back();
+                        Navigator.pop(context);
                       }
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionButton(
-                      'edit'.tr, 
-                      CupertinoIcons.pencil, 
-                      AppTheme.primary,
-                      () {
-                        Get.back();
-                        Get.find<TaskFormController>().loadTaskIntoForm(task);
-                        Get.toNamed('/add-task', arguments: task);
-                      }
+                  if (!isCompleted) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        'edit'.tr, 
+                        CupertinoIcons.pencil, 
+                        AppTheme.primary,
+                        () {
+                          Navigator.pop(context);
+                          Get.find<TaskFormController>().loadTaskIntoForm(task);
+                          Get.toNamed('/add-task', arguments: task);
+                        }
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -401,7 +403,7 @@ class TasksView extends GetView<TaskListController> {
                 CupertinoIcons.trash, 
                 const Color(0xFFEF4444),
                 () {
-                  Get.back();
+                  Navigator.pop(context);
                   controller.deleteTask(task);
                 }
               ),

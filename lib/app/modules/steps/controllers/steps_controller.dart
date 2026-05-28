@@ -734,7 +734,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       title: 'new_achievement'.tr,
       body: 'achievement_earned'.trParams({'name': achievement.titleKey.tr}),
       bigText: '${'new_achievement'.tr}\n\n${'achievement_earned'.trParams({'name': achievement.titleKey.tr})}\n${achievement.descKey.tr}\n\n${'keep_achieving'.tr}',
-      largeIcon: 'achievement',
+      imageAssetPath: 'assets/images/cat/grade.png',
     );
   }
 
@@ -779,7 +779,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         title: 'almost_there_title'.tr,
         body: 'steps_remaining_msg'.trParams({'count': '$remaining'}),
         bigText: '${'steps_remaining_msg'.trParams({'count': '$remaining'})} 💪\n${'goal_today_msg'.trParams({'goal': '${dailyGoal.value}'})}',
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/thinking.png',
       );
     }
   }
@@ -792,7 +792,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         title: 'goal_complete_title'.tr,
         body: 'goal_complete_body'.tr,
         bigText: '${'goal_complete_body'.tr} 🎉\n$stepsToday ${'step_unit'.tr} ${'of'.tr} ${dailyGoal.value}\n${'rest_well'.tr}',
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/champion.png',
       );
     }
   }

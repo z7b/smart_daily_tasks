@@ -824,8 +824,8 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
               const Spacer(),
               Text(
                 widget.existingNote != null 
-                  ? 'Edited ${widget.existingNote!.updatedAt?.toIso8601String().substring(0, 10)}'
-                  : 'New Note',
+                  ? '${'keep_edited'.tr} ${widget.existingNote!.updatedAt?.toIso8601String().substring(0, 10)}'
+                  : 'keep_new_note'.tr,
                 style: TextStyle(color: (isDark ? Colors.white : Colors.black87).withValues(alpha: 0.5), fontSize: 12),
               ),
               const Spacer(),
@@ -1292,19 +1292,17 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final rootCtx = context;
 
     final now = DateTime.now();
-    int daysUntilMonday = DateTime.monday - now.weekday;
-    if (daysUntilMonday <= 0) daysUntilMonday += 7;
 
     // Detect which preset matches the current reminderAt
     String detectSelected(DateTime? dt) {
       if (dt == null) return '';
       final today = DateTime(now.year, now.month, now.day);
       final tomorrow = today.add(const Duration(days: 1));
-      final nextMonday = today.add(Duration(days: daysUntilMonday));
+      final nextWeek = today.add(const Duration(days: 7));
       final dtDay = DateTime(dt.year, dt.month, dt.day);
       if (dtDay == today) return 'later_today';
       if (dtDay == tomorrow) return 'tomorrow';
-      if (dtDay == nextMonday) return 'next_week';
+      if (dtDay == nextWeek) return 'next_week';
       return 'custom';
     }
 
@@ -1448,7 +1446,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                         'remind_next_week_keep',
                         const TimeOfDay(hour: 8, minute: 0),
                         Icons.next_week_outlined,
-                        (t) => DateTime(now.year, now.month, now.day + daysUntilMonday, t.hour, t.minute),
+                        (t) => DateTime(now.year, now.month, now.day + 7, t.hour, t.minute),
                       ),
 
                       const Padding(

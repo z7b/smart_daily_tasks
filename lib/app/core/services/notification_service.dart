@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -9,6 +12,7 @@ import 'package:intl/intl.dart';
 import '../helpers/log_helper.dart';
 
 class NotificationService extends GetxService {
+  final Random _random = Random();
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -22,6 +26,7 @@ class NotificationService extends GetxService {
   static const int stepsOffset = 500000000;
   static const int appointmentOffset = 600000000;
   static const int salaryOffset = 700000000;
+  static const int funOffset = 900000000;
 
   /// ✅ Phase 4: Deterministic ID Strategy
   /// Ensures notifications are consistent across app installs/restores.
@@ -223,7 +228,7 @@ class NotificationService extends GetxService {
     required String title,
     required String body,
     required DateTime scheduledTime,
-    String? largeIcon,
+    String? imageAssetPath,
     String? bigText,
     bool htmlFormatTitle = false,
     bool htmlFormatBigText = false,
@@ -264,6 +269,30 @@ class NotificationService extends GetxService {
     }
 
     try {
+      ByteArrayAndroidBitmap? bigPictureBitmap;
+      if (imageAssetPath != null) {
+        bigPictureBitmap = await _getAssetBitmap(imageAssetPath);
+      }
+
+      StyleInformation? styleInfo;
+      if (bigPictureBitmap != null) {
+         styleInfo = BigPictureStyleInformation(
+           bigPictureBitmap,
+           contentTitle: title,
+           summaryText: bigText ?? body,
+           htmlFormatContentTitle: htmlFormatTitle,
+           htmlFormatSummaryText: htmlFormatBigText,
+           hideExpandedLargeIcon: true,
+         );
+      } else if (bigText != null) {
+         styleInfo = BigTextStyleInformation(
+           bigText,
+           contentTitle: title,
+           htmlFormatBigText: htmlFormatBigText,
+           htmlFormatContentTitle: htmlFormatTitle,
+         );
+      }
+
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
         title,
@@ -281,15 +310,7 @@ class NotificationService extends GetxService {
             subText: 'Life OS',
             fullScreenIntent: isAlarm,
             additionalFlags: isAlarm ? Int32List.fromList(<int>[4]) : null,
-            largeIcon: largeIcon != null ? DrawableResourceAndroidBitmap(largeIcon) : null,
-            styleInformation: bigText != null
-                ? BigTextStyleInformation(
-                    bigText,
-                    contentTitle: title,
-                    htmlFormatBigText: htmlFormatBigText,
-                    htmlFormatContentTitle: htmlFormatTitle,
-                  )
-                : null,
+            styleInformation: styleInfo,
             actions: actions,
           ),
         ),
@@ -464,18 +485,36 @@ class NotificationService extends GetxService {
     required String title,
     required String body,
     String? bigText,
-    String? largeIcon,
+    String? imageAssetPath,
   }) async {
     if (!isInitialized.value) await _waitForInit();
     
     if (!(await Permission.notification.isGranted)) return;
 
     try {
-      // ✅ Expert: largeIcon appears on the RIGHT in RTL (Arabic) — exactly where we want it
-      // The small app icon (@mipmap/ic_launcher) appears on the LEFT automatically
-      AndroidBitmap<Object>? iconBitmap;
-      if (largeIcon != null) {
-        iconBitmap = DrawableResourceAndroidBitmap(largeIcon);
+      ByteArrayAndroidBitmap? bigPictureBitmap;
+      if (imageAssetPath != null) {
+        bigPictureBitmap = await _getAssetBitmap(imageAssetPath);
+      }
+
+      StyleInformation? styleInfo;
+      if (bigPictureBitmap != null) {
+         styleInfo = BigPictureStyleInformation(
+           bigPictureBitmap,
+           contentTitle: title,
+           summaryText: bigText ?? body,
+           htmlFormatContentTitle: true,
+           htmlFormatSummaryText: true,
+           hideExpandedLargeIcon: true,
+         );
+      } else if (bigText != null) {
+         styleInfo = BigTextStyleInformation(
+           bigText,
+           contentTitle: title,
+           summaryText: 'خطواتي • نشاطك اليومي',
+           htmlFormatBigText: true,
+           htmlFormatContentTitle: true,
+         );
       }
 
       await flutterLocalNotificationsPlugin.show(
@@ -490,19 +529,8 @@ class NotificationService extends GetxService {
             importance: Importance.high,
             priority: Priority.high,
             showWhen: true,
-            // ✅ Image on the right (RTL) with no background — Android crops to circle
-            largeIcon: iconBitmap,
-            // ✅ App name as subtext under notification
             subText: 'Life OS',
-            styleInformation: bigText != null
-                ? BigTextStyleInformation(
-                    bigText,
-                    contentTitle: title,
-                    summaryText: 'خطواتي • نشاطك اليومي',
-                    htmlFormatBigText: true,
-                    htmlFormatContentTitle: true,
-                  )
-                : null,
+            styleInformation: styleInfo,
             category: AndroidNotificationCategory.reminder,
             actions: [
               const AndroidNotificationAction(
@@ -518,8 +546,8 @@ class NotificationService extends GetxService {
       );
       talker.info('🚶 Smart Steps Notification Sent: $title');
     } on PlatformException catch (e) {
-      // ✅ Fallback: If largeIcon resource fails, send without it
-      talker.error('❌ Large Icon resource error: ${e.message}. Sending without icon.');
+      // ✅ Fallback: If Big Picture resource fails, send without it
+      talker.error('❌ Big Picture resource error: ${e.message}. Sending without image.');
       await flutterLocalNotificationsPlugin.show(
         stepsOffset + id,
         title,
@@ -597,7 +625,7 @@ class NotificationService extends GetxService {
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: morningTime,
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/sunbathing.png',
         actions: [remindAction],
       );
     }
@@ -613,7 +641,7 @@ class NotificationService extends GetxService {
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: middayTime,
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/thinking.png',
         actions: [remindAction],
       );
     }
@@ -629,7 +657,7 @@ class NotificationService extends GetxService {
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: eveningTime,
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/cat_f.png', // Or 'tired.png' depending on actual name
         actions: [remindAction],
       );
     }
@@ -646,7 +674,7 @@ class NotificationService extends GetxService {
           htmlFormatTitle: true,
           htmlFormatBigText: true,
           scheduledTime: nightTime,
-          largeIcon: 'achievement',
+          imageAssetPath: 'assets/images/cat/champion.png',
         );
       } else {
         await scheduleNotification(
@@ -657,7 +685,7 @@ class NotificationService extends GetxService {
           htmlFormatTitle: true,
           htmlFormatBigText: true,
           scheduledTime: nightTime,
-          largeIcon: 'walker',
+          imageAssetPath: 'assets/images/cat/screaming.png',
           actions: [remindAction],
         );
       }
@@ -747,6 +775,118 @@ class NotificationService extends GetxService {
       titleKey: 'appointment_now_notif',
       isAlarm: alarmEnabled,
     );
+  }
+
+  /// ✅ Fun Daily Reminders: Motivational notifications with cat images
+  /// Scheduled at morning (10 AM), afternoon (3 PM), evening (8 PM)
+  /// Each picks a random cat image + random fun message (task or keep)
+  Future<void> scheduleFunDailyReminders() async {
+    if (!isInitialized.value) await _waitForInit();
+    if (!(await Permission.notification.isGranted)) return;
+
+    // Cancel previous day's fun reminders before rescheduling
+    for (int i = 1; i <= 3; i++) {
+      await cancelNotification(funOffset + i);
+    }
+
+    final now = DateTime.now();
+    final rng = _random;
+
+    // Cat image pools per time slot
+    const morningImages = [
+      'assets/images/cat/sunbathing.png',
+      'assets/images/cat/thinking.png',
+      'assets/images/cat/star.png',
+      'assets/images/cat/cute.png',
+      'assets/images/cat/cat.png',
+    ];
+    const afternoonImages = [
+      'assets/images/cat/reading.png',
+      'assets/images/cat/analyst.png',
+      'assets/images/cat/photography.png',
+      'assets/images/cat/business (8).png',
+      'assets/images/cat/painting.png',
+    ];
+    const eveningImages = [
+      'assets/images/cat/alert.png',
+      'assets/images/cat/sleeping.png',
+      'assets/images/cat/champion.png',
+      'assets/images/cat/tired.png',
+      'assets/images/cat/love (2).png',
+    ];
+
+    Future<void> scheduleSlot({
+      required int slotIndex,
+      required int hour,
+      required String titleKey,
+      required String taskBodyKey,
+      required String ideaBodyKey,
+      required List<String> images,
+    }) async {
+      if (now.hour >= hour) return;
+
+      final slotTime = DateTime(now.year, now.month, now.day, hour, 0);
+      final pickTask = rng.nextBool();
+      final bodyKey = pickTask ? taskBodyKey : ideaBodyKey;
+      final imagePath = images[rng.nextInt(images.length)];
+
+      await scheduleNotification(
+        id: funOffset + slotIndex,
+        title: titleKey.tr,
+        body: bodyKey.tr,
+        scheduledTime: slotTime,
+        imageAssetPath: imagePath,
+        channelId: 'reminders_channel',
+        channelName: 'Reminders',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: true,
+      );
+    }
+
+    await scheduleSlot(
+      slotIndex: 1,
+      hour: 10,
+      titleKey: 'fun_morning_title',
+      taskBodyKey: 'fun_morning_task',
+      ideaBodyKey: 'fun_morning_idea',
+      images: morningImages,
+    );
+
+    await scheduleSlot(
+      slotIndex: 2,
+      hour: 15,
+      titleKey: 'fun_afternoon_title',
+      taskBodyKey: 'fun_afternoon_task',
+      ideaBodyKey: 'fun_afternoon_idea',
+      images: afternoonImages,
+    );
+
+    await scheduleSlot(
+      slotIndex: 3,
+      hour: 20,
+      titleKey: 'fun_evening_title',
+      taskBodyKey: 'fun_evening_task',
+      ideaBodyKey: 'fun_evening_idea',
+      images: eveningImages,
+    );
+
+    talker.info('🐱 Fun Daily Reminders Scheduled (slots: 10AM, 3PM, 8PM)');
+  }
+
+  Future<ByteArrayAndroidBitmap?> _getAssetBitmap(String? assetPath) async {
+    if (assetPath == null || assetPath.isEmpty) return null;
+    try {
+      final ByteData data = await rootBundle.load(assetPath);
+      final Uint8List bytes = data.buffer.asUint8List();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 400);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final ByteData? resized = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      return resized != null ? ByteArrayAndroidBitmap(resized.buffer.asUint8List()) : ByteArrayAndroidBitmap(bytes);
+    } catch (e) {
+      talker.error('❌ Failed to load asset bitmap: $assetPath - $e');
+      return null;
+    }
   }
 
   /// 🌍 Best-effort timezone detection to ensure tz.local matches the device timezone

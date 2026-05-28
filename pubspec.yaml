@@ -130,6 +130,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/cat/
     - assets/images/notifications/
     - assets/images/Background_notes/
 

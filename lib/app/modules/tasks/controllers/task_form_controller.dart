@@ -143,6 +143,10 @@ class TaskFormController extends GetxController {
   Future<void> updateTask(Task existingTask) async {
     if (titleController.text.trim().isEmpty) return;
     if (isLoading.value) return;
+    if (existingTask.status == TaskStatus.completed) {
+      talker.warning('🛡️ Blocked edit on completed task: ${existingTask.title}');
+      return;
+    }
 
     try {
       isLoading.value = true;

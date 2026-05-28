@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/bindings/initial_binding.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:smart_daily_tasks/app/core/translations/messages.dart';
 import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
@@ -123,6 +124,7 @@ void main() {
       Workmanager().initialize(callbackDispatcher);
 
       tz.initializeTimeZones();
+      await initializeDateFormatting();
       await GetStorage.init();
 
       // ✅ Initialize Google Mobile Ads SDK

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -44,6 +45,9 @@ class JobController extends GetxController {
   final workBalanceMinutes = 0.obs; // Surplus or deficit vs official hours
   
   final isLoading = false.obs;
+  
+  final minuteTick = 0.obs;
+  Timer? _minuteTimer;
 
   // Weekly Chart Data (Sorted)
   final weeklyChartData = <AttendanceLog>[].obs;
@@ -62,6 +66,9 @@ class JobController extends GetxController {
   void onInit() {
     super.onInit();
     refreshData();
+    _minuteTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      minuteTick.value++;
+    });
   }
 
   Future<void> refreshData() async {
@@ -837,5 +844,11 @@ class JobController extends GetxController {
     final minutes = totalMinutes % 60;
     final anchor = DateTime(2000, 1, 1, hours, minutes);
     return DateFormat.jm(Get.locale?.languageCode).format(anchor);
+  }
+
+  @override
+  void onClose() {
+    _minuteTimer?.cancel();
+    super.onClose();
   }
 }

@@ -127,6 +127,9 @@ class JobView extends GetView<JobController> {
                   child: _buildUnemployedState(context),
                 )
               else ...[
+                // ── Next Shift Card ──
+                SliverToBoxAdapter(child: _buildNextShiftCard(context)),
+
                 // ── Salary countdown card ──
               SliverToBoxAdapter(child: _buildSalaryCard(context)),
 
@@ -327,6 +330,208 @@ class JobView extends GetView<JobController> {
         ),
       ),
     );
+  }
+
+  // ─── Next Shift Card ──────────────────────────────────────────
+  Widget _buildNextShiftCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const jobColor = Color(0xFF5E5CE6);
+
+    return Obx(() {
+      try {
+        // Force rebuild every minute for live time countdown
+        controller.minuteTick.value;
+
+        final shiftDetails = controller.getNextShiftDetails();
+        if (shiftDetails == null && controller.totalMandatedDays.value == 0) {
+          return const SizedBox();
+        }
+
+        final isActive = shiftDetails?['isActive'] as bool? ?? false;
+        final start = shiftDetails?['start'] as DateTime?;
+        final end = shiftDetails?['end'] as DateTime?;
+        final now = DateTime.now();
+
+        String timeLeftStr = '';
+        if (shiftDetails != null) {
+          if (isActive) {
+            final left = end!.difference(now);
+            timeLeftStr = left.inHours > 0
+                ? '${left.inHours}h ${left.inMinutes % 60}m'
+                : '${left.inMinutes}m';
+          } else {
+            final wait = start!.difference(now);
+            timeLeftStr = wait.inDays > 0
+                ? '${wait.inDays.f}${'d'.tr} ${(wait.inHours % 24).f}${'h'.tr}'
+                : (wait.inHours > 0
+                      ? '${wait.inHours.f}${'h'.tr} ${(wait.inMinutes % 60).f}${'m'.tr}'
+                      : '${wait.inMinutes.f}${'m'.tr}');
+          }
+        }
+
+        final presentCount =
+            controller.statsSummary[AttendanceStatus.present] ?? 0;
+        final totalDays = controller.totalMandatedDays.value;
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.03)
+                : jobColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : jobColor.withValues(alpha: 0.1),
+              width: 1,
+            ),
+            boxShadow: [
+              if (isDark)
+                BoxShadow(
+                  color: jobColor.withValues(alpha: 0.05),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: jobColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.briefcase_fill,
+                      color: jobColor,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'الدوام',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (totalDays > 0)
+                    Text(
+                      '${presentCount.f} / ${totalDays.f}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: jobColor,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (shiftDetails != null) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isActive
+                                ? '${'ends'.tr}: $timeLeftStr'
+                                : '${'starts'.tr}: $timeLeftStr',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                              color: isActive ? Colors.greenAccent : null,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: jobColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: jobColor,
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Stack(
+                  children: [
+                    Container(
+                      height: 8,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: jobColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 800),
+                      height: 8,
+                      width:
+                          (Get.width - 96) *
+                          (totalDays > 0
+                              ? (presentCount / totalDays).clamp(0.0, 1.0)
+                              : 0.0),
+                      decoration: BoxDecoration(
+                        color: jobColor,
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: jobColor.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Text(
+                  'no_shift_scheduled'.tr,
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : Colors.black.withValues(alpha: 0.3),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        )
+        .animate()
+        .fadeIn(duration: const Duration(milliseconds: 400))
+        .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack);
+      } catch (_) {
+        return const SizedBox();
+      }
+    });
   }
 
   // ─── Salary card ─────────────────────────────────────────────

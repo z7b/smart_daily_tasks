@@ -223,6 +223,12 @@ class KeepController extends GetxController {
     Color(0xFFFFCDD2), // Red
     Color(0xFFDCEDC8), // Lime
     Color(0xFFB0BEC5), // Grey
+    Color(0xFF80CBC4), // Teal
+    Color(0xFF9FA8DA), // Indigo
+    Color(0xFFBCAAA4), // Brown
+    Color(0xFFFFAB91), // DeepOrange
+    Color(0xFFFFE082), // Amber
+    Color(0xFFB39DDB), // DeepPurple
   ];
 
   static const List<Color> textColors = [
@@ -238,12 +244,20 @@ class KeepController extends GetxController {
     Color(0xFFFFCDD2), // Red
     Color(0xFFDCEDC8), // Lime
     Color(0xFFB0BEC5), // Grey
+    Color(0xFF80CBC4), // Teal
+    Color(0xFF9FA8DA), // Indigo
+    Color(0xFFBCAAA4), // Brown
+    Color(0xFFFFAB91), // DeepOrange
+    Color(0xFFFFE082), // Amber
+    Color(0xFFB39DDB), // DeepPurple
   ];
 
   static const List<String> backgroundImages = [
     'assets/images/Background_notes/dominikakukulka-cat.jpg',
     'assets/images/Background_notes/impermanent-forest.jpg',
     'assets/images/Background_notes/impermanent-samurai.jpg',
+    'assets/images/Background_notes/jaron-photoA.jpg',
+    'assets/images/Background_notes/kanenori-starry-skyA.jpg',
     'assets/images/Background_notes/miezekieze-cat.jpg',
     'assets/images/Background_notes/mohann-bird.jpg',
     'assets/images/Background_notes/nitrogeniumn-planets.jpg',
@@ -346,7 +360,7 @@ class KeepController extends GetxController {
 
       final note = existing == null
           ? Note(
-              title: title.isEmpty ? 'keep_untitled'.tr : title,
+              title: title,
               content: contentJson,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
@@ -376,8 +390,32 @@ class KeepController extends GetxController {
         if (reminderAt.value != null && reminderAt.value!.isAfter(DateTime.now())) {
           final notifId = 800000000 + note.id;
           String previewText = 'keep_notes'.tr;
-          if (cleanedBlocks.isNotEmpty && cleanedBlocks.first.type == KeepNoteType.text) {
-            previewText = (cleanedBlocks.first.data as String).trim();
+          if (cleanedBlocks.isNotEmpty) {
+            if (cleanedBlocks.first.type == KeepNoteType.text) {
+              String rawData = (cleanedBlocks.first.data as String).trim();
+              try {
+                if (rawData.startsWith('[') && rawData.endsWith(']')) {
+                  final decoded = jsonDecode(rawData) as List;
+                  String extracted = '';
+                  for (var item in decoded) {
+                    if (item is Map && item['insert'] is String) {
+                      extracted += item['insert'];
+                    }
+                  }
+                  previewText = extracted.trim();
+                } else {
+                  previewText = rawData;
+                }
+              } catch (_) {
+                previewText = rawData;
+              }
+            } else if (cleanedBlocks.first.type == KeepNoteType.checklist) {
+              final items = cleanedBlocks.first.data as List<ChecklistItem>;
+              if (items.isNotEmpty) {
+                previewText = items.first.text;
+              }
+            }
+            if (previewText.isEmpty) previewText = 'keep_notes'.tr;
             if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
           }
           await Get.find<NotificationService>().scheduleNotification(
