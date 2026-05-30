@@ -10,6 +10,7 @@ import 'package:rxdart/rxdart.dart';
 
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
 import 'package:smart_daily_tasks/app/core/extensions/date_time_extensions.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 
@@ -22,6 +23,7 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
+import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
@@ -134,6 +136,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   // Raw DateTimes for live countdown recalculation
   final _nextTaskAt = Rxn<DateTime>();
+  final _nextTaskEndAt = Rxn<DateTime>();
   final _nextMedAt = Rxn<DateTime>();
   final minuteTick = 0.obs;
 
@@ -179,10 +182,13 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
     _updateGreeting();
     _setupStaticListeners(); 
-    _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
-    _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
-    _bindStepLogStream();   // ✅ SSOT: Real-time Step Count (fixes Home vs Steps discrepancy)
-    _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
+    // ✅ Performance Fix: Defer heavy DB queries until AFTER the first frame renders
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
+      _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
+      _bindStepLogStream();   // ✅ SSOT: Real-time Step Count (fixes Home vs Steps discrepancy)
+      _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
+    });
     
     // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
     _timeService.dayChangedStream.listen((newToday) {
@@ -198,6 +204,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       _bindTaskStream();
       _bindStepLogStream();
       _loadRealData();
+    });
+
+    // ✅ Instant AM/PM update on locale change
+    ever(Get.find<ThemeService>().localeVersion, (_) {
+      _refreshCountdowns();
     });
   }
 
@@ -272,14 +283,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       // but for now, the Timer in TimeService is sufficient.
       // We can manually trigger a check if we want extra safety.
       _loadRealData();
+      }
     }
-  }
 
-  void refreshDashboard() {
-    _healthService.fetchAndPersistSteps();
-    _loadRealData();
-  }
-  
   void connectHealth() async {
     final success = await _healthService.requestPermissions();
     if (success) _loadRealData();
@@ -302,6 +308,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextTaskPriority.value = stats.nextPriority;
       nextTaskKind.value = stats.nextTaskKind;
       _nextTaskAt.value = stats.nextScheduledAt;
+      _nextTaskEndAt.value = stats.nextScheduledEndAt;
 
       // ✅ SSOT: Update Today's Total Count
       taskCount.value = stats.total;
@@ -565,6 +572,20 @@ class HomeController extends GetxController with WidgetsBindingObserver {
           nextMedicationTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
         }
       }
+    }
+
+    // Recompute time strings for locale-aware AM/PM
+    if (_nextTaskAt.value != null) {
+      nextTaskTime.value = TimeFormatHelper.formatTime(_nextTaskAt.value!);
+    }
+    if (_nextTaskEndAt.value != null) {
+      nextTaskEndTime.value = TimeFormatHelper.formatTime(_nextTaskEndAt.value!);
+    } else if (_nextTaskAt.value == null) {
+      nextTaskEndTime.value = '';
+    }
+
+    if (_nextMedAt.value != null) {
+      nextMedicationTime.value = TimeFormatHelper.formatTime(_nextMedAt.value!);
     }
   }
 

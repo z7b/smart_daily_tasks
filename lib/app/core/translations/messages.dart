@@ -917,6 +917,7 @@ class Messages extends Translations {
       'fun_evening_title': 'Evening Touch 🌆',
       'fun_evening_idea': 'Tomorrow\'s ideas start tonight.\nJot them down before sleeping 🌙',
       'fun_evening_task': 'Last chance today!\nFinish those remaining tasks 🏁',
+      'doctor_prefix': 'Dr: ',
 
     },
     'ar': {
@@ -1835,6 +1836,7 @@ class Messages extends Translations {
       'fun_evening_title': 'لمسة مسائية 🌆',
       'fun_evening_idea': 'أفكار بكرة تبدأ من الليلة.\nدوّنها قبل النوم 🌙',
       'fun_evening_task': 'آخر فرصة اليوم!\nأنهِ المهام المتبقية 🏁',
+      'doctor_prefix': 'الدكتور: ',
       'remind_10_days': 'بعد ١٠ أيام',
       'remind_next_month': 'بعد شهر',
       'remind_custom': 'تخصيص وقت محدد',

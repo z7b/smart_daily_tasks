@@ -7,7 +7,8 @@ import '../../../data/models/work_profile_model.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
-import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
+import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
 
 import 'package:isar/isar.dart';
 
@@ -68,6 +69,14 @@ class JobController extends GetxController {
     refreshData();
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       minuteTick.value++;
+    });
+
+    // ✅ Instant AM/PM update on locale change
+    ever(Get.find<ThemeService>().localeVersion, (_) {
+      minuteTick.value++;
+      if (todayLog.value?.checkInTime != null) {
+        _calculateTodayPredictiveExit();
+      }
     });
   }
 
@@ -491,7 +500,7 @@ class JobController extends GetxController {
       
       final expectedExitTime = checkIn.add(Duration(minutes: spanMinutes));
       
-      expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime).f;
+      expectedCheckOut.value = TimeFormatHelper.formatTime(expectedExitTime);
     } else {
       expectedCheckOut.value = '--:--';
     }
@@ -843,7 +852,7 @@ class JobController extends GetxController {
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
     final anchor = DateTime(2000, 1, 1, hours, minutes);
-    return DateFormat.jm(Get.locale?.languageCode).format(anchor);
+    return TimeFormatHelper.formatTime(anchor);
   }
 
   @override

@@ -12,6 +12,7 @@ import '../controllers/task_form_controller.dart';
 import 'widgets/task_tile.dart';
 import 'widgets/task_section_header.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/time_format_helper.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 import '../../../widgets/ad_banner_widget.dart';
@@ -49,7 +50,7 @@ class TasksView extends GetView<TaskListController> {
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                 title: Text(
                   'tasks_timeline'.tr,
                   style: TextStyle(
@@ -362,7 +363,7 @@ class TasksView extends GetView<TaskListController> {
                 const SizedBox(height: 24),
               ],
               _buildDetailItem(CupertinoIcons.time, 'time'.tr, 
-                "${DateFormat.jm('en').format(task.scheduledAt).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr)}${task.scheduledEnd != null ? ' - ${DateFormat.jm('en').format(task.scheduledEnd!).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr)}' : ''}"),
+                "${TimeFormatHelper.formatTime(task.scheduledAt)}${task.scheduledEnd != null ? ' - ${TimeFormatHelper.formatTime(task.scheduledEnd!)}' : ''}"),
               const SizedBox(height: 12),
               _buildDetailItem(CupertinoIcons.calendar, 'date'.tr, 
                 DateFormat.yMMMMd(Get.locale?.languageCode).format(task.scheduledAt).f),

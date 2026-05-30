@@ -954,4 +954,16 @@ const Map<String, String> zhCN = {
       'remind_save': '保存',
       'text_color': '文字颜色',
       'background': '背景',
+
+  // ─── Fun Daily Reminders ──────────────────────────
+  'fun_morning_title': '创意早晨 🌅',
+  'fun_morning_idea': '您的下一个好主意正在等待！\n把它添加到看板上 🎨',
+  'fun_morning_task': '新的一天开始了！\n今天您要征服什么任务？💪',
+  'fun_afternoon_title': '午间提神 🌤',
+  'fun_afternoon_idea': '灵光一闪？\n在它飞走之前记到看板上 🧠',
+  'fun_afternoon_task': '半天已经过去了！\n检查您的任务并强力完成 💪',
+  'fun_evening_title': '晚间点缀 🌆',
+  'fun_evening_idea': '明天的想法从今晚开始。\n在睡觉前记下来 🌙',
+  'fun_evening_task': '今天最后的机会！\n完成剩余的任务 🏁',
+  'doctor_prefix': '医生: ',
 };

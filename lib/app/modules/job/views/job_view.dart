@@ -9,6 +9,7 @@ import '../controllers/job_controller.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../routes/app_routes.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/time_format_helper.dart';
 import '../../../core/helpers/custom_date_picker.dart';
 import '../../../widgets/ad_banner_widget.dart';
 
@@ -49,7 +50,7 @@ class JobView extends GetView<JobController> {
                   onPressed: () => Get.back(),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
-                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                  titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                   title: Row(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -469,7 +470,7 @@ class JobView extends GetView<JobController> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
+                            '${TimeFormatHelper.formatTime(start!)} - ${TimeFormatHelper.formatTime(end!)}',
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
@@ -490,24 +491,24 @@ class JobView extends GetView<JobController> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          (totalDays > 0
-                              ? (presentCount / totalDays).clamp(0.0, 1.0)
-                              : 0.0),
-                      decoration: BoxDecoration(
-                        color: jobColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: jobColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width: constraints.maxWidth * controller.attendanceRate.value.clamp(0.0, 1.0),
+                          decoration: BoxDecoration(
+                            color: jobColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: jobColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                      }
                     ),
                   ],
                 ),
@@ -712,7 +713,7 @@ class JobView extends GetView<JobController> {
                                   ? 'not_logged_yet'.tr
                                   : (today.status.name.tr +
                                         (today.checkInTime != null
-                                            ? ' (${TimeOfDay.fromDateTime(today.checkInTime!).format(context)})'
+                                            ? ' (${TimeFormatHelper.formatTime(today.checkInTime!)})'
                                             : '')),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w500,

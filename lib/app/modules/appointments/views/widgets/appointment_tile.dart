@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import '../../../../data/models/appointment_model.dart';
 import '../../../../core/services/appointment_time_service.dart';
+import '../../../../widgets/glassy_pin_button.dart';
 
 class AppointmentTile extends StatelessWidget {
   final Appointment appointment;
@@ -88,10 +89,12 @@ class AppointmentTile extends StatelessWidget {
               ),
             ],
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                // Medical Side Indicator (Gradient)
+          child: Stack(
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  children: [
+                    // Medical Side Indicator (Gradient)
                 Container(
                   width: 8,
                   decoration: BoxDecoration(
@@ -123,6 +126,8 @@ class AppointmentTile extends StatelessWidget {
                           children: [
                             _buildStatusBadge(context, appointment, isToday),
                             const Spacer(),
+                            GlassyPinButton(itemType: 'appointment', itemId: appointment.id),
+                            const SizedBox(width: 8),
                             if (!isInactive) ...[
                               if (onPostpone != null)
                                 _CircleActionButton(
@@ -233,10 +238,13 @@ class AppointmentTile extends StatelessWidget {
               ],
             ),
           ),
-        ),
+
+        ],
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildStatusBadge(BuildContext context, Appointment appt, bool isToday) {
     String label = 'upcoming'.tr;

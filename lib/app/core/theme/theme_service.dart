@@ -16,6 +16,7 @@ class ThemeService extends GetxService {
   final fontTypeRx = 'Rubik'.obs;
   final fontSizeRx = 'medium'.obs;
   final useArabicNumbersRx = false.obs;
+  final localeVersion = 0.obs;
 
   bool get isDarkMode => _loadThemeFromBox();
   String get fontType => _box.read(_fontTypeKey) ?? 'Rubik';
@@ -181,6 +182,7 @@ class ThemeService extends GetxService {
   void saveLocale(String languageKey) {
     try {
       _box.write(_localeKey, languageKey);
+      localeVersion.value++;
     } catch (e) {
       debugPrint('⚠️ Error saving locale: $e');
     }

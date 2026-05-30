@@ -8,7 +8,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/task_time_service.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../../core/helpers/number_extension.dart';
+import '../../../../core/helpers/time_format_helper.dart';
 import '../../controllers/task_list_controller.dart';
+
+import '../../../../widgets/glassy_pin_button.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -81,13 +84,15 @@ class TaskTile extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: () => _showOptions(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row: Icon + Status Badge + Actions
+        child: Stack(
+          children: [
+            InkWell(
+              onTap: onTap,
+              onLongPress: () => _showOptions(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row: Icon + Status Badge + Actions
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
                 child: Row(
@@ -193,6 +198,9 @@ class TaskTile extends StatelessWidget {
             ],
           ),
         ),
+
+          ],
+        ),
       ),
     );
   }
@@ -250,6 +258,8 @@ class TaskTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        GlassyPinButton(itemType: 'task', itemId: task.id),
+        const SizedBox(width: 8),
         if (!isCompleted && !isCancelled)
           _buildCircleButton(
             icon: CupertinoIcons.checkmark_alt,
@@ -306,13 +316,9 @@ class TaskTile extends StatelessWidget {
   }
 
   String _formatTimeRange() {
-    final start = DateFormat.jm('en').format(task.scheduledAt).f
-        .replaceAll('AM', 'am_short'.tr)
-        .replaceAll('PM', 'pm_short'.tr);
+    final start = TimeFormatHelper.formatTime(task.scheduledAt);
     if (task.scheduledEnd == null) return start;
-    final end = DateFormat.jm('en').format(task.scheduledEnd!).f
-        .replaceAll('AM', 'am_short'.tr)
-        .replaceAll('PM', 'pm_short'.tr);
+    final end = TimeFormatHelper.formatTime(task.scheduledEnd!);
     return '$start - $end';
   }
 

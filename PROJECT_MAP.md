@@ -293,3 +293,171 @@ Added all 11 missing keys to each of the 6 locale files, completing the 8-langua
 - `_pickReminder` layout: vertical ListView of options with icon + title + time — text uses `Expanded` / `Spacer` to prevent overflow.
 - `_showCustomDateTimePickerBottomSheet` layout: date/time columns in `Expanded` children + full-width Button.
 - **No RenderFlex overflow risk** for any language at the font sizes used (14-18px).
+
+---
+
+# PROJECT_MAP.md — Medications Module: Complete ru_RU Translation + AM/PM Audit
+
+## Date: 2026-05-28
+
+## Problem
+The Russian locale file (`ru_ru.dart`) was missing **40+ translation keys** used by the Medications module (علاجاتي / My Medications) and its sub-pages/popups, including the `'AM'`/`'PM'` keys for AM/PM time text translation. The other 5 non-EN/AR locales (es, fr, hi, zh_CN, zh_TW) already had complete coverage.
+
+## Audit Results
+Checked all 8 locales (en, ar, ru, es, fr, hi, zh_CN, zh_TW) for AM/PM + medication key coverage:
+
+| Locale | `AM`/`PM` keys | Medication keys |
+|--------|:-:|:-:|
+| en (messages) | ✅ | ✅ |
+| ar (messages) | ✅ | ✅ |
+| es (es_es) | ✅ | ✅ |
+| fr (fr_fr) | ✅ | ✅ |
+| hi (hi_in) | ✅ | ✅ |
+| zh_CN | ✅ | ✅ |
+| zh_TW | ✅ | ✅ |
+| **ru** | **❌ → ✅** | **❌ → ✅** |
+
+## Fix
+Added all missing keys to `lib/app/core/translations/ru_ru.dart` (after line 152, single insertion block):
+
+### AM/PM keys (2)
+- `'AM': 'AM'`, `'PM': 'PM'` — Russian typically uses 24h format, so the abbreviations match English for the `.replaceAll()` pattern used by medication views.
+
+### Medication UI keys (40)
+Type names: `pill`, `syrup`, `med_injection`, `topical`, `drops`, `other`
+Instructions: `before_food`, `after_food`, `with_food`, `empty_stomach`, `before_sleep`, `normal`
+Form labels: `edit_medication`, `medication_name`, `strength`, `treatment_duration`, `duration`, `med_type`, `med_instruction`, `scheduling`, `frequency`, `interval`, `times_per_day`, `times`, `every`, `hours`, `first_dose_time`, `reminders_alerts`, `enable_notifications`, `will_alert_at`, `med_today_status`, `take`, `doses_remaining`
+Status messages: `medication_added`, `medication_updated`, `duplicate_intake`, `dose_taken`, `med_delete_success`, `med_delete_error`, `days`
+
+### Files Modified
+- **`lib/app/core/translations/ru_ru.dart`** — Added 42 new key-value pairs.
+
+### Files Verified (no changes needed)
+- `lib/app/modules/medication/views/medication_view.dart` — Already uses `.tr` for all labels (no hardcoded strings).
+- `lib/app/modules/medication/controllers/medication_controller.dart` — Already uses `.tr` for all snackbar messages.
+- `lib/app/core/translations/es_es.dart` — Already has all keys.
+- `lib/app/core/translations/fr_fr.dart` — Already has all keys.
+- `lib/app/core/translations/hi_in.dart` — Already has all keys.
+- `lib/app/core/translations/zh_cn.dart` — Already has all keys.
+- `lib/app/core/translations/zh_tw.dart` — Already has all keys.
+
+### Verification
+- `flutter analyze` passes — 0 errors, 0 warnings (1 pre-existing info-level issue).
+- No RenderFlex overflow risk: medication card text uses `Expanded` + `TextOverflow.ellipsis`; the add/edit bottom sheet uses `SingleChildScrollView` inside `Expanded`. Both patterns prevent overflow for any language at the font sizes used (10-22px).
+
+---
+
+## Appointment Home Card: Remove Decorative Heart Icon (2026-05-28)
+
+### Problem
+The doctor appointment card on the home page had a large decorative `CupertinoIcons.heart_circle_fill` icon (size 140, positioned bottom-right) inside the active appointment `Stack`. This violated the requirement for the card to be free of background images/icons.
+
+### Fix
+Removed the `Positioned` widget containing the heart icon from `_buildAppointmentHomeCard()` in `lib/app/modules/home/views/home_view.dart` (previously lines 2121-2130).
+
+### Files Modified
+- **`lib/app/modules/home/views/home_view.dart`** — Removed the `Positioned` decorative heart icon (and its `// Decorative Background Icon` comment) from the `Stack` children list.
+
+### Verification
+- No background images exist in the home appointment card (verified: no `decorationImage`, `Image.asset`, `Image.file`, or `Image.network` in the home module).
+- No heart icon remains in the appointment card (the decorative `heart_circle_fill` at line 2126 removed).
+- `CupertinoIcons` import remains in use elsewhere in the file — no orphan import.
+- Card layout unchanged: glassmorphism (BackdropFilter + blur), gradient avatar, translucent colors remain intact.
+
+---
+
+# PROJECT_MAP.md — Translation Audit: Fun Reminders, Doctor Prefix, Overflow Fixes
+
+## Date: 2026-05-29
+
+## Problem
+The comprehensive 8-language translation audit revealed:
+1. **6 locale files** (ru, es, fr, hi, zh_CN, zh_TW) were missing the entire 9-key `fun_*` daily reminder block — users would see raw key names in notification titles/bodies.
+2. **`home_view.dart`** hardcoded `'Dr: '` / `'الدكتور: '` with only an Arabic fallback — all other languages displayed English `"Dr: "`.
+3. **`medication_view.dart`** `SwitchListTile.subtitle` for `'will_alert_at'.trParams` had no `maxLines`/`overflow` — with 4-6 reminder times the text could overflow in any verbose language (Russian, Spanish, French).
+
+## Fixes
+
+### 1. 9 `fun_*` keys added to 6 locale files
+Each file received a new `// ─── Fun Daily Reminders ──────────────────────────` section with all 9 keys (3 time slots × title/idea/task).
+
+**Files modified:** ru_ru.dart, es_es.dart, fr_fr.dart, hi_in.dart, zh_cn.dart, zh_tw.dart
+
+Translations follow the English/Arabic tone with culturally appropriate language in each locale.
+
+### 2. `doctor_prefix` key added to all 8 locale files + code fix
+- **messages.dart (EN):** `'doctor_prefix': 'Dr: '`
+- **messages.dart (AR):** `'doctor_prefix': 'الدكتور: '`
+- **ru_ru.dart:** `'doctor_prefix': 'Др.: '`
+- **es_es.dart:** `'doctor_prefix': 'Dr.: '`
+- **fr_fr.dart:** `'doctor_prefix': 'Dr.: '`
+- **hi_in.dart:** `'doctor_prefix': 'डॉ.: '`
+- **zh_cn.dart:** `'doctor_prefix': '医生: '`
+- **zh_tw.dart:** `'doctor_prefix': '醫生: '`
+- **home_view.dart:2218:** Replaced `Get.locale?.languageCode == 'ar' ? 'الدكتور: ' : 'Dr: '` → `'doctor_prefix'.tr`
+
+### 3. Medication overflow fix
+- **medication_view.dart:813:** Added `maxLines: 2, overflow: TextOverflow.ellipsis` to the `SwitchListTile.subtitle` Text widget for `'will_alert_at'.trParams(...)`.
+
+## Verification
+- `dart analyze` on all modified files: **0 errors, 0 warnings.**
+- All 8 locale files now have complete `fun_*` and `doctor_prefix` key coverage.
+- Medication bottom sheet subtitle now handles long translated strings safely.
+- Doctor label on home appointment card now correctly localized for all 8 languages.
+
+## Affected Files
+- lib/app/core/translations/ru_ru.dart
+- lib/app/core/translations/es_es.dart
+- lib/app/core/translations/fr_fr.dart
+- lib/app/core/translations/hi_in.dart
+- lib/app/core/translations/zh_cn.dart
+- lib/app/core/translations/zh_tw.dart
+- lib/app/core/translations/messages.dart
+- lib/app/modules/home/views/home_view.dart
+- lib/app/modules/medication/views/medication_view.dart
+
+# PROJECT_MAP.md — Fix: Home Task Card AM/PM Stale After Language Switch
+
+## Date: 2026-05-29
+
+## Problem
+When the user changes the app language (Settings → Language), the AM/PM time text on the home page task card (`_buildTaskHomeCard`) did not update. The strings `nextTaskTime` and `nextTaskEndTime` were pre-computed in `HomeTaskService._computeStats()` with locale-specific `.tr` calls, then stored as static values. `Get.updateLocale()` rebuilds the widget tree but `Obx` only re-runs its builder on Rx changes — the stale string values persisted until the next Isar DB stream emission.
+
+## Fix (3 files, ~20 lines)
+
+### Root cause chain
+`service._computeStats()` → `.replaceAll('AM', 'am_short'.tr)` (locale baked) → stream → controller Rx → Obx reads `.value` → locale changes → Obx doesn't rebuild, Rx still holds old locale string.
+
+### Surgical changes
+
+**1. `theme_service.dart`** (2 lines)
+- Added `final localeVersion = 0.obs;` — reactive counter incremented on every `saveLocale()` call.
+- `saveLocale()` now does `localeVersion.value++;` before `Get.updateLocale()` in the settings controller.
+
+**2. `home_task_service.dart`** (3 lines)
+- Added `DateTime? nextScheduledEndAt` field to `TaskDailyStats` model + constructor.
+- `_computeStats()` captures `featuredTask.scheduledEnd` as `nextTaskEndDate`.
+- `TaskDailyStats` constructor passes `nextScheduledEndAt: nextTaskEndDate`.
+
+**3. `home_controller.dart`** (~15 lines)
+- Added `final _nextTaskEndAt = Rxn<DateTime>();` — raw end DateTime parallel to existing `_nextTaskAt`.
+- `_bindTaskStream()` stores `_nextTaskEndAt.value = stats.nextScheduledEndAt`.
+- `_refreshCountdowns()` now recomputes `nextTaskTime`/`nextTaskEndTime` from the raw DateTimes using the same `DateFormat.jm('en')` + `.replaceAll('AM', 'am_short'.tr)` pattern as the service — ensuring locale-appropriate AM/PM on every tick.
+- Added `ever(Get.find<ThemeService>().localeVersion, (_) { _refreshCountdowns(); })` in `onInit()` — fires synchronously within the same frame as `Get.updateLocale()`, so the Obx rebuilds with correct locale text instantly with zero flicker.
+
+## Update chain (instant)
+1. User changes language → `saveLocale()` → `localeVersion++`
+2. `ever` fires → `_refreshCountdowns()` recomputes time strings + `minuteTick++`
+3. `Get.updateLocale()` rebuilds MaterialApp
+4. Obx sees changed `minuteTick` → re-runs builder → reads fresh `nextTaskTime` with current locale → correct AM/PM displayed
+
+## Verification
+- `dart analyze` on all 3 modified files: **0 errors, 0 warnings.**
+- `dart analyze` on `lib/app/core/theme/`, `lib/app/modules/home/`: **No issues found.**
+- No regression: existing Obx reactivity, stream subscriptions, countdown timer, and AM/PM formatting in `task_tile.dart`, `tasks_view.dart`, `home_task_service.dart` are untouched.
+- The `ever` worker fires synchronously in the same frame as `Get.updateLocale()`, so no stale-frame flicker.
+
+## Affected Files
+- lib/app/core/theme/theme_service.dart
+- lib/app/modules/home/services/home_task_service.dart
+- lib/app/modules/home/controllers/home_controller.dart

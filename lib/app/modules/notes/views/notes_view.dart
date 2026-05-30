@@ -50,7 +50,7 @@ class NotesView extends GetView<NotesController> {
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                 title: Text(
                   'notes'.tr,
                   style: TextStyle(

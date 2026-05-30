@@ -346,6 +346,13 @@ const Map<String, String> hiIN = {
   'clinic_name': 'क्लीनिक का नाम',
   'clinic_location': 'क्लीनिक का स्थान',
   'schedule': 'अनुसूची',
+  'scheduled_at': 'निर्धारित समय',
+  'appointment_time': 'अपॉइंटमेंट का समय',
+  'enable_alarm': 'अपॉइंटमेंट पर अलार्म सक्षम करें',
+  'appointment_saved': 'अपॉइंटमेंट सफलतापूर्वक सहेजा गया',
+  'please_enter_doctor_name': 'कृपया डॉक्टर का नाम दर्ज करें',
+  'confirm_delete_appointment': 'क्या आप वाकई यह अपॉइंटमेंट हटाना चाहते हैं?',
+  'hour': 'घंटा',
   'appointment_date': 'अपॉइंटमेंट की तारीख',
   'page_of': 'पृष्ठ @current / @total',
   'reading_feeling': 'पढ़ने का अनुभव',
@@ -421,6 +428,7 @@ const Map<String, String> hiIN = {
   'excellent_consistency': 'उत्कृष्ट निरंतरता! आप एक शानदार लय बनाए हुए हैं।',
   'previous_days': 'पिछले दिन',
   'msg_dawn': 'फ़ज्र की नमाज़ और कुरान मत भूलना।',
+  'msg_dhikr': 'ईश्वर का ध्यान (ज़िक्र) करना न भूलें।',
   'unified_status': 'सिस्टम: आज @percent% एकीकृत',
 
   // ─── Verified Audit Finalization ─────────────────
@@ -665,4 +673,16 @@ const Map<String, String> hiIN = {
       'remind_save': 'सहेजें',
       'text_color': 'टेक्स्ट का रंग',
       'background': 'पृष्ठभूमि',
+
+  // ─── Fun Daily Reminders ──────────────────────────
+  'fun_morning_title': 'रचनात्मक सुबह 🌅',
+  'fun_morning_idea': 'आपका अगला बड़ा विचार इंतज़ार कर रहा है!\nइसे बोर्ड पर जोड़ें 🎨',
+  'fun_morning_task': 'नया दिन शुरू होता है!\nआज आप कौन सा कार्य जीतेंगे? 💪',
+  'fun_afternoon_title': 'दोपहर का बूस्ट 🌤',
+  'fun_afternoon_idea': 'प्रेरणा की चिंगारी मिली?\nउड़ने से पहले इसे बोर्ड पर डालें 🧠',
+  'fun_afternoon_task': 'आधा दिन बीत गया!\nअपने कार्यों की जाँच करें और मज़बूती से खत्म करें 💪',
+  'fun_evening_title': 'शाम का स्पर्श 🌆',
+  'fun_evening_idea': 'कल के विचार आज रात शुरू होते हैं।\nसोने से पहले उन्हें लिख लें 🌙',
+  'fun_evening_task': 'आज का आखिरी मौका!\nबचे हुए कार्यों को पूरा करें 🏁',
+  'doctor_prefix': 'डॉ.: ',
 };

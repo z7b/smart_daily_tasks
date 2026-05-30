@@ -225,7 +225,7 @@ class MedicationController extends GetxController {
     await _isar.writeTxn(() async {
       await _isar.medications.put(updatedMed);
     });
-    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now).replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f}));
+    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now).replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr).f}));
   }
 
   Future<void> toggleActive(Medication med) async {

@@ -43,10 +43,10 @@ class AppointmentsView extends GetView<AppointmentsController> {
             ),
             actions: [
               Container(
-                margin: const EdgeInsets.only(right: 16),
+                margin: const EdgeInsetsDirectional.only(end: 16),
                 decoration: BoxDecoration(
                   color: medicalBlue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
                   icon: const Icon(CupertinoIcons.add, size: 24),

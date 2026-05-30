@@ -18,6 +18,7 @@ import 'package:smart_daily_tasks/app/core/services/security_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/pin_service.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/task_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
@@ -260,6 +261,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       Get.put(JobRepository(isar), permanent: true);
       Get.put(AppointmentRepository(isar), permanent: true);
+
+      // Inject Global State Services
+      Get.put(PinService(isar), permanent: true);
       
       talker.info('⏱️ [Trace] Phase 3 (Repositories) completed in ${phaseSw.elapsedMilliseconds}ms');
       phaseSw.reset();

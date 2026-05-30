@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/time_format_helper.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 
@@ -30,6 +31,7 @@ class TaskDailyStats {
   final String nextFullDate;
   final TaskPriority nextPriority;
   final DateTime? nextScheduledAt;
+  final DateTime? nextScheduledEndAt;
   final NextTaskKind nextTaskKind;
 
   TaskDailyStats({
@@ -44,6 +46,7 @@ class TaskDailyStats {
     required this.nextFullDate,
     required this.nextPriority,
     this.nextScheduledAt,
+    this.nextScheduledEndAt,
     this.nextTaskKind = NextTaskKind.upcoming,
   });
 }
@@ -83,6 +86,7 @@ class HomeTaskService extends GetxService {
     String nextFullDate = '';
     TaskPriority nextPriority = TaskPriority.medium;
     DateTime? nextTaskDate;
+    DateTime? nextTaskEndDate;
     NextTaskKind nextTaskKind = NextTaskKind.upcoming;
 
     final locale = Get.locale?.languageCode ?? 'en';
@@ -171,9 +175,10 @@ class HomeTaskService extends GetxService {
       // ── Populate fields from the featured task ──
       if (featuredTask != null) {
         nextTaskDate = featuredTask.scheduledAt;
+        nextTaskEndDate = featuredTask.scheduledEnd;
         nextTitle = featuredTask.title;
-        nextTime = DateFormat.jm('en').format(featuredTask.scheduledAt).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr);
-        nextEndTime = featuredTask.scheduledEnd != null ? DateFormat.jm('en').format(featuredTask.scheduledEnd!).f.replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr) : '';
+        nextTime = TimeFormatHelper.formatTime(featuredTask.scheduledAt);
+        nextEndTime = featuredTask.scheduledEnd != null ? TimeFormatHelper.formatTime(featuredTask.scheduledEnd!) : '';
         nextPriority = featuredTask.priority;
         nextFullDate = '${DateFormat('dd MMMM yyyy', locale).format(featuredTask.scheduledAt).f} • $nextTime';
         
@@ -193,6 +198,7 @@ class HomeTaskService extends GetxService {
       nextFullDate: nextFullDate,
       nextPriority: nextPriority,
       nextScheduledAt: nextTaskDate,
+      nextScheduledEndAt: nextTaskEndDate,
       nextTaskKind: nextTaskKind,
     );
   }

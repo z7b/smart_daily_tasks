@@ -339,7 +339,7 @@ class KeepController extends GetxController {
           }
           return;
         } else {
-          await _showDeleteConfirmation(existing);
+          await showDeleteConfirmation(existing);
           return;
         }
       }
@@ -449,7 +449,7 @@ class KeepController extends GetxController {
     }
   }
 
-  Future<void> _showDeleteConfirmation(Note note) async {
+  Future<void> showDeleteConfirmation(Note note) async {
     final theme = Theme.of(Get.context!);
     final isDark = theme.brightness == Brightness.dark;
     

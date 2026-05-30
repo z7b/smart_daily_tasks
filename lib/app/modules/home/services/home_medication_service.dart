@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../data/providers/medication_repository.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/time_format_helper.dart';
 
 class MedicationDailyStats {
   final int taken;
@@ -124,7 +125,7 @@ class HomeMedicationService extends GetxService {
       }
       
       if (nextDoseDateTime != null) {
-        nextTime = DateFormat.jm(locale).format(nextDoseDateTime).f;
+        nextTime = TimeFormatHelper.formatTime(nextDoseDateTime);
         final diff = nextDoseDateTime.difference(now);
         
         if (diff.isNegative) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 
@@ -19,10 +19,11 @@ import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
 import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart' show NextTaskKind;
-import 'package:smart_daily_tasks/app/widgets/ad_banner_widget.dart';
+
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -93,13 +94,6 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
-        // Glassmorphism Toggle Button
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: AdBannerWidget(),
-          ),
-        ),
         SliverToBoxAdapter(
           child: _buildReorderToggle(context),
         ),
@@ -444,34 +438,37 @@ class HomeView extends GetView<HomeController> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: bookColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          controller.currentBookProgress.value.clamp(0.0, 1.0),
-                      decoration: BoxDecoration(
-                        color: bookColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: bookColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: bookColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width: constraints.maxWidth *
+                              controller.currentBookProgress.value.clamp(0.0, 1.0),
+                          decoration: BoxDecoration(
+                            color: bookColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: bookColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
               ] else ...[
                 Text(
@@ -658,7 +655,7 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
       ),
-    ).animate().fadeIn();
+    );
   }
 
   Widget _buildSalaryHomeCard(BuildContext context) {
@@ -669,12 +666,8 @@ class HomeView extends GetView<HomeController> {
       if (!jobCtrl.isEmployed) return const SizedBox();
       
       final days = jobCtrl.daysUntilSalary.value;
-      final now = DateTime.now();
+      final progress = jobCtrl.salaryProgress.value.clamp(0.0, 1.0);
       final isDark = Theme.of(context).brightness == Brightness.dark;
-
-      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-      final elapsedDays = now.day;
-      final progress = (elapsedDays / daysInMonth).clamp(0.0, 1.0);
 
       final Color primaryColor = const Color(0xFF4F46E5); // Indigo 600
       final Color secondaryColor = const Color(0xFF9333EA); // Purple 600
@@ -900,7 +893,7 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                   ],
                                 ),
-                              ).animate().fadeIn().scale(),
+                              ),
                             ],
                           ],
                         ),
@@ -1343,7 +1336,7 @@ class HomeView extends GetView<HomeController> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
+                          '${TimeFormatHelper.formatTime(start!)} - ${TimeFormatHelper.formatTime(end!)}',
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -1364,24 +1357,24 @@ class HomeView extends GetView<HomeController> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 800),
-                        height: 8,
-                        width:
-                            (Get.width - 96) *
-                            (totalDays > 0
-                                ? (presentCount / totalDays).clamp(0.0, 1.0)
-                                : 0.0),
-                        decoration: BoxDecoration(
-                          color: jobColor,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: jobColor.withValues(alpha: 0.3),
-                              blurRadius: 8,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 800),
+                            height: 8,
+                            width: constraints.maxWidth * jobCtrl.attendanceRate.value.clamp(0.0, 1.0),
+                            decoration: BoxDecoration(
+                              color: jobColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: jobColor.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1527,37 +1520,41 @@ class HomeView extends GetView<HomeController> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: medColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          (controller.medExpectedDoses.value > 0
-                              ? (controller.medTakenDoses.value /
-                                    controller.medExpectedDoses.value)
-                              : 0.0),
-                      decoration: BoxDecoration(
-                        color: medColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: medColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: medColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width: constraints.maxWidth *
+                              (controller.medExpectedDoses.value > 0
+                                  ? (controller.medTakenDoses.value /
+                                          controller.medExpectedDoses.value)
+                                      .clamp(0.0, 1.0)
+                                  : 0.0),
+                          decoration: BoxDecoration(
+                            color: medColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: medColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
               ] else ...[
                 Text(
@@ -1757,38 +1754,42 @@ class HomeView extends GetView<HomeController> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          (controller.taskCount.value > 0
-                              ? ((controller.taskCount.value -
-                                        controller.tasksLeftCount.value) /
-                                    controller.taskCount.value)
-                              : 0.0),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width: constraints.maxWidth *
+                              (controller.taskCount.value > 0
+                                  ? ((controller.taskCount.value -
+                                              controller.tasksLeftCount.value) /
+                                          controller.taskCount.value)
+                                      .clamp(0.0, 1.0)
+                                  : 0.0),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
               ] else ...[
                 Text(
@@ -2118,17 +2119,6 @@ class HomeView extends GetView<HomeController> {
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Stack(
                   children: [
-                    // Decorative Background Icon
-                    Positioned(
-                      right: -24,
-                      bottom: -24,
-                      child: Icon(
-                        CupertinoIcons.heart_circle_fill,
-                        size: 140,
-                        color: badgeColor.withValues(alpha: isDark ? 0.03 : 0.04),
-                      ),
-                    ),
-                    
                     Padding(
                       padding: const EdgeInsets.all(22),
                       child: Column(
@@ -2140,27 +2130,32 @@ class HomeView extends GetView<HomeController> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // Time Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: badgeColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(CupertinoIcons.clock_fill, size: 16, color: badgeColor),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      smartLabel,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: badgeColor,
-                                        fontSize: 13,
-                                        letterSpacing: -0.3,
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: badgeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(CupertinoIcons.clock_fill, size: 16, color: badgeColor),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          smartLabel,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: badgeColor,
+                                            fontSize: 13,
+                                            letterSpacing: -0.3,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                               // Header Label
@@ -2226,7 +2221,7 @@ class HomeView extends GetView<HomeController> {
                                       text: TextSpan(
                                         children: [
                                           TextSpan(
-                                            text: Get.locale?.languageCode == 'ar' ? 'الدكتور: ' : 'Dr: ',
+                                            text: 'doctor_prefix'.tr,
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
@@ -2322,7 +2317,7 @@ class HomeView extends GetView<HomeController> {
             );
           }
         ),
-      ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.05, curve: Curves.easeOutBack);
+      );
     });
   }
 }

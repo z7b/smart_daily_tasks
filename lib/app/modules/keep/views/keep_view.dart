@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:convert';
 import '../../../core/helpers/number_extension.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../data/models/note_model.dart';
 import '../controllers/keep_controller.dart';
 import '../widgets/keep_sticky_card.dart';
+import '../widgets/linked_item_card.dart';
 import '../views/add_keep_note_view.dart';
 import '../../../widgets/ad_banner_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -156,10 +158,11 @@ class KeepView extends StatelessWidget {
                           icon: Icon(Icons.push_pin_rounded, color: isDark ? Colors.white : Colors.black87),
                           onPressed: () => ctrl.pinSelectedNotes(),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.palette_outlined, color: isDark ? Colors.white : Colors.black87),
-                          onPressed: () => _showColorPickerCAB(context, ctrl),
-                        ),
+                        if (_canShowPalette(ctrl))
+                          IconButton(
+                            icon: Icon(Icons.palette_outlined, color: isDark ? Colors.white : Colors.black87),
+                            onPressed: () => _showColorPickerCAB(context, ctrl),
+                          ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
                           onPressed: () {
@@ -208,6 +211,22 @@ class KeepView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _canShowPalette(KeepController ctrl) {
+    if (ctrl.selectedNoteIds.isEmpty) return false;
+    for (final note in ctrl.keepNotes) {
+      if (!ctrl.selectedNoteIds.contains(note.id)) continue;
+      
+      if (note.linkedItemType != null) return false;
+      
+      try {
+        final Map<String, dynamic> parsed = jsonDecode(note.content ?? '{}');
+        final data = KeepNoteData.fromJson(parsed);
+        if (data.backgroundIndex != null) return false;
+      } catch (_) {}
+    }
+    return true;
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
@@ -428,25 +447,34 @@ class KeepView extends StatelessWidget {
   Widget _buildSliverStickyGrid(BuildContext context, KeepController ctrl, double keyboardHeight) {
     final notes = ctrl.filteredNotes;
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 400 + keyboardHeight),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 400 + keyboardHeight),
       sliver: SliverMasonryGrid.count(
         key: ValueKey(notes.map((e) => '${e.id}_${e.orderIndex}').join('-')),
         crossAxisCount: _crossAxisCount(context),
-        mainAxisSpacing: 20,
-        crossAxisSpacing: 16,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 8,
         childCount: notes.length,
         itemBuilder: (context, index) {
           final note = notes[index];
-          final child = KeepStickyCard(
-            note: note,
-            index: index,
-            onTap: () => _openNote(note),
-            onDelete: () => ctrl.deleteNote(note.id),
-            onTogglePin: () => ctrl.togglePin(note),
-            onColorChange: (colorIndex) => ctrl.changeColor(note, colorIndex),
-          );
+          Widget child;
 
-          if (note.isPinned || ctrl.searchQuery.value.isNotEmpty) {
+          if (note.linkedItemType != null) {
+            child = LinkedItemCard(
+              note: note,
+              index: index,
+            );
+          } else {
+            child = KeepStickyCard(
+              note: note,
+              index: index,
+              onTap: () => _openNote(note),
+              onDelete: () => ctrl.deleteNote(note.id),
+              onTogglePin: () => ctrl.togglePin(note),
+              onColorChange: (colorIndex) => ctrl.changeColor(note, colorIndex),
+            );
+          }
+
+          if (ctrl.searchQuery.value.isNotEmpty) {
             return GestureDetector(
               onLongPress: () {
                 HapticFeedback.mediumImpact();
@@ -509,14 +537,16 @@ class KeepView extends StatelessWidget {
   }
 
   int _crossAxisCount(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    if (w >= 900) return 4;
-    if (w >= 600) return 3;
     return 2;
   }
 
   // ── Empty state ────────────────────────────────────────────────────────────
   Widget _buildEmptyBoard(BuildContext context, bool isDark) {
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final iconColor = isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.3);
+    final circleColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05);
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.1);
+
     return Center(
       child: SingleChildScrollView(
         child: Column(
@@ -526,50 +556,49 @@ class KeepView extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: circleColor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: borderColor,
                   width: 2,
                 ),
-                    ),
-                    child: Icon(
-                      Icons.push_pin_outlined,
-                      size: 44,
-                      color: Colors.white.withValues(alpha: 0.4),
-                    ),
+              ),
+              child: Icon(
+                Icons.push_pin_outlined,
+                size: 44,
+                color: iconColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'keep_empty_title'.tr,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: textColor.withValues(alpha: 0.8),
+                shadows: [
+                  Shadow(
+                    color: isDark ? Colors.black38 : Colors.transparent,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'keep_empty_title'.tr,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white.withValues(alpha: 0.7),
-                      shadows: const [
-                        Shadow(
-                          color: Colors.black38,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'keep_empty_sub'.tr,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.45),
-                    ),
-                  ),
-
                 ],
-              )
-              .animate()
-              .fadeIn(duration: const Duration(milliseconds: 500))
-              .scale(begin: const Offset(0.9, 0.9)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'keep_empty_sub'.tr,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: textColor.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        )
+        .animate()
+        .fadeIn(duration: const Duration(milliseconds: 500))
+        .scale(begin: const Offset(0.9, 0.9)),
       ),
     );
   }

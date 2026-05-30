@@ -11,6 +11,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../data/models/note_model.dart';
+
+import '../../../core/helpers/time_format_helper.dart';
 import '../controllers/keep_controller.dart';
 import 'dart:convert';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -31,6 +33,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
   
   bool _isAddMenuExpanded = false;
   bool _isFilePickerActive = false;
+  bool _isDeleting = false;
   late final AnimationController _animCtrl;
   late final Animation<double> _scaleAnim;
   late bool _isViewOnly;
@@ -208,6 +211,10 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
         canPop: false,
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
+          if (_isDeleting) {
+            Get.back();
+            return;
+          }
           if (_isViewOnly) {
             Get.back();
           } else {
@@ -829,7 +836,126 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                 style: TextStyle(color: (isDark ? Colors.white : Colors.black87).withValues(alpha: 0.5), fontSize: 12),
               ),
               const Spacer(),
-              _buildGlassButton(Icons.more_vert_rounded, isDark, () {}),
+              Builder(
+                builder: (ctx) => _buildGlassButton(Icons.more_vert_rounded, isDark, () {
+                  final RenderBox button = ctx.findRenderObject() as RenderBox;
+                  final RenderBox overlay = Navigator.of(ctx).overlay!.context.findRenderObject() as RenderBox;
+                  final RelativeRect position = RelativeRect.fromRect(
+                    Rect.fromPoints(
+                      button.localToGlobal(Offset.zero, ancestor: overlay),
+                      button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+                    ),
+                    Offset.zero & overlay.size,
+                  );
+                  showMenu<int>(
+                    context: ctx,
+                    position: position,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 8,
+                    color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+                    items: [
+                      PopupMenuItem(
+                        value: 0,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                            const SizedBox(width: 12),
+                            Text(
+                              'delete'.tr,
+                              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ).then((val) async {
+                    if (val == 0) {
+                      if (widget.existingNote != null) {
+                        final bool? confirm = await Get.dialog<bool>(
+                          Dialog(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.75) : Colors.white.withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.05),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.delete_outline_rounded, size: 48, color: Colors.redAccent.withValues(alpha: 0.8)),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'confirm_delete'.tr,
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'keep_empty_delete_msg'.tr,
+                                        style: TextStyle(fontSize: 14, color: Get.theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextButton(
+                                              onPressed: () => Get.back(result: false),
+                                              style: TextButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              child: Text('cancel'.tr),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () => Get.back(result: true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.redAccent,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              child: Text('delete'.tr),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          barrierColor: Colors.black.withValues(alpha: 0.3),
+                        );
+
+                        if (confirm == true) {
+                          _isDeleting = true;
+                          await _ctrl.deleteNote(widget.existingNote!.id);
+                          Get.back();
+                        }
+                      } else {
+                        // If it's a new idea, just discard without asking since it hasn't been saved.
+                        _isDeleting = true;
+                        Get.back();
+                      }
+                    }
+                  });
+                }),
+              ),
             ],
           ),
         ),
@@ -1328,8 +1454,8 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
             ) {
               final isSelected = selectedKey == key;
               final displayTime = isSelected
-                  ? selectedTime.format(sheetCtx)
-                  : defaultTime.format(sheetCtx);
+                  ? TimeFormatHelper.formatTimeOfDay(selectedTime)
+                  : TimeFormatHelper.formatTimeOfDay(defaultTime);
 
               return InkWell(
                 onTap: () async {
@@ -1480,7 +1606,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                               if (selectedKey == 'custom') ...[
                                 const Spacer(),
                                 Text(
-                                  '${_ctrl.reminderAt.value?.day}/${_ctrl.reminderAt.value?.month}  ${selectedTime.format(sheetCtx)}',
+                                  '${_ctrl.reminderAt.value?.day}/${_ctrl.reminderAt.value?.month}  ${TimeFormatHelper.formatTimeOfDay(selectedTime)}',
                                   style: TextStyle(color: primary, fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ],
@@ -1540,7 +1666,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
         return StatefulBuilder(
           builder: (context, setState) {
             final dateStr = "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
-            final timeStr = selectedTime.format(context);
+            final timeStr = TimeFormatHelper.formatTimeOfDay(selectedTime);
 
             return ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

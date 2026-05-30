@@ -902,4 +902,16 @@ const Map<String, String> frFR = {
       'remind_save': 'Enregistrer',
       'text_color': 'Couleur du texte',
       'background': 'Arrière-plan',
+
+  // ─── Fun Daily Reminders ──────────────────────────
+  'fun_morning_title': 'Matin Créatif 🌅',
+  'fun_morning_idea': 'Votre prochaine grande idée vous attend!\nAjoutez-la au tableau 🎨',
+  'fun_morning_task': 'Un nouveau jour commence!\nQuelle tâche allez-vous conquérir aujourd\'hui? 💪',
+  'fun_afternoon_title': 'Boost de Midi 🌤',
+  'fun_afternoon_idea': 'Une étincelle d\'inspiration?\nDéposez-la sur le tableau avant qu\'elle ne s\'envole 🧠',
+  'fun_afternoon_task': 'La moitié de la journée est passée!\nVérifiez vos tâches et finissez en force 💪',
+  'fun_evening_title': 'Touche du Soir 🌆',
+  'fun_evening_idea': 'Les idées de demain commencent ce soir.\nNotez-les avant de dormir 🌙',
+  'fun_evening_task': 'Dernière chance aujourd\'hui!\nTerminez les tâches restantes 🏁',
+  'doctor_prefix': 'Dr.: ',
 };

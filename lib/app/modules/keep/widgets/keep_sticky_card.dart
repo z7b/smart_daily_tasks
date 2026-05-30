@@ -246,40 +246,34 @@ class KeepStickyCard extends StatelessWidget {
     final color = isActive ? Colors.blueAccent : (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
     final bgColor = isDark ? Colors.black.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.5);
     
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: color.withValues(alpha: 0.3),
-              width: 0.5,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isActive ? Icons.notifications_active_rounded : Icons.notifications_rounded,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            timeText,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? Icons.notifications_active_rounded : Icons.notifications_rounded,
-                size: 13,
-                color: color,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                timeText,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -550,11 +544,13 @@ class _PinWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!isPinned) return const SizedBox.shrink();
+    
     return Container(
       width: 14,
       height: 14,
       decoration: BoxDecoration(
-        color: isPinned ? Colors.redAccent : Colors.grey.shade400,
+        color: Colors.redAccent,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(

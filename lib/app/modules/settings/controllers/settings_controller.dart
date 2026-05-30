@@ -90,10 +90,10 @@ class SettingsController extends GetxController {
 
   void changeLanguage(String langKey) {
     currentLanguage.value = langKey;
-    _themeService.saveLocale(langKey);
-
     final locale = ThemeService.supportedLocales[langKey];
     if (locale != null) {
+      Get.updateLocale(locale);
+      
       // Auto-switch font for CJK/Devanagari
       if (langKey == 'zh_CN') {
         _themeService.switchFont('Noto Sans SC');
@@ -111,9 +111,10 @@ class SettingsController extends GetxController {
         _themeService.switchFont('Rubik');
         fontType.value = 'Rubik';
       }
-
-      Get.updateLocale(locale);
     }
+    
+    // Save locale AFTER Get.updateLocale so listeners (like HomeController) get the new translations
+    _themeService.saveLocale(langKey);
   }
 
   /// Shows the language picker with all supported languages.

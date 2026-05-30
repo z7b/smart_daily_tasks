@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -657,7 +656,7 @@ class NotificationService extends GetxService {
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: eveningTime,
-        imageAssetPath: 'assets/images/cat/cat_f.png', // Or 'tired.png' depending on actual name
+        imageAssetPath: 'assets/images/cat/cat f.png', // Or 'tired.png' depending on actual name
         actions: [remindAction],
       );
     }
