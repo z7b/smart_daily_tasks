@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:ui';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -10,7 +10,7 @@ import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../data/models/note_model.dart';
+import '../../../data/models/keep_note_model.dart';
 
 import '../../../core/helpers/time_format_helper.dart';
 import '../controllers/keep_controller.dart';
@@ -18,7 +18,7 @@ import 'dart:convert';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class AddKeepNoteView extends StatefulWidget {
-  final Note? existingNote;
+  final KeepNote? existingNote;
   /// When true, opens in read-only view mode (no editing allowed).
   final bool viewOnly;
   const AddKeepNoteView({super.key, this.existingNote, this.viewOnly = false});
@@ -652,11 +652,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
     final iconColor = color ?? (isDark ? Colors.white : Colors.black87);
     final bgColor = isDark ? Colors.black54 : Colors.white60;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
+    return Container(
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(16),
@@ -668,9 +664,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _miniFABItem({
@@ -703,11 +697,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
           ),
           const SizedBox(width: 10),
           // Label pill (right)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
+          Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 7,
@@ -735,8 +725,6 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                   ),
                 ),
               ),
-            ),
-          ),
         ],
       ),
     );
@@ -875,11 +863,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                           Dialog(
                             backgroundColor: Colors.transparent,
                             elevation: 0,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Container(
+                            child: Container(
                                   padding: const EdgeInsets.all(24),
                                   decoration: BoxDecoration(
                                     color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.75) : Colors.white.withValues(alpha: 0.75),
@@ -936,8 +920,6 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                                     ],
                                   ),
                                 ),
-                              ),
-                            ),
                           ),
                           barrierColor: Colors.black.withValues(alpha: 0.3),
                         );
@@ -1510,11 +1492,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
               );
             }
 
-            return ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
+            return Container(
                   padding: EdgeInsets.only(
                       top: 24,
                       bottom: MediaQuery.of(sheetCtx).padding.bottom + 24),
@@ -1639,9 +1617,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                         ),
                     ],
                   ),
-                ),
-              ),
-            );
+                );
           },
         );
       },
@@ -1668,11 +1644,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
             final dateStr = "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
             final timeStr = TimeFormatHelper.formatTimeOfDay(selectedTime);
 
-            return ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
+            return Container(
                   padding: EdgeInsets.only(top: 24, bottom: MediaQuery.of(context).padding.bottom + 24, left: 24, right: 24),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.95),
@@ -1797,9 +1769,7 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                       ),
                     ],
                   ),
-                ),
-              ),
-            );
+                );
           },
         );
       },

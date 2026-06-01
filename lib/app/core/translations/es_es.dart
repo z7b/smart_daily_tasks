@@ -79,6 +79,10 @@ const Map<String, String> esES = {
   'saturday': 'Sábado',
   'sunday': 'Domingo',
   'monday': 'Lunes',
+  'tuesday': 'Martes',
+  'wednesday': 'Miércoles',
+  'thursday': 'Jueves',
+  'friday': 'Viernes',
   'backup': 'Respaldo y Restauración',
   'amazing': 'Excelente',
 

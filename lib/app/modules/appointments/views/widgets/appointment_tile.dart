@@ -11,6 +11,7 @@ class AppointmentTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onComplete;
   final VoidCallback? onPostpone;
+  final bool isBoardMode;
 
   const AppointmentTile({
     super.key,
@@ -19,6 +20,7 @@ class AppointmentTile extends StatelessWidget {
     required this.onDelete,
     required this.onComplete,
     this.onPostpone,
+    this.isBoardMode = false,
   });
 
   @override
@@ -71,7 +73,7 @@ class AppointmentTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: isDark ? theme.cardColor.withValues(alpha: 0.6) : Colors.white,
             borderRadius: BorderRadius.circular(32),
@@ -84,18 +86,19 @@ class AppointmentTile extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: (isToday ? medicalBlue : color).withValues(alpha: isDark ? 0.05 : 0.08),
-                blurRadius: 20,
+                blurRadius: 12,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Stack(
             children: [
-              IntrinsicHeight(
-                child: Row(
-                  children: [
-                    // Medical Side Indicator (Gradient)
-                Container(
+              // Medical Side Indicator (Gradient) - Moved to Positioned to avoid IntrinsicHeight
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
                   width: 8,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -112,8 +115,11 @@ class AppointmentTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                
-                const SizedBox(width: 20),
+              ),
+              
+              Row(
+                children: [
+                  const SizedBox(width: 28), // 8 (width) + 20 (spacing)
                 
                 Expanded(
                   child: Padding(
@@ -237,13 +243,11 @@ class AppointmentTile extends StatelessWidget {
                 const SizedBox(width: 20),
               ],
             ),
-          ),
-
-        ],
+          ],
+        ),
       ),
     ),
-  ),
-);
+  );
 }
 
   Widget _buildStatusBadge(BuildContext context, Appointment appt, bool isToday) {

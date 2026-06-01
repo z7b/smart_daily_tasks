@@ -159,7 +159,7 @@ class SettingsController extends GetxController {
 
   String getSavedStartRoute() {
     final key = _box.read(StorageKeys.startScreen) ?? 'home';
-    return '/$key';
+    return StartScreen.fromKey(key).routePath;
   }
 
   Future<void> checkNotificationStability({bool silent = false}) async {

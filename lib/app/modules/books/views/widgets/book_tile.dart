@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 
 
 import '../../../../core/theme/app_theme.dart';
@@ -42,10 +42,8 @@ class BookTile extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return AspectRatio(
-      aspectRatio: 0.72,
-      child: GestureDetector(
-        onTap: onRead, // Typically opens book details
+    return GestureDetector(
+      onTap: onRead, // Typically opens book details
       onLongPress: () {
         HapticFeedback.mediumImpact();
         // Typically opens book options. Handled by parent.
@@ -197,7 +195,6 @@ class BookTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
       ),
     );
   }

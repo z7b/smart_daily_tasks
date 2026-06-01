@@ -45,7 +45,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   // Dependencies
   final _isar = Get.find<Isar>();
   final _healthService = Get.find<HealthService>();
-  
+
   late final HomeMedicationService _medicationService;
   late final HomeTaskService _taskService;
   late final HomeHealthService _healthServiceStats;
@@ -66,7 +66,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   // UI State
   final greetingKey = 'greet_morning'.obs;
   final greetingMsg = 'msg_morning'.obs;
-  final currentIndex = 0.obs;
+  late final RxInt currentIndex;
   final selectedDate = DateTime.now().obs;
 
   // Real-time Database Counts
@@ -80,11 +80,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final medicationCount = 0.obs;
   final calendarEventCount = 0.obs;
   final bookCount = 0.obs;
-  
+
   // ✅ Architecture Fix: No more Dropped Events logic
   final _isRefreshing = false.obs;
   bool _needsRefresh = false; // Dirty flag for serial execution
-  final _loadToken = 0.obs; // For cancelling stale future results // ✅ Token System to prevent Race Conditions
+  final _loadToken = 0
+      .obs; // For cancelling stale future results // ✅ Token System to prevent Race Conditions
 
   // Progress Pillars
   final mindProgress = 0.0.obs;
@@ -107,7 +108,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   // Activity & Stats
   final completedDays = <DateTime>{}.obs;
   final weeklyData = <int>[0, 0, 0, 0, 0, 0, 0].obs;
-  
+
   // Health Stats
   final stepsCount = 0.obs;
   final stepsGoal = 10000.obs;
@@ -124,7 +125,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final nextMedicationTime = ''.obs;
   final nextMedicationName = ''.obs;
   final nextMedicationTimeLeft = ''.obs;
-  
+
   // Next Task Stats
   final nextTaskTitle = ''.obs;
   final nextTaskTime = ''.obs;
@@ -145,7 +146,15 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   // Reorderable Dashboard
   final isReorderMode = false.obs;
   final cardOrder = <String>[
-    'mood', 'salary', 'next_shift', 'activity', 'medication', 'task', 'appointment', 'reading', 'bento'
+    'mood',
+    'salary',
+    'next_shift',
+    'activity',
+    'medication',
+    'task',
+    'appointment',
+    'reading',
+    'bento',
   ].obs;
 
   void toggleReorderMode() {
@@ -162,10 +171,17 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
+
+    // Set initial index synchronously to prevent heavy KeepView building at startup
+    final startRoute = AppPages.savedStartRoute;
+    currentIndex = (startRoute == '/keep' ? 0 : 1).obs;
+
     WidgetsBinding.instance.addObserver(this);
 
     // Initialize Services
-    _medicationService = HomeMedicationService(Get.find<MedicationRepository>());
+    _medicationService = HomeMedicationService(
+      Get.find<MedicationRepository>(),
+    );
     _taskService = HomeTaskService(Get.find<TaskRepository>());
     _healthServiceStats = HomeHealthService(
       Get.find<StepRepository>(),
@@ -181,15 +197,20 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     }
 
     _updateGreeting();
-    _setupStaticListeners(); 
-    // ✅ Performance Fix: Defer heavy DB queries until AFTER the first frame renders
+    _setupStaticListeners();
+    // ✅ Performance Fix: Defer heavy DB queries until AFTER the first frame renders + 600ms
+    // This allows the UI to fully layout and paint the empty dashboard smoothly.
+    // If we bind streams immediately, the DB will synchronously push data to 20 Obx widgets
+    // causing a massive layout pass that stutters the scroll in the first second.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bindTaskStream();      // ✅ SSOT: Dedicated Reactive Task Stream
-      _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
-      _bindStepLogStream();   // ✅ SSOT: Real-time Step Count (fixes Home vs Steps discrepancy)
-      _loadRealData();        // One-time load for non-reactive pillars (Health, Meds, etc)
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _bindTaskStream(); // ✅ SSOT: Dedicated Reactive Task Stream
+        _bindAppointmentStream(); // ✅ SSOT: Next Appointment Stream
+        _bindStepLogStream(); // ✅ SSOT: Real-time Step Count (fixes Home vs Steps discrepancy)
+        _loadRealData(); // One-time load for non-reactive pillars (Health, Meds, etc)
+      });
     });
-    
+
     // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
     _timeService.dayChangedStream.listen((newToday) {
       talker.info('🌅 Home: Day rotated to $newToday. Refreshing Dashboard.');
@@ -220,42 +241,40 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     }
 
     final startRoute = AppPages.savedStartRoute;
-    if (startRoute == Routes.HOME) {
-      currentIndex.value = 1;
-    } else if (startRoute == '/keep') {
-      currentIndex.value = 0;
-    } else {
-      currentIndex.value = 1; // Default base to home
+    if (startRoute != Routes.HOME && startRoute != '/keep') {
       Get.toNamed(startRoute);
     }
 
     // ✅ Startup Performance: Defer heavy operations until FIRST FRAME IS RENDERED + IDLE DELAY
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      
-      // 1️⃣ Recurrence Engine (Deferred by 2 seconds post-frame)
-      Future.delayed(const Duration(seconds: 2), () async {
-        talker.info('♻️ Starting Recurrence Engine (Post-Frame)...');
-        final sw = Stopwatch()..start();
+      // 1️⃣ Recurrence Engine (Deferred by 5 seconds post-frame)
+      // Checks for missed tasks and rolls them over if necessary
+      Future.delayed(const Duration(seconds: 5), () async {
+        talker.info('⚙️ Phase 4: Triggering background recurrence engine...');
         await Get.find<TaskRepository>().instantiateRecurringTasks();
-        talker.info('⏱️ [Trace] Recurrence Engine completed in ${sw.elapsedMilliseconds}ms');
       });
 
-      // 2️⃣ Health Sync (Deferred by 4 seconds post-frame to avoid concurrent DB locks)
-      Future.delayed(const Duration(seconds: 4), () async {
+      // 2️⃣ Health Sync (Deferred by 10 seconds post-frame to avoid concurrent DB locks and UI startup freeze)
+      // The health plugin triggers a MethodChannel which can skip frames on Android during startup
+      Future.delayed(const Duration(seconds: 10), () async {
         if (_healthService.isAuthorized.value == true) {
-          talker.info('🏥 Phase 5: Triggering background pulse sync (Idle Phase)...');
+          talker.info(
+            '🏥 Phase 5: Triggering background pulse sync (Idle Phase)...',
+          );
           final sw = Stopwatch()..start();
           await _healthService.fetchAndPersistSteps();
-          talker.info('⏱️ [Trace] Health Sync completed in ${sw.elapsedMilliseconds}ms');
+          talker.info(
+            '⏱️ [Trace] Health Sync completed in ${sw.elapsedMilliseconds}ms',
+          );
         }
       });
 
-      // 3️⃣ Fun Daily Reminders (Deferred by 6 seconds post-frame)
-      Future.delayed(const Duration(seconds: 6), () async {
+      // 3️⃣ Fun Daily Reminders (Deferred by 15 seconds post-frame)
+      // Uses AlarmManager native calls which are notoriously blocking on Android
+      Future.delayed(const Duration(seconds: 15), () async {
         talker.info('🐱 Scheduling Fun Daily Reminders...');
         await Get.find<NotificationService>().scheduleFunDailyReminders();
       });
-      
     });
   }
 
@@ -283,8 +302,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       // but for now, the Timer in TimeService is sufficient.
       // We can manually trigger a check if we want extra safety.
       _loadRealData();
-      }
     }
+  }
 
   void connectHealth() async {
     final success = await _healthService.requestPermissions();
@@ -299,7 +318,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       tasksLeftCount.value = stats.pending;
       completedTasksCount.value = stats.completed;
       cancelledTasksCount.value = stats.cancelled;
-      
+
       nextTaskTitle.value = stats.nextTitle;
       nextTaskTime.value = stats.nextTime;
       nextTaskEndTime.value = stats.nextEndTime;
@@ -314,28 +333,36 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       taskCount.value = stats.total;
 
       // Update Pillars that depend on tasks
-      final taskScore = stats.total > 0 ? (stats.completed / stats.total).clamp(0.0, 1.0) : 0.0;
+      final taskScore = stats.total > 0
+          ? (stats.completed / stats.total).clamp(0.0, 1.0)
+          : 0.0;
       final bookScore = currentBookProgress.value.clamp(0.0, 1.0);
       mindProgress.value = (taskScore * 0.7 + bookScore * 0.3).clamp(0.0, 1.0);
-      
+
       _updateTotalProgress();
     });
   }
 
   void _bindAppointmentStream() {
     _appointmentSub?.cancel();
-    _appointmentSub = Get.find<AppointmentRepository>().listenToAppointments().listen((list) {
-      final upcoming = list
-          .where((a) => a.scheduledAt.isAfter(DateTime.now()) && a.status == AppointmentStatus.active)
-          .toList();
-      
-      if (upcoming.isNotEmpty) {
-        // Sort already handled by repository, but safe to double check or just take first
-        nextAppointment.value = upcoming.first;
-      } else {
-        nextAppointment.value = null;
-      }
-    });
+    _appointmentSub = Get.find<AppointmentRepository>()
+        .listenToAppointments()
+        .listen((list) {
+          final upcoming = list
+              .where(
+                (a) =>
+                    a.scheduledAt.isAfter(DateTime.now()) &&
+                    a.status == AppointmentStatus.active,
+              )
+              .toList();
+
+          if (upcoming.isNotEmpty) {
+            // Sort already handled by repository, but safe to double check or just take first
+            nextAppointment.value = upcoming.first;
+          } else {
+            nextAppointment.value = null;
+          }
+        });
   }
 
   /// ✅ SSOT: Real-time Step Log Stream (fixes discrepancy with StepsController)
@@ -348,7 +375,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     final stepRepo = Get.find<StepRepository>();
     final viewDate = selectedDate.value;
 
-    _stepLogReactiveSub = stepRepo.watchStepLog(viewDate).listen((StepLog? stepLog) {
+    _stepLogReactiveSub = stepRepo.watchStepLog(viewDate).listen((
+      StepLog? stepLog,
+    ) {
       stepsCount.value = stepLog?.steps ?? 0;
       stepsGoal.value = stepLog?.goal ?? 10000;
       stepsProgress.value = (stepLog?.progress ?? 0.0).clamp(0.0, 1.0);
@@ -358,7 +387,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
       if (stepLog?.lastSyncedAt != null) {
         final locale = Get.locale?.languageCode ?? 'en';
-        healthLastSync.value = DateFormat.jm(locale).format(stepLog!.lastSyncedAt!).f;
+        healthLastSync.value = DateFormat.jm(
+          locale,
+        ).format(stepLog!.lastSyncedAt!).f;
       } else {
         healthLastSync.value = '';
       }
@@ -367,7 +398,10 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       final medScore = medExpectedDoses.value > 0
           ? (medTakenDoses.value / medExpectedDoses.value).clamp(0.0, 1.0)
           : 0.0;
-      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
+      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(
+        0.0,
+        1.0,
+      );
       _updateTotalProgress();
     });
   }
@@ -387,19 +421,37 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     });
 
     // Note: Task watcher removed from here. Tasks are now handled via _bindTaskStream().
-        
+
     _journalSub?.cancel();
-    _journalSub = _isar.journals.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _journalSub = _isar.journals
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 500))
+        .listen((_) => _loadRealData());
     _bookmarkSub?.cancel();
-    _bookmarkSub = _isar.bookmarks.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookmarkSub = _isar.bookmarks
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 500))
+        .listen((_) => _loadRealData());
     _bookSub?.cancel();
-    _bookSub = _isar.books.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _bookSub = _isar.books
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 500))
+        .listen((_) => _loadRealData());
     _medicationSub?.cancel();
-    _medicationSub = _isar.medications.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _medicationSub = _isar.medications
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 500))
+        .listen((_) => _loadRealData());
     _stepLogSub?.cancel();
-    _stepLogSub = _isar.stepLogs.watchLazy().debounceTime(const Duration(milliseconds: 300)).listen((_) => _loadRealData());
+    _stepLogSub = _isar.stepLogs
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 300))
+        .listen((_) => _loadRealData());
     _attendanceSub?.cancel();
-    _attendanceSub = _isar.attendanceLogs.watchLazy().debounceTime(const Duration(milliseconds: 500)).listen((_) => _loadRealData());
+    _attendanceSub = _isar.attendanceLogs
+        .watchLazy()
+        .debounceTime(const Duration(milliseconds: 500))
+        .listen((_) => _loadRealData());
 
     GetStorage().listenKey('daily_step_goal', (_) => _loadRealData());
   }
@@ -407,7 +459,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   void _updateGreeting() {
     final hour = DateTime.now().hour;
     final random = Random();
-    
+
     if (hour >= 3 && hour < 6) {
       greetingKey.value = 'greet_dawn';
       greetingMsg.value = 'msg_dawn';
@@ -427,7 +479,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
     if (progressPercentage.value >= 0.9) {
       greetingMsg.value = 'msg_high_performance';
-    } 
+    }
   }
 
   Future<void> _loadRealData() async {
@@ -464,7 +516,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
         _healthServiceStats.getHealthStats(viewDate),
         _pillarService.getGlobalCounts(),
       ]);
-      
+
       if (currentToken != _loadToken.value) return;
 
       final medStats = results[0] as MedicationDailyStats;
@@ -494,16 +546,28 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       weeklyMoodTrend.value = healthStats.moodTrend;
       currentBookTitle.value = healthStats.currentBookTitle;
       currentBookProgress.value = healthStats.currentBookProgress;
-      
+
       // ✅ Step data is now handled by _bindStepLogStream() for real-time reactivity.
       // No longer reading stepLog from the batched getHealthStats() call.
 
-      final medScore = medStats.expected > 0 ? (medStats.taken / medStats.expected).clamp(0.0, 1.0) : 0.0;
-      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(0.0, 1.0);
+      final medScore = medStats.expected > 0
+          ? (medStats.taken / medStats.expected).clamp(0.0, 1.0)
+          : 0.0;
+      bodyProgress.value = (stepsProgress.value * 0.5 + medScore * 0.5).clamp(
+        0.0,
+        1.0,
+      );
 
-      final moodMap = {'happy': 1.0, 'relaxed': 0.8, 'neutral': 0.6, 'stressed': 0.4, 'sad': 0.2};
+      final moodMap = {
+        'happy': 1.0,
+        'relaxed': 0.8,
+        'neutral': 0.6,
+        'stressed': 0.4,
+        'sad': 0.2,
+      };
       final moodScore = moodMap[weeklyMoodTrend.value] ?? 0.6;
-      spiritProgress.value = (healthStats.journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
+      spiritProgress.value =
+          (healthStats.journalProgress * 0.7 + moodScore * 0.3).clamp(0.0, 1.0);
 
       _updateTotalProgress();
 
@@ -516,7 +580,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   void _updateTotalProgress() {
-    progressPercentage.value = (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
+    progressPercentage.value =
+        (mindProgress.value + bodyProgress.value + spiritProgress.value) / 3;
   }
 
   /// Recompute time-left strings from stored raw DateTimes every minute tick.
@@ -533,16 +598,22 @@ class HomeController extends GetxController with WidgetsBindingObserver {
         if (diff.inDays == 1) {
           nextTaskTimeLeft.value = 'tomorrow'.tr;
         } else if (diff.inDays < 7) {
-          nextTaskTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+          nextTaskTimeLeft.value = 'in_x_days'.trParams({
+            'days': diff.inDays.toString(),
+          });
         } else {
           final locale = Get.locale?.languageCode ?? 'en';
-          nextTaskTimeLeft.value = DateFormat('d MMMM', locale).format(_nextTaskAt.value!).f;
+          nextTaskTimeLeft.value = DateFormat(
+            'd MMMM',
+            locale,
+          ).format(_nextTaskAt.value!).f;
         }
       } else {
         final hours = diff.inHours;
         final minutes = (diff.inMinutes % 60).abs();
         if (hours > 0) {
-          nextTaskTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
+          nextTaskTimeLeft.value =
+              '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
         } else {
           nextTaskTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
         }
@@ -558,16 +629,22 @@ class HomeController extends GetxController with WidgetsBindingObserver {
         if (diff.inDays == 1) {
           nextMedicationTimeLeft.value = 'tomorrow'.tr;
         } else if (diff.inDays < 7) {
-          nextMedicationTimeLeft.value = 'in_x_days'.trParams({'days': diff.inDays.toString()});
+          nextMedicationTimeLeft.value = 'in_x_days'.trParams({
+            'days': diff.inDays.toString(),
+          });
         } else {
           final locale = Get.locale?.languageCode ?? 'en';
-          nextMedicationTimeLeft.value = DateFormat('d MMMM', locale).format(_nextMedAt.value!).f;
+          nextMedicationTimeLeft.value = DateFormat(
+            'd MMMM',
+            locale,
+          ).format(_nextMedAt.value!).f;
         }
       } else {
         final hours = diff.inHours;
         final minutes = (diff.inMinutes % 60).abs();
         if (hours > 0) {
-          nextMedicationTimeLeft.value = '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
+          nextMedicationTimeLeft.value =
+              '${hours.f}${'hours_abbr'.tr} ${minutes.f}${'minutes_abbr'.tr}';
         } else {
           nextMedicationTimeLeft.value = '${minutes.f}${'minutes_abbr'.tr}';
         }
@@ -579,7 +656,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextTaskTime.value = TimeFormatHelper.formatTime(_nextTaskAt.value!);
     }
     if (_nextTaskEndAt.value != null) {
-      nextTaskEndTime.value = TimeFormatHelper.formatTime(_nextTaskEndAt.value!);
+      nextTaskEndTime.value = TimeFormatHelper.formatTime(
+        _nextTaskEndAt.value!,
+      );
     } else if (_nextTaskAt.value == null) {
       nextTaskEndTime.value = '';
     }
@@ -588,7 +667,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       nextMedicationTime.value = TimeFormatHelper.formatTime(_nextMedAt.value!);
     }
   }
-
 
   void onDateSelected(DateTime date) {
     selectedDate.value = date;
@@ -599,23 +677,27 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     final contextDate = selectedDate.value; // ✅ Rule 2: Time Context
     final today = contextDate.normalized;
     final sevenDaysAgo = today.subtract(const Duration(days: 6));
-    
-    final completedDates = await _isar.tasks.filter()
+
+    final completedDates = await _isar.tasks
+        .filter()
         .statusEqualTo(TaskStatus.completed)
         .completedAtGreaterThan(sevenDaysAgo)
         .completedAtProperty()
         .findAll();
-        
+
     final List<int> data = List.filled(7, 0);
     final List<String> labels = [];
     final locale = Get.locale?.languageCode ?? 'en';
-    
+
     for (int i = 0; i < 7; i++) {
       final day = sevenDaysAgo.add(Duration(days: i));
       labels.add(DateFormat.E(locale).format(day).substring(0, 1));
-      
+
       data[i] = completedDates.where((d) {
-        return d != null && d.year == day.year && d.month == day.month && d.day == day.day;
+        return d != null &&
+            d.year == day.year &&
+            d.month == day.month &&
+            d.day == day.day;
       }).length;
     }
     weeklyData.assignAll(data);
@@ -623,17 +705,21 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> _loadCompletedDays() async {
-    final completedDates = await _isar.tasks.filter()
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    final completedDates = await _isar.tasks
+        .filter()
         .statusEqualTo(TaskStatus.completed)
+        .completedAtGreaterThan(sevenDaysAgo)
         .completedAtProperty()
         .findAll();
-        
+
     final days = completedDates
         .whereType<DateTime>()
         .map((d) => DateTime(d.year, d.month, d.day))
         .toSet();
-    
-    if (completedDays.length != days.length || !completedDays.containsAll(days)) {
+
+    if (completedDays.length != days.length ||
+        !completedDays.containsAll(days)) {
       completedDays.assignAll(days);
     }
   }

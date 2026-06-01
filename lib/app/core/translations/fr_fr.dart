@@ -79,6 +79,10 @@ const Map<String, String> frFR = {
   'saturday': 'Samedi',
   'sunday': 'Dimanche',
   'monday': 'Lundi',
+  'tuesday': 'Mardi',
+  'wednesday': 'Mercredi',
+  'thursday': 'Jeudi',
+  'friday': 'Vendredi',
   'backup': 'Sauvegarde et Restauration',
   'amazing': 'Excellent',
 

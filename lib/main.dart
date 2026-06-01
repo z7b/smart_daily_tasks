@@ -37,6 +37,7 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
+import 'package:smart_daily_tasks/app/data/models/keep_note_model.dart';
 
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
@@ -47,6 +48,8 @@ import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart'
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/job_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/appointment_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/keep_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/keep_migration_service.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/core/services/time_service.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
@@ -78,6 +81,7 @@ void callbackDispatcher() {
           WorkProfileSchema,
           AttendanceLogSchema,
           AppointmentSchema,
+          KeepNoteSchema,
         ],
         directory: dir.path,
         inspector: false,
@@ -128,8 +132,14 @@ void main() {
       await initializeDateFormatting();
       await GetStorage.init();
 
-      // ✅ Initialize Google Mobile Ads SDK
-      await MobileAds.instance.initialize();
+      // ✅ Initialize Google Mobile Ads SDK (Delayed to protect Android Main Thread)
+      // The native AdMob SDK blocks the Android platform thread during initialization.
+      // Delaying it ensures the initial app animations render buttery smooth.
+      Future.delayed(const Duration(seconds: 3), () {
+        MobileAds.instance.initialize().then((status) {
+          talker.info('📢 AdMob SDK Initialized in background');
+        });
+      });
 
       runApp(const AppBootstrapper());
     },
@@ -194,6 +204,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
                 WorkProfileSchema,
                 AttendanceLogSchema,
                 AppointmentSchema,
+                KeepNoteSchema,
               ],
               directory: dir.path,
               inspector: false,
@@ -261,6 +272,10 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       Get.put(JobRepository(isar), permanent: true);
       Get.put(AppointmentRepository(isar), permanent: true);
+      Get.put(KeepRepository(isar), permanent: true);
+
+      // One-time migration: Note → KeepNote
+      await KeepMigrationService(isar).migrateIfNeeded();
 
       // Inject Global State Services
       Get.put(PinService(isar), permanent: true);

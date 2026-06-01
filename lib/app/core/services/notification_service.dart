@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -16,7 +18,7 @@ class NotificationService extends GetxService {
       FlutterLocalNotificationsPlugin();
 
   final isInitialized = false.obs;
-  
+
   // 🛡️ Global ID Governance (Phase 4: Triple Hardening)
   static const int medOffset = 100000000;
   static const int taskOffset = 200000000;
@@ -37,7 +39,6 @@ class NotificationService extends GetxService {
     }
     return (offset + (hash % 10000000));
   }
-
 
   @override
   void onInit() {
@@ -78,14 +79,15 @@ class NotificationService extends GetxService {
           ?.createNotificationChannel(channel);
 
       // Create channel for work shifts
-      const AndroidNotificationChannel shiftChannel = AndroidNotificationChannel(
-        'work_shifts_channel', 
-        'Work Shifts',
-        description: 'Reminders for your work shift start times',
-        importance: Importance.max,
-        playSound: true,
-        enableVibration: true,
-      );
+      const AndroidNotificationChannel shiftChannel =
+          AndroidNotificationChannel(
+            'work_shifts_channel',
+            'Work Shifts',
+            description: 'Reminders for your work shift start times',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          );
 
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -94,12 +96,13 @@ class NotificationService extends GetxService {
           ?.createNotificationChannel(shiftChannel);
 
       // Create channel for steps smart reminders
-      const AndroidNotificationChannel stepsChannel = AndroidNotificationChannel(
-        'steps_smart_channel',
-        'خطواتي',
-        description: 'تذكيرات ذكية للمشي والنشاط',
-        importance: Importance.high,
-      );
+      const AndroidNotificationChannel stepsChannel =
+          AndroidNotificationChannel(
+            'steps_smart_channel',
+            'خطواتي',
+            description: 'تذكيرات ذكية للمشي والنشاط',
+            importance: Importance.high,
+          );
 
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -108,15 +111,16 @@ class NotificationService extends GetxService {
           ?.createNotificationChannel(stepsChannel);
 
       // Create channel for System Alarms (Appointments, Tasks, Meds)
-      const AndroidNotificationChannel systemAlarmsChannel = AndroidNotificationChannel(
-        'system_alarms_channel',
-        'System Alarms',
-        description: 'High priority continuous alarms',
-        importance: Importance.max,
-        playSound: true,
-        enableVibration: true,
-        audioAttributesUsage: AudioAttributesUsage.alarm,
-      );
+      const AndroidNotificationChannel systemAlarmsChannel =
+          AndroidNotificationChannel(
+            'system_alarms_channel',
+            'System Alarms',
+            description: 'High priority continuous alarms',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+          );
 
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -125,31 +129,34 @@ class NotificationService extends GetxService {
           ?.createNotificationChannel(systemAlarmsChannel);
 
       // Create channel for Reminders
-      const AndroidNotificationChannel remindersChannel = AndroidNotificationChannel(
-        'reminders_channel',
-        'Reminders',
-        description: 'General reminders for appointments and tasks',
-        importance: Importance.high,
-        playSound: true,
-      );
+      const AndroidNotificationChannel remindersChannel =
+          AndroidNotificationChannel(
+            'reminders_channel',
+            'Reminders',
+            description: 'General reminders for appointments and tasks',
+            importance: Importance.high,
+            playSound: true,
+          );
 
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >()
           ?.createNotificationChannel(remindersChannel);
-          
+
       // ✅ Defer permissions explicitly to prevent racing with Health Service during boot
       Future.delayed(const Duration(seconds: 12), () async {
         try {
           await requestFullPermissions();
         } on PlatformException catch (e) {
-          talker.warning('⚠️ Notification permission race condition (PlatformException): $e');
+          talker.warning(
+            '⚠️ Notification permission race condition (PlatformException): $e',
+          );
         } catch (e) {
           talker.warning('⚠️ Error requesting notification permissions: $e');
         }
       });
-      
+
       isInitialized.value = true;
       talker.info('✅ Notifications Ready (GetX Service)');
     } catch (e, stack) {
@@ -164,11 +171,11 @@ class NotificationService extends GetxService {
 
     try {
       _isRequestingPermissions = true;
-      
+
       // 🛡️ High Standard: Batch all permissions in a SINGLE managed call
       // This includes Notifications, Exact Alarms, AND Battery Optimizations
       talker.info('📢 Starting Unified Permission Request Batch...');
-      
+
       final statuses = await [
         Permission.notification,
         Permission.scheduleExactAlarm,
@@ -241,17 +248,26 @@ class NotificationService extends GetxService {
   }) async {
     // Safety check for initialization
     if (!isInitialized.value) {
-      talker.warning('⚠️ Scheduling attempted before notification service ready. Deferring...');
+      talker.warning(
+        '⚠️ Scheduling attempted before notification service ready. Deferring...',
+      );
       await _waitForInit();
     }
 
     // 🛡️ Timezone Safety: Convert to UTC first to prevent double-offset
     // This ensures correct scheduling regardless of whether scheduledTime is UTC or local
-    final tz.TZDateTime tzTime = tz.TZDateTime.from(scheduledTime.toUtc(), tz.local);
+    final tz.TZDateTime tzTime = tz.TZDateTime.from(
+      scheduledTime.toUtc(),
+      tz.local,
+    );
 
     // If time is in the past (with 5s safety buffer for performance overhead), don't schedule
-    if (tzTime.isBefore(tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)))) {
-      talker.warning('🕒 Notification time is in the past or too close (buffer: 5s). Skipping.');
+    if (tzTime.isBefore(
+      tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+    )) {
+      talker.warning(
+        '🕒 Notification time is in the past or too close (buffer: 5s). Skipping.',
+      );
       return;
     }
 
@@ -260,36 +276,38 @@ class NotificationService extends GetxService {
     if (defaultTargetPlatform == TargetPlatform.android) {
       canScheduleExact = await Permission.scheduleExactAlarm.isGranted;
     }
-    
+
     // 🛡️ Governance: Do not silently fail if permissions are utterly revoked
     if (!(await Permission.notification.isGranted)) {
-      talker.warning('⚠️ Notification permission explicitly denied by user. Aborting.');
+      talker.warning(
+        '⚠️ Notification permission explicitly denied by user. Aborting.',
+      );
       return;
     }
 
     try {
-      ByteArrayAndroidBitmap? bigPictureBitmap;
+      dynamic bigPictureBitmap;
       if (imageAssetPath != null) {
         bigPictureBitmap = await _getAssetBitmap(imageAssetPath);
       }
 
       StyleInformation? styleInfo;
       if (bigPictureBitmap != null) {
-         styleInfo = BigPictureStyleInformation(
-           bigPictureBitmap,
-           contentTitle: title,
-           summaryText: bigText ?? body,
-           htmlFormatContentTitle: htmlFormatTitle,
-           htmlFormatSummaryText: htmlFormatBigText,
-           hideExpandedLargeIcon: true,
-         );
+        styleInfo = BigPictureStyleInformation(
+          bigPictureBitmap,
+          contentTitle: title,
+          summaryText: bigText ?? body,
+          htmlFormatContentTitle: htmlFormatTitle,
+          htmlFormatSummaryText: htmlFormatBigText,
+          hideExpandedLargeIcon: true,
+        );
       } else if (bigText != null) {
-         styleInfo = BigTextStyleInformation(
-           bigText,
-           contentTitle: title,
-           htmlFormatBigText: htmlFormatBigText,
-           htmlFormatContentTitle: htmlFormatTitle,
-         );
+        styleInfo = BigTextStyleInformation(
+          bigText,
+          contentTitle: title,
+          htmlFormatBigText: htmlFormatBigText,
+          htmlFormatContentTitle: htmlFormatTitle,
+        );
       }
 
       await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -313,12 +331,15 @@ class NotificationService extends GetxService {
             actions: actions,
           ),
         ),
-        androidScheduleMode: canScheduleExact 
-            ? AndroidScheduleMode.exactAllowWhileIdle 
-            : AndroidScheduleMode.inexactAllowWhileIdle, 
+        androidScheduleMode: canScheduleExact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
+
+      // 🛡️ Yield to UI thread to prevent freezing during bulk scheduling
+      await Future.delayed(const Duration(milliseconds: 50));
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Notification scheduling failed');
     }
@@ -327,7 +348,7 @@ class NotificationService extends GetxService {
   /// ✅ Diagnostic Signal: Fires an immediate test notification to prove system stability
   Future<void> sendTestNotification() async {
     if (!isInitialized.value) await _waitForInit();
-    
+
     try {
       await flutterLocalNotificationsPlugin.show(
         999, // Diagnostic ID
@@ -351,15 +372,14 @@ class NotificationService extends GetxService {
     }
   }
 
-
   /// ✅ Real-time Stability Status
   Future<bool> isSystemStable() async {
     if (defaultTargetPlatform != TargetPlatform.android) return true;
-    
+
     final notifStatus = await Permission.notification.isGranted;
     final batteryStatus = await Permission.ignoreBatteryOptimizations.isGranted;
     final alarmStatus = await Permission.scheduleExactAlarm.isGranted;
-    
+
     return notifStatus && batteryStatus && alarmStatus;
   }
 
@@ -370,7 +390,9 @@ class NotificationService extends GetxService {
       attempts++;
     }
     if (!isInitialized.value) {
-      talker.error('⚠️ NotificationService failed to initialize after $attempts attempts');
+      talker.error(
+        '⚠️ NotificationService failed to initialize after $attempts attempts',
+      );
     }
   }
 
@@ -380,21 +402,23 @@ class NotificationService extends GetxService {
 
   /// 🛡️ Reschedule all active notifications (called on app resume / timezone change)
   /// This cancels all pending notifications and reschedules from scratch.
-  Future<void> rescheduleAllNotifications(List<Map<String, dynamic>> taskSchedules) async {
+  Future<void> rescheduleAllNotifications(
+    List<Map<String, dynamic>> taskSchedules,
+  ) async {
     if (!isInitialized.value) await _waitForInit();
-    
+
     try {
       // Cancel all existing notifications first
       await flutterLocalNotificationsPlugin.cancelAll();
       talker.info('🔄 Cancelled all pending notifications for reschedule');
-      
+
       int scheduled = 0;
       for (final schedule in taskSchedules) {
         final id = schedule['id'] as int;
         final title = schedule['title'] as String;
         final body = schedule['body'] as String;
         final time = schedule['scheduledTime'] as DateTime;
-        
+
         if (time.isAfter(DateTime.now())) {
           await scheduleNotification(
             id: id,
@@ -405,8 +429,10 @@ class NotificationService extends GetxService {
           scheduled++;
         }
       }
-      
-      talker.info('✅ Rescheduled $scheduled notifications after timezone/resume check');
+
+      talker.info(
+        '✅ Rescheduled $scheduled notifications after timezone/resume check',
+      );
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Failed to reschedule notifications');
     }
@@ -426,18 +452,27 @@ class NotificationService extends GetxService {
     // 🛡️ Use local DateTime for correct timezone handling
     // (tz.local defaults to UTC if setLocalLocation was never called)
     final now = DateTime.now();
-    DateTime scheduledLocal = DateTime(now.year, now.month, now.day, hour, minute);
-    
+    DateTime scheduledLocal = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
     // Calculate days until target weekday (DateTime.weekday is 1-7 ISO same as dayOfWeek)
     int daysToAdd = (dayOfWeek - scheduledLocal.weekday + 7) % 7;
     scheduledLocal = scheduledLocal.add(Duration(days: daysToAdd));
-    
+
     if (scheduledLocal.isBefore(now)) {
       scheduledLocal = scheduledLocal.add(const Duration(days: 7));
     }
 
     // Convert local DateTime → TZDateTime (preserving correct epoch time)
-    final tz.TZDateTime scheduledDate = tz.TZDateTime.from(scheduledLocal.toUtc(), tz.local);
+    final tz.TZDateTime scheduledDate = tz.TZDateTime.from(
+      scheduledLocal.toUtc(),
+      tz.local,
+    );
 
     // Check for exact alarm permission on Android 12+
     bool canScheduleExact = true;
@@ -455,7 +490,9 @@ class NotificationService extends GetxService {
           android: AndroidNotificationDetails(
             isAlarm ? 'system_alarms_channel' : 'work_shifts_channel',
             isAlarm ? 'System Alarms' : 'Work Shifts',
-            channelDescription: isAlarm ? 'High priority continuous alarms' : 'Shift start reminders',
+            channelDescription: isAlarm
+                ? 'High priority continuous alarms'
+                : 'Shift start reminders',
             importance: Importance.max,
             priority: Priority.max,
             playSound: true,
@@ -463,14 +500,19 @@ class NotificationService extends GetxService {
             additionalFlags: isAlarm ? Int32List.fromList(<int>[4]) : null,
           ),
         ),
-        androidScheduleMode: canScheduleExact 
-            ? AndroidScheduleMode.exactAllowWhileIdle 
+        androidScheduleMode: canScheduleExact
+            ? AndroidScheduleMode.exactAllowWhileIdle
             : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, 
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
-      talker.info('📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute (local: $scheduledLocal)');
+      talker.info(
+        '📅 Scheduled weekly notification $id for day $dayOfWeek at $hour:$minute (local: $scheduledLocal)',
+      );
+
+      // 🛡️ Yield to UI thread to prevent freezing during bulk scheduling (e.g. Work Shifts)
+      await Future.delayed(const Duration(milliseconds: 50));
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Weekly notification scheduling failed');
     }
@@ -487,33 +529,33 @@ class NotificationService extends GetxService {
     String? imageAssetPath,
   }) async {
     if (!isInitialized.value) await _waitForInit();
-    
+
     if (!(await Permission.notification.isGranted)) return;
 
     try {
-      ByteArrayAndroidBitmap? bigPictureBitmap;
+      dynamic bigPictureBitmap;
       if (imageAssetPath != null) {
         bigPictureBitmap = await _getAssetBitmap(imageAssetPath);
       }
 
       StyleInformation? styleInfo;
       if (bigPictureBitmap != null) {
-         styleInfo = BigPictureStyleInformation(
-           bigPictureBitmap,
-           contentTitle: title,
-           summaryText: bigText ?? body,
-           htmlFormatContentTitle: true,
-           htmlFormatSummaryText: true,
-           hideExpandedLargeIcon: true,
-         );
+        styleInfo = BigPictureStyleInformation(
+          bigPictureBitmap,
+          contentTitle: title,
+          summaryText: bigText ?? body,
+          htmlFormatContentTitle: true,
+          htmlFormatSummaryText: true,
+          hideExpandedLargeIcon: true,
+        );
       } else if (bigText != null) {
-         styleInfo = BigTextStyleInformation(
-           bigText,
-           contentTitle: title,
-           summaryText: 'خطواتي • نشاطك اليومي',
-           htmlFormatBigText: true,
-           htmlFormatContentTitle: true,
-         );
+        styleInfo = BigTextStyleInformation(
+          bigText,
+          contentTitle: title,
+          summaryText: 'خطواتي • نشاطك اليومي',
+          htmlFormatBigText: true,
+          htmlFormatContentTitle: true,
+        );
       }
 
       await flutterLocalNotificationsPlugin.show(
@@ -546,7 +588,9 @@ class NotificationService extends GetxService {
       talker.info('🚶 Smart Steps Notification Sent: $title');
     } on PlatformException catch (e) {
       // ✅ Fallback: If Big Picture resource fails, send without it
-      talker.error('❌ Big Picture resource error: ${e.message}. Sending without image.');
+      talker.error(
+        '❌ Big Picture resource error: ${e.message}. Sending without image.',
+      );
       await flutterLocalNotificationsPlugin.show(
         stepsOffset + id,
         title,
@@ -656,7 +700,8 @@ class NotificationService extends GetxService {
         htmlFormatTitle: true,
         htmlFormatBigText: true,
         scheduledTime: eveningTime,
-        imageAssetPath: 'assets/images/cat/cat f.png', // Or 'tired.png' depending on actual name
+        imageAssetPath:
+            'assets/images/cat/cat f.png', // Or 'tired.png' depending on actual name
         actions: [remindAction],
       );
     }
@@ -669,7 +714,8 @@ class NotificationService extends GetxService {
           id: stepsOffset + 4,
           title: '<font color="#34C759">بطل حقيقي! 🏆</font>',
           body: 'إنجاز اليوم',
-          bigText: 'لقد حققت هدفك اليوم بنجاح!<br>أنجزت <font color="#34C759">$goalFormatted</font> خطوة،<br>احرص على الراحة والنوم الجيد 😴',
+          bigText:
+              'لقد حققت هدفك اليوم بنجاح!<br>أنجزت <font color="#34C759">$goalFormatted</font> خطوة،<br>احرص على الراحة والنوم الجيد 😴',
           htmlFormatTitle: true,
           htmlFormatBigText: true,
           scheduledTime: nightTime,
@@ -680,7 +726,8 @@ class NotificationService extends GetxService {
           id: stepsOffset + 4,
           title: '<font color="#FF3B30">فرصة أخيرة اليوم! 🌟</font>',
           body: 'نشاطك اليومي',
-          bigText: '10 دقائق مشي قبل النوم تفرق كثيراً 🌙<br>ينقصك <font color="#FF3B30">$remainingFormatted</font> خطوة فقط،<br>أنهِ يومك بإنجاز قوي!',
+          bigText:
+              '10 دقائق مشي قبل النوم تفرق كثيراً 🌙<br>ينقصك <font color="#FF3B30">$remainingFormatted</font> خطوة فقط،<br>أنهِ يومك بإنجاز قوي!',
           htmlFormatTitle: true,
           htmlFormatBigText: true,
           scheduledTime: nightTime,
@@ -690,7 +737,9 @@ class NotificationService extends GetxService {
       }
     }
 
-    talker.info('🔔 Smart Steps Reminders Scheduled (progress: ${(progress * 100).toInt()}%)');
+    talker.info(
+      '🔔 Smart Steps Reminders Scheduled (progress: ${(progress * 100).toInt()}%)',
+    );
   }
 
   String _formatNumber(int number) {
@@ -711,11 +760,13 @@ class NotificationService extends GetxService {
     required bool alarmEnabled,
   }) async {
     final now = DateTime.now();
-    final timeFormatted = DateFormat.jm(Get.locale?.languageCode ?? 'en').format(scheduledTime);
+    final timeFormatted = DateFormat.jm(
+      Get.locale?.languageCode ?? 'en',
+    ).format(scheduledTime);
     final locationText = clinicName.isNotEmpty
         ? ' @ $clinicName'
         : (clinicLocation.isNotEmpty ? ' @ $clinicLocation' : '');
-    
+
     final patientPrefix = patientName.isNotEmpty ? '$patientName - ' : '';
 
     Future<void> scheduleStage({
@@ -728,14 +779,19 @@ class NotificationService extends GetxService {
 
       final id = appointmentOffset + (appointmentId * 10) + stageIndex;
       final title = '🩺 $patientPrefix${titleKey.tr}';
-      
+
       await scheduleNotification(
         id: id,
         title: title,
-        body: 'appointment_notif_body'.trParams({'doctor': doctorName, 'location': locationText}),
+        body: 'appointment_notif_body'.trParams({
+          'doctor': doctorName,
+          'location': locationText,
+        }),
         bigText: 'appointment_notif_detail'.trParams({
           'doctor': doctorName,
-          'location': clinicLocation.isNotEmpty ? clinicLocation : (clinicName.isNotEmpty ? clinicName : ''),
+          'location': clinicLocation.isNotEmpty
+              ? clinicLocation
+              : (clinicName.isNotEmpty ? clinicName : ''),
           'time': timeFormatted,
         }),
         htmlFormatBigText: true,
@@ -852,6 +908,8 @@ class NotificationService extends GetxService {
       images: morningImages,
     );
 
+    await Future.delayed(const Duration(milliseconds: 500));
+
     await scheduleSlot(
       slotIndex: 2,
       hour: 15,
@@ -860,6 +918,8 @@ class NotificationService extends GetxService {
       ideaBodyKey: 'fun_afternoon_idea',
       images: afternoonImages,
     );
+
+    await Future.delayed(const Duration(milliseconds: 500));
 
     await scheduleSlot(
       slotIndex: 3,
@@ -873,15 +933,25 @@ class NotificationService extends GetxService {
     talker.info('🐱 Fun Daily Reminders Scheduled (slots: 10AM, 3PM, 8PM)');
   }
 
-  Future<ByteArrayAndroidBitmap?> _getAssetBitmap(String? assetPath) async {
+  Future<dynamic> _getAssetBitmap(String? assetPath) async {
     if (assetPath == null || assetPath.isEmpty) return null;
     try {
-      final ByteData data = await rootBundle.load(assetPath);
-      final Uint8List bytes = data.buffer.asUint8List();
-      final ui.Codec codec = await ui.instantiateImageCodec(bytes, targetWidth: 400);
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      final ByteData? resized = await frame.image.toByteData(format: ui.ImageByteFormat.png);
-      return resized != null ? ByteArrayAndroidBitmap(resized.buffer.asUint8List()) : ByteArrayAndroidBitmap(bytes);
+      // 🚀 Ninja Optimization: Do NOT use ByteArrayAndroidBitmap!
+      // Passing byte arrays over the MethodChannel for scheduled notifications
+      // causes massive 300KB+ BpBinder payloads that freeze the UI thread.
+      // Instead, we cache the asset to a temp file and send only the file path string!
+      final directory = await getTemporaryDirectory();
+      final String fileName = assetPath.split('/').last;
+      final String cachedFilePath = '${directory.path}/$fileName';
+      
+      final File file = File(cachedFilePath);
+      if (!await file.exists()) {
+        final ByteData data = await rootBundle.load(assetPath);
+        final Uint8List bytes = data.buffer.asUint8List();
+        await file.writeAsBytes(bytes, flush: true);
+      }
+      
+      return FilePathAndroidBitmap(cachedFilePath);
     } catch (e) {
       talker.error('❌ Failed to load asset bitmap: $assetPath - $e');
       return null;
@@ -897,14 +967,33 @@ class NotificationService extends GetxService {
 
       // Fast path: check common timezones first (covers majority of users)
       const priorityLocations = [
-        'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Shanghai',
-        'Asia/Tokyo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
-        'America/New_York', 'America/Chicago', 'America/Denver',
-        'America/Los_Angeles', 'Africa/Cairo', 'Australia/Sydney',
-        'Asia/Karachi', 'Asia/Bangkok', 'Asia/Dhaka', 'Asia/Tehran',
-        'America/Sao_Paulo', 'Pacific/Auckland', 'Asia/Jakarta',
-        'Asia/Kuala_Lumpur', 'Asia/Singapore', 'Europe/Moscow',
-        'Europe/Istanbul', 'Asia/Baghdad', 'Asia/Amman',
+        'Asia/Riyadh',
+        'Asia/Dubai',
+        'Asia/Kolkata',
+        'Asia/Shanghai',
+        'Asia/Tokyo',
+        'Europe/London',
+        'Europe/Paris',
+        'Europe/Berlin',
+        'America/New_York',
+        'America/Chicago',
+        'America/Denver',
+        'America/Los_Angeles',
+        'Africa/Cairo',
+        'Australia/Sydney',
+        'Asia/Karachi',
+        'Asia/Bangkok',
+        'Asia/Dhaka',
+        'Asia/Tehran',
+        'America/Sao_Paulo',
+        'Pacific/Auckland',
+        'Asia/Jakarta',
+        'Asia/Kuala_Lumpur',
+        'Asia/Singapore',
+        'Europe/Moscow',
+        'Europe/Istanbul',
+        'Asia/Baghdad',
+        'Asia/Amman',
       ];
 
       for (final name in priorityLocations) {
@@ -912,7 +1001,9 @@ class NotificationService extends GetxService {
           final loc = tz.getLocation(name);
           if (tz.TZDateTime.now(loc).timeZoneOffset == deviceOffset) {
             tz.setLocalLocation(loc);
-            talker.info('🌍 Timezone detected: $name (offset: ${deviceOffset.inHours}h)');
+            talker.info(
+              '🌍 Timezone detected: $name (offset: ${deviceOffset.inHours}h)',
+            );
             return;
           }
         } catch (_) {}
@@ -929,7 +1020,9 @@ class NotificationService extends GetxService {
         } catch (_) {}
       }
 
-      talker.warning('⚠️ Could not detect device timezone — tz.local defaults to UTC');
+      talker.warning(
+        '⚠️ Could not detect device timezone — tz.local defaults to UTC',
+      );
     } catch (e) {
       talker.warning('⚠️ Timezone detection error: $e');
     }

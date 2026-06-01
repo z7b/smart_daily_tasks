@@ -79,6 +79,10 @@ const Map<String, String> hiIN = {
   'saturday': 'शनिवार',
   'sunday': 'रविवार',
   'monday': 'सोमवार',
+  'tuesday': 'मंगलवार',
+  'wednesday': 'बुधवार',
+  'thursday': 'गुरुवार',
+  'friday': 'शुक्रवार',
   'backup': 'बैकअप और रीस्टोर',
   'amazing': 'बेहतरीन',
 

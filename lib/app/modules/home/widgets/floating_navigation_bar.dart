@@ -1,4 +1,4 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
@@ -18,11 +18,7 @@ class FloatingNavigationBar extends StatelessWidget {
       right: false,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
+        child: Container(
               height: 70,
               decoration: BoxDecoration(
                 color: isDark
@@ -88,8 +84,6 @@ class FloatingNavigationBar extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ),
       ),
     );
   }

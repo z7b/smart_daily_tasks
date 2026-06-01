@@ -20,6 +20,7 @@ class TaskTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onCancel;
+  final bool isBoardMode;
 
   const TaskTile({
     super.key,
@@ -29,6 +30,7 @@ class TaskTile extends StatelessWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onCancel,
+    this.isBoardMode = false,
   });
 
   @override
@@ -51,7 +53,7 @@ class TaskTile extends StatelessWidget {
     final showGlow = !isCompleted && !isCancelled;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? theme.cardColor : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -64,20 +66,20 @@ class TaskTile extends StatelessWidget {
           if (showGlow)
             BoxShadow(
               color: glowColor.withValues(alpha: isDark ? 0.30 : 0.20),
-              blurRadius: 20,
-              spreadRadius: 2,
+              blurRadius: 12,
+              spreadRadius: 4,
             ),
           // Secondary priority glow (diffuse, atmospheric)
           if (showGlow)
             BoxShadow(
               color: glowColor.withValues(alpha: isDark ? 0.12 : 0.08),
-              blurRadius: 36,
-              spreadRadius: 4,
+              blurRadius: 16,
+              spreadRadius: 6,
             ),
           // Subtle depth shadow
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: isDark ? 0.02 : 0.04),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],

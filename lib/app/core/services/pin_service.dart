@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 import '../../data/models/note_model.dart';
+import '../../data/models/keep_note_model.dart';
 import '../../core/helpers/log_helper.dart';
 
 class PinService extends GetxService {
@@ -20,7 +21,7 @@ class PinService extends GetxService {
 
   Future<void> _loadPinnedItems() async {
     try {
-      final pinnedNotes = await _isar.notes.filter()
+      final pinnedNotes = await _isar.keepNotes.filter()
           .linkedItemTypeIsNotNull()
           .findAll();
       
@@ -45,31 +46,29 @@ class PinService extends GetxService {
     try {
       if (pinnedItems.contains(key)) {
         // Unpin: Find and delete the note
-        final note = await _isar.notes.filter()
+        final note = await _isar.keepNotes.filter()
             .linkedItemTypeEqualTo(type)
             .linkedItemIdEqualTo(id)
             .findFirst();
             
         if (note != null) {
           await _isar.writeTxn(() async {
-            await _isar.notes.delete(note.id);
+            await _isar.keepNotes.delete(note.id);
           });
           pinnedItems.remove(key);
         }
       } else {
-        // Pin: Create a new shell note with category 'keep' 
+        // Pin: Create a new shell keepNote
         // so KeepController picks it up in the board view.
-        final note = Note(
-          title: '📌 $type #$id',
-          createdAt: DateTime.now(),
-          linkedItemType: type,
-          linkedItemId: id,
-          isPinned: false,
-          category: 'keep',
-        );
+        final note = KeepNote()
+          ..title = '📌 $type #$id'
+          ..createdAt = DateTime.now()
+          ..linkedItemType = type
+          ..linkedItemId = id
+          ..isPinned = false;
         
         await _isar.writeTxn(() async {
-          await _isar.notes.put(note);
+          await _isar.keepNotes.put(note);
         });
         pinnedItems.add(key);
       }

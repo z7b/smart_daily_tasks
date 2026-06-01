@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
+
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -293,11 +293,7 @@ class SettingsView extends GetView<SettingsController> {
     return Obx(() {
       final useArabic = controller.useArabicNumbers.value;
 
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
+      return Container(
             height: 36,
             width: 100,
             decoration: BoxDecoration(
@@ -363,9 +359,7 @@ class SettingsView extends GetView<SettingsController> {
                 ),
               ],
             ),
-          ),
-        ),
-      );
+          );
     });
   }
 
@@ -602,11 +596,7 @@ class SettingsView extends GetView<SettingsController> {
           },
         );
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Obx(() {
+      child: Obx(() {
             final isLoaded = adService.isAdLoaded.value;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
@@ -660,8 +650,6 @@ class SettingsView extends GetView<SettingsController> {
               ),
             );
           }),
-        ),
-      ),
     );
   }
 }

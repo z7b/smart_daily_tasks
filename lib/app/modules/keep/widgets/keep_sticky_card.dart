@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
-import '../../../data/models/note_model.dart';
+import '../../../data/models/keep_note_model.dart';
 import '../controllers/keep_controller.dart';
 
 class KeepStickyCard extends StatelessWidget {
@@ -18,7 +18,7 @@ class KeepStickyCard extends StatelessWidget {
 
   static bool _isUntitled(String title) =>
       title.isEmpty || _untitledValues.contains(title) || title == 'keep_untitled'.tr;
-  final Note note;
+  final KeepNote note;
   final int index;
   final VoidCallback onTap;
   final VoidCallback onDelete;
@@ -39,13 +39,13 @@ class KeepStickyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = Get.find<KeepController>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = ctrl.getBoardColor(note.color, isDark);
-    final noteData = KeepController.parseContent(note.content);
+    final bgColor = ctrl.getBoardColor(note.colorIndex, isDark);
+    final noteData = KeepController.noteToData(note);
     
-    final isImageBg = noteData.backgroundIndex != null && 
-        noteData.backgroundIndex! >= 0 && 
-        noteData.backgroundIndex! < KeepController.backgroundImages.length;
-    final customTextColor = ctrl.getTextColor(noteData.textColorIndex);
+    final isImageBg = note.backgroundIndex != null && 
+        note.backgroundIndex! >= 0 && 
+        note.backgroundIndex! < KeepController.backgroundImages.length;
+    final customTextColor = ctrl.getTextColor(note.textColorIndex);
     final textColor = customTextColor ?? (isImageBg ? Colors.white : _contrastColor(bgColor));
     final blocks = noteData.blocks;
     final hasHeroImage = blocks.isNotEmpty && blocks.first.type == KeepNoteType.image;

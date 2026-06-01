@@ -1,5 +1,3 @@
-import 'dart:ui';
-import 'dart:convert';
 import '../../../core/helpers/number_extension.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../data/models/note_model.dart';
+import '../../../data/models/keep_note_model.dart';
 import '../controllers/keep_controller.dart';
 import '../widgets/keep_sticky_card.dart';
 import '../widgets/linked_item_card.dart';
@@ -111,11 +109,7 @@ class KeepView extends StatelessWidget {
               top: ctrl.isSelectionMode ? MediaQuery.of(context).padding.top + 16 : -100,
               left: 16,
               right: 16,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
+              child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.65) : Colors.white.withValues(alpha: 0.75),
@@ -195,9 +189,7 @@ class KeepView extends StatelessWidget {
                           },
                         ),
                       ],
-                    ),
                   ),
-                ),
               ),
             );
           }),
@@ -219,12 +211,7 @@ class KeepView extends StatelessWidget {
       if (!ctrl.selectedNoteIds.contains(note.id)) continue;
       
       if (note.linkedItemType != null) return false;
-      
-      try {
-        final Map<String, dynamic> parsed = jsonDecode(note.content ?? '{}');
-        final data = KeepNoteData.fromJson(parsed);
-        if (data.backgroundIndex != null) return false;
-      } catch (_) {}
+      if (note.backgroundIndex != null) return false;
     }
     return true;
   }
@@ -334,11 +321,7 @@ class KeepView extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
+      child: Container(
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(16),
@@ -363,9 +346,7 @@ class KeepView extends StatelessWidget {
               ),
               backgroundColor: Colors.transparent,
             ),
-          ),
-        ),
-      ),
+            ),
     ).animate().fadeIn(delay: const Duration(milliseconds: 100));
   }
 
@@ -374,19 +355,13 @@ class KeepView extends StatelessWidget {
     return Obx(() {
       final total = ctrl.keepNotes.length;
       final pinned = ctrl.keepNotes.where((n) => n.isPinned).length;
-      final checklists = ctrl.keepNotes.where((n) => 
-          (n.content?.contains('"type":"checklist"') ?? false) || 
-          (n.content?.contains('checklist:') ?? false) || 
-          (n.content?.contains('[ ]') ?? false)).length;
+      final checklists = ctrl.keepNotes.where((n) => n.checkItems.isNotEmpty).length;
       final images = ctrl.keepNotes.where((n) => 
-          (n.content?.contains('"type":"image"') ?? false) || 
-          (n.content?.contains('img:') ?? false)).length;
+          n.attachments.any((a) => a.type == 'image')).length;
       final voices = ctrl.keepNotes.where((n) => 
-          (n.content?.contains('"type":"voice"') ?? false) || 
-          (n.content?.contains('voice:') ?? false)).length;
+          n.attachments.any((a) => a.type == 'voice' || a.type == 'audio')).length;
       final drawings = ctrl.keepNotes.where((n) => 
-          (n.content?.contains('"type":"drawing"') ?? false) || 
-          (n.content?.contains('draw:') ?? false)).length;
+          n.attachments.any((a) => a.type == 'drawing')).length;
 
       if (total == 0) return const SizedBox.shrink();
 
@@ -449,7 +424,6 @@ class KeepView extends StatelessWidget {
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(8, 8, 8, 400 + keyboardHeight),
       sliver: SliverMasonryGrid.count(
-        key: ValueKey(notes.map((e) => '${e.id}_${e.orderIndex}').join('-')),
         crossAxisCount: _crossAxisCount(context),
         mainAxisSpacing: 12,
         crossAxisSpacing: 8,
@@ -512,13 +486,22 @@ class KeepView extends StatelessWidget {
                   child: SizedBox(
                     // Estimate width for feedback since it's floating outside grid
                     width: (MediaQuery.of(context).size.width - 48) / _crossAxisCount(context),
-                    child: child,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 8),
+                          )
+                        ],
+                      ),
+                      child: child,
+                    ),
                   ),
                 ),
-                childWhenDragging: Opacity(
-                  opacity: 0.3, // Keeps the layout space and shows a ghost card instead of empty space
-                  child: child,
-                ),
+                childWhenDragging: child, // Keeps original fully visible to avoid layout spaces
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
@@ -608,7 +591,7 @@ class KeepView extends StatelessWidget {
     return _KeepFAB(onAddNote: _openAddNote, isDark: isDark);
   }
 
-  void _openNote(Note note) {
+  void _openNote(KeepNote note) {
     Get.to(
       () => AddKeepNoteView(existingNote: note, viewOnly: true),
       transition: Transition.downToUp,
@@ -840,12 +823,9 @@ class _KeepFABState extends State<_KeepFAB>
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4), // Very slight glass effect
-                    child: Container(
+                child: Container(
                       decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
                         gradient: SweepGradient(
                           transform: GradientRotation(_animCtrl.value * 0.5 * 3.1415926535), // Subtle 90 degree shift on click
                           colors: [
@@ -869,9 +849,7 @@ class _KeepFABState extends State<_KeepFAB>
                       ),
                     ),
                   ),
-                ),
-              ),
-            );
+                );
           },
         ),
       ],
@@ -890,11 +868,7 @@ class _KeepFABState extends State<_KeepFAB>
         mainAxisSize: MainAxisSize.min,
         children: [
           // Label pill (leading side)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
+          Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 7,
@@ -922,8 +896,6 @@ class _KeepFABState extends State<_KeepFAB>
                   ),
                 ),
               ),
-            ),
-          ),
           const SizedBox(width: 10),
           // Icon button (trailing side)
           Container(

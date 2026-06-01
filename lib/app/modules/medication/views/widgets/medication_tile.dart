@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 
 import '../../../../data/models/medication_model.dart';
 import '../../../../core/helpers/number_extension.dart';
@@ -14,6 +14,7 @@ class MedicationTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onRecordIntake;
   final VoidCallback onEdit;
+  final bool isBoardMode;
 
   const MedicationTile({
     super.key,
@@ -22,6 +23,7 @@ class MedicationTile extends StatelessWidget {
     required this.onDelete,
     required this.onRecordIntake,
     required this.onEdit,
+    this.isBoardMode = false,
   });
 
   static const Color _themeColor = Color(0xFFFF3B30);
@@ -48,7 +50,7 @@ class MedicationTile extends StatelessWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onDelete(),
       background: Container(
-        margin: const EdgeInsets.only(bottom: 20),
+        margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.only(bottom: 20),
         padding: const EdgeInsets.only(right: 24),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
@@ -58,7 +60,7 @@ class MedicationTile extends StatelessWidget {
         child: const Icon(CupertinoIcons.trash, color: Colors.white),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
+        margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
           color: isDark
               ? theme.cardColor.withValues(alpha: 0.7)

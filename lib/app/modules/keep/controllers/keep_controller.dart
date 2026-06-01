@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/helpers/log_helper.dart';
 import '../../../core/services/notification_service.dart';
-import '../../../data/models/note_model.dart';
-import '../../../data/providers/note_repository.dart';
+import '../../../data/models/keep_note_model.dart';
+import '../../../data/providers/keep_repository.dart';
 
 /// Note types supported in the Keep bulletin board
 enum KeepNoteType { text, checklist, image, drawing, voice }
 
-/// Checklist item model
+/// Checklist item model (for UI form state only — DB uses KeepCheckItem)
 class ChecklistItem {
   String text;
   bool isDone;
@@ -136,12 +136,12 @@ class KeepNoteData {
 }
 
 class KeepController extends GetxController {
-  final NoteRepository _repository;
+  final KeepRepository _repository;
   KeepController(this._repository);
 
   // State
-  final keepNotes = <Note>[].obs;
-  final filteredNotes = <Note>[].obs;
+  final keepNotes = <KeepNote>[].obs;
+  final filteredNotes = <KeepNote>[].obs;
   final searchQuery = ''.obs;
   final isLoading = false.obs;
 
@@ -162,9 +162,7 @@ class KeepController extends GetxController {
   }
 
   Future<void> deleteSelectedNotes() async {
-    for (final id in selectedNoteIds) {
-      await _repository.deleteNote(id);
-    }
+    await _repository.deleteMultiple(selectedNoteIds.toList());
     clearSelection();
   }
 
@@ -178,8 +176,8 @@ class KeepController extends GetxController {
       }
     }
     for (final n in selectedNotes) {
-      n.isPinned = !allPinned;
-      await _repository.updateNote(n);
+      final updated = n.copyWith(isPinned: !allPinned);
+      await _repository.putNote(updated);
     }
     clearSelection();
   }
@@ -187,8 +185,8 @@ class KeepController extends GetxController {
   Future<void> changeColorForSelected(int? colorIndex) async {
     final selectedNotes = keepNotes.where((n) => selectedNoteIds.contains(n.id));
     for (final n in selectedNotes) {
-      n.color = colorIndex;
-      await _repository.updateNote(n);
+      final updated = n.copyWith(colorIndex: colorIndex);
+      await _repository.putNote(updated);
     }
     clearSelection();
   }
@@ -270,24 +268,8 @@ class KeepController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _notesSub = _repository.watchAllNotes().listen((allNotes) {
-      keepNotes.value = allNotes.where((n) => n.category == 'keep').toList()
-        ..sort((a, b) {
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-
-          // Drag and drop ordering
-          double orderA = a.orderIndex == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.orderIndex;
-          double orderB = b.orderIndex == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.orderIndex;
-          
-          if (orderA != orderB) {
-            return orderB.compareTo(orderA); // Descending (highest at top)
-          }
-
-          final aDate = a.updatedAt ?? a.createdAt;
-          final bDate = b.updatedAt ?? b.createdAt;
-          return bDate.compareTo(aDate);
-        });
+    _notesSub = _repository.watchAll().listen((allNotes) {
+      keepNotes.value = allNotes;
       _applyFilter();
     });
 
@@ -309,7 +291,7 @@ class KeepController extends GetxController {
 
   void searchNotes(String query) => searchQuery.value = query;
 
-  Future<void> saveNote({Note? existing, bool popAfterSave = true}) async {
+  Future<void> saveNote({KeepNote? existing, bool popAfterSave = true}) async {
     if (isLoading.value) return;
     try {
       isLoading.value = true;
@@ -344,80 +326,101 @@ class KeepController extends GetxController {
         }
       }
 
-      final noteData = KeepNoteData(
-        blocks: cleanedBlocks,
-        backgroundIndex: selectedBackground.value,
-        backgroundBlur: backgroundBlur.value,
-        textAlign: textAlign.value,
-        textSize: textSize.value,
-        isBold: isBold.value,
-        isItalic: isItalic.value,
-        isUnderline: isUnderline.value,
-        textColorIndex: selectedTextColor.value,
-        reminderAt: reminderAt.value,
-      );
-      final contentJson = jsonEncode(noteData.toJson());
+      // ── Build KeepNote from form state ──────────────────────────────────
 
-      final note = existing == null
-          ? Note(
-              title: title,
-              content: contentJson,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              color: selectedColor.value,
-              isPinned: isPinned.value,
-              category: 'keep',
-              orderIndex: DateTime.now().millisecondsSinceEpoch.toDouble(),
-            )
-          : Note(
-              id: existing.id,
-              title: title,
-              content: contentJson,
-              createdAt: existing.createdAt,
-              updatedAt: DateTime.now(),
-              color: selectedColor.value,
-              isPinned: isPinned.value,
-              category: 'keep',
-              orderIndex: existing.orderIndex,
-            );
+      final note = existing?.copyWith(
+            title: title,
+            updatedAt: DateTime.now(),
+          ) ??
+          (KeepNote()
+            ..title = title
+            ..createdAt = DateTime.now()
+            ..updatedAt = DateTime.now()
+            ..sortOrder = DateTime.now().millisecondsSinceEpoch.toDouble());
 
-      final result = existing == null
-          ? await _repository.addNote(note)
-          : await _repository.updateNote(note);
+      // Color & background
+      note.colorIndex = selectedColor.value;
+      note.isPinned = isPinned.value;
+      note.backgroundIndex = selectedBackground.value;
+      note.backgroundBlur = backgroundBlur.value;
+      note.textAlign = textAlign.value;
+      note.textSize = textSize.value;
+      note.isBold = isBold.value;
+      note.isItalic = isItalic.value;
+      note.isUnderline = isUnderline.value;
+      note.textColorIndex = selectedTextColor.value;
+      note.reminderAt = reminderAt.value;
+
+      // Flatten blocks → KeepNote fields
+      final textParts = <String>[];
+      final checkItems = <KeepCheckItem>[];
+      final attachments = <KeepAttachment>[];
+      int checkSort = 0;
+      int attachSort = 0;
+
+      for (final block in cleanedBlocks) {
+        switch (block.type) {
+          case KeepNoteType.text:
+            if (block.data is String && (block.data as String).trim().isNotEmpty) {
+              textParts.add(block.data as String);
+            }
+            break;
+          case KeepNoteType.checklist:
+            for (final item in (block.data as List<ChecklistItem>)) {
+              checkItems.add(KeepCheckItem()
+                ..text = item.text
+                ..isDone = item.isDone
+                ..sortIndex = checkSort++);
+            }
+            break;
+          case KeepNoteType.image:
+          case KeepNoteType.drawing:
+          case KeepNoteType.voice:
+            if (block.data is String && (block.data as String).isNotEmpty) {
+              attachments.add(KeepAttachment()
+                ..type = block.type.name
+                ..relativePath = block.data as String
+                ..sortIndex = attachSort++);
+            }
+            break;
+        }
+      }
+
+      note.content = textParts.isNotEmpty ? textParts.join('\n') : null;
+      note.checkItems = checkItems;
+      note.attachments = attachments;
+
+      final result = await _repository.putNote(note);
 
       if (result.isSuccess) {
         // ✅ Schedule notification only after confirmed save (note.id is valid)
         if (reminderAt.value != null && reminderAt.value!.isAfter(DateTime.now())) {
           final notifId = 800000000 + note.id;
           String previewText = 'keep_notes'.tr;
-          if (cleanedBlocks.isNotEmpty) {
-            if (cleanedBlocks.first.type == KeepNoteType.text) {
-              String rawData = (cleanedBlocks.first.data as String).trim();
-              try {
-                if (rawData.startsWith('[') && rawData.endsWith(']')) {
-                  final decoded = jsonDecode(rawData) as List;
-                  String extracted = '';
-                  for (var item in decoded) {
-                    if (item is Map && item['insert'] is String) {
-                      extracted += item['insert'];
-                    }
+          if (textParts.isNotEmpty) {
+            String rawData = textParts.first.trim();
+            try {
+              if (rawData.startsWith('[') && rawData.endsWith(']')) {
+                final decoded = jsonDecode(rawData) as List;
+                String extracted = '';
+                for (var item in decoded) {
+                  if (item is Map && item['insert'] is String) {
+                    extracted += item['insert'];
                   }
-                  previewText = extracted.trim();
-                } else {
-                  previewText = rawData;
                 }
-              } catch (_) {
+                previewText = extracted.trim();
+              } else {
                 previewText = rawData;
               }
-            } else if (cleanedBlocks.first.type == KeepNoteType.checklist) {
-              final items = cleanedBlocks.first.data as List<ChecklistItem>;
-              if (items.isNotEmpty) {
-                previewText = items.first.text;
-              }
+            } catch (_) {
+              previewText = rawData;
             }
-            if (previewText.isEmpty) previewText = 'keep_notes'.tr;
-            if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
+          } else if (checkItems.isNotEmpty) {
+            previewText = checkItems.first.text;
           }
+          if (previewText.isEmpty) previewText = 'keep_notes'.tr;
+          if (previewText.length > 50) previewText = '${previewText.substring(0, 50)}...';
+
           await Get.find<NotificationService>().scheduleNotification(
             id: notifId,
             title: title.isNotEmpty ? title : 'keep_notes'.tr,
@@ -449,7 +452,7 @@ class KeepController extends GetxController {
     }
   }
 
-  Future<void> showDeleteConfirmation(Note note) async {
+  Future<void> showDeleteConfirmation(KeepNote note) async {
     final theme = Theme.of(Get.context!);
     final isDark = theme.brightness == Brightness.dark;
     
@@ -457,11 +460,7 @@ class KeepController extends GetxController {
       Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
+        child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.75) : Colors.white.withValues(alpha: 0.75),
@@ -525,8 +524,6 @@ class KeepController extends GetxController {
                   ),
                 ],
               ),
-            ),
-          ),
         ),
       ),
       barrierColor: Colors.black.withValues(alpha: 0.3),
@@ -551,19 +548,19 @@ class KeepController extends GetxController {
 
     double newOrder;
 
-    // Calculate an orderIndex that inserts draggedNote before or after targetNote.
-    // Notes are sorted DESCENDING (highest orderIndex at top).
+    // Calculate an sortOrder that inserts draggedNote before or after targetNote.
+    // Notes are sorted DESCENDING (highest sortOrder at top).
     if (draggedIndex < targetIndex) {
       // Dragging downwards. Insert AFTER targetNote.
       if (targetIndex == unpinnedNotes.length - 1) {
-        double tOrder = unpinnedNotes[targetIndex].orderIndex;
+        double tOrder = unpinnedNotes[targetIndex].sortOrder;
         if (tOrder == 0.0) tOrder = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
         newOrder = tOrder - 10000.0;
       } else {
-        double tOrder1 = unpinnedNotes[targetIndex].orderIndex;
+        double tOrder1 = unpinnedNotes[targetIndex].sortOrder;
         if (tOrder1 == 0.0) tOrder1 = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
         
-        double tOrder2 = unpinnedNotes[targetIndex + 1].orderIndex;
+        double tOrder2 = unpinnedNotes[targetIndex + 1].sortOrder;
         if (tOrder2 == 0.0) tOrder2 = (unpinnedNotes[targetIndex + 1].updatedAt ?? unpinnedNotes[targetIndex + 1].createdAt).millisecondsSinceEpoch.toDouble();
         
         newOrder = (tOrder1 + tOrder2) / 2.0;
@@ -571,21 +568,21 @@ class KeepController extends GetxController {
     } else {
       // Dragging upwards. Insert BEFORE targetNote.
       if (targetIndex == 0) {
-        double tOrder = unpinnedNotes[targetIndex].orderIndex;
+        double tOrder = unpinnedNotes[targetIndex].sortOrder;
         if (tOrder == 0.0) tOrder = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
         newOrder = tOrder + 10000.0;
       } else {
-        double tOrder1 = unpinnedNotes[targetIndex].orderIndex;
+        double tOrder1 = unpinnedNotes[targetIndex].sortOrder;
         if (tOrder1 == 0.0) tOrder1 = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
         
-        double tOrder2 = unpinnedNotes[targetIndex - 1].orderIndex;
+        double tOrder2 = unpinnedNotes[targetIndex - 1].sortOrder;
         if (tOrder2 == 0.0) tOrder2 = (unpinnedNotes[targetIndex - 1].updatedAt ?? unpinnedNotes[targetIndex - 1].createdAt).millisecondsSinceEpoch.toDouble();
         
         newOrder = (tOrder1 + tOrder2) / 2.0;
       }
     }
 
-    final updatedDragged = draggedNote.copyWith(orderIndex: newOrder);
+    final updatedDragged = draggedNote.copyWith(sortOrder: newOrder);
 
     // Optimistic UI Update
     final indexA = keepNotes.indexWhere((n) => n.id == draggedNote.id);
@@ -597,8 +594,8 @@ class KeepController extends GetxController {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        double orderA = a.orderIndex == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.orderIndex;
-        double orderB = b.orderIndex == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.orderIndex;
+        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
+        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
         
         if (orderA != orderB) return orderB.compareTo(orderA);
         
@@ -610,7 +607,7 @@ class KeepController extends GetxController {
     }
 
     // Save to database
-    await _repository.updateNote(updatedDragged);
+    await _repository.putNote(updatedDragged);
     
     // Governance: if position was transferred (dragged), intention is not edit/select, so close it.
     clearSelection();
@@ -624,13 +621,13 @@ class KeepController extends GetxController {
     if (unpinnedNotes.isEmpty) return;
 
     double minOrder = unpinnedNotes.map((n) {
-      if (n.orderIndex == 0.0) return (n.updatedAt ?? n.createdAt).millisecondsSinceEpoch.toDouble();
-      return n.orderIndex;
+      if (n.sortOrder == 0.0) return (n.updatedAt ?? n.createdAt).millisecondsSinceEpoch.toDouble();
+      return n.sortOrder;
     }).reduce(min);
 
-    // Move to end by assigning an orderIndex smaller than the minimum
+    // Move to end by assigning a sortOrder smaller than the minimum
     final newOrder = minOrder - 10000.0;
-    final updatedDragged = draggedNote.copyWith(orderIndex: newOrder);
+    final updatedDragged = draggedNote.copyWith(sortOrder: newOrder);
 
     final indexA = keepNotes.indexWhere((n) => n.id == draggedId);
     if (indexA != -1) {
@@ -639,8 +636,8 @@ class KeepController extends GetxController {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        double orderA = a.orderIndex == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.orderIndex;
-        double orderB = b.orderIndex == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.orderIndex;
+        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
+        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
         
         if (orderA != orderB) return orderB.compareTo(orderA);
         
@@ -651,93 +648,89 @@ class KeepController extends GetxController {
       _applyFilter();
     }
 
-    await _repository.updateNote(updatedDragged);
+    await _repository.putNote(updatedDragged);
   }
 
   Future<void> deleteNote(int id) async {
     await _repository.deleteNote(id);
   }
 
-  Future<void> togglePin(Note note) async {
+  Future<void> togglePin(KeepNote note) async {
     try {
-      await _repository.updateNote(note.copyWith(isPinned: !note.isPinned));
+      await _repository.putNote(note.copyWith(isPinned: !note.isPinned));
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Keep Pin Toggle Error');
     }
   }
 
-  Future<void> changeColor(Note note, int? colorIndex) async {
+  Future<void> changeColor(KeepNote note, int? colorIndex) async {
     try {
-      final data = parseContent(note.content);
-      final newData = KeepNoteData(
-        blocks: data.blocks,
-        backgroundIndex: colorIndex != null ? null : data.backgroundIndex,
-        backgroundBlur: colorIndex != null ? 0.0 : data.backgroundBlur,
-        textAlign: data.textAlign,
-        textSize: data.textSize,
-        isBold: data.isBold,
-        isItalic: data.isItalic,
-        isUnderline: data.isUnderline,
-        textColorIndex: data.textColorIndex,
-      );
-      final updatedNote = Note(
-        id: note.id,
-        title: note.title,
-        content: jsonEncode(newData.toJson()),
-        createdAt: note.createdAt,
+      final updated = note.copyWith(
+        colorIndex: colorIndex,
+        backgroundIndex: colorIndex != null ? null : note.backgroundIndex,
+        backgroundBlur: colorIndex != null ? 0.0 : note.backgroundBlur,
         updatedAt: DateTime.now(),
-        color: colorIndex,
-        isPinned: note.isPinned,
-        category: note.category,
-        orderIndex: note.orderIndex,
       );
-      await _repository.updateNote(updatedNote);
+      await _repository.putNote(updated);
     } catch (e, stack) {
       talker.handle(e, stack, '🔴 Keep Color Error');
     }
   }
   
-  Future<void> changeBackground(Note note, int? bgIndex, {double? blur}) async {
+  Future<void> changeBackground(KeepNote note, int? bgIndex, {double? blur}) async {
     try {
-      final data = parseContent(note.content);
-      final newData = KeepNoteData(
-        blocks: data.blocks, 
-        backgroundIndex: bgIndex, 
-        backgroundBlur: blur ?? data.backgroundBlur,
-        textAlign: data.textAlign,
-        textSize: data.textSize,
-        isBold: data.isBold,
-        isItalic: data.isItalic,
-        isUnderline: data.isUnderline,
-        textColorIndex: data.textColorIndex,
-      );
-      await _repository.updateNote(note.copyWith(
-        content: jsonEncode(newData.toJson()), 
+      final updated = note.copyWith(
+        backgroundIndex: bgIndex,
+        backgroundBlur: blur ?? note.backgroundBlur,
+        colorIndex: bgIndex != null ? null : note.colorIndex,
         updatedAt: DateTime.now(),
-        color: bgIndex != null ? null : note.color,
-      ));
+      );
+      await _repository.putNote(updated);
     } catch(e, stack) {
       talker.handle(e, stack, '🔴 Keep Background Error');
     }
   }
 
-  void loadNoteIntoForm(Note note) {
+  void loadNoteIntoForm(KeepNote note) {
     titleController.text = note.title;
-    selectedColor.value = note.color;
+    selectedColor.value = note.colorIndex;
     isPinned.value = note.isPinned;
+    selectedBackground.value = note.backgroundIndex;
+    backgroundBlur.value = note.backgroundBlur;
+    textAlign.value = note.textAlign;
+    textSize.value = note.textSize;
+    isBold.value = note.isBold;
+    isItalic.value = note.isItalic;
+    isUnderline.value = note.isUnderline;
+    selectedTextColor.value = note.textColorIndex;
+    reminderAt.value = note.reminderAt;
     
-    final noteData = parseContent(note.content);
-    selectedBackground.value = noteData.backgroundIndex;
-    backgroundBlur.value = noteData.backgroundBlur ?? 0.0;
-    textAlign.value = noteData.textAlign ?? 0;
-    textSize.value = noteData.textSize ?? 16.0;
-    isBold.value = noteData.isBold ?? false;
-    isItalic.value = noteData.isItalic ?? false;
-    isUnderline.value = noteData.isUnderline ?? false;
-    selectedTextColor.value = noteData.textColorIndex;
-    reminderAt.value = noteData.reminderAt;
+    // Rebuild blocks from KeepNote fields
+    final rebuiltBlocks = <KeepBlock>[];
     
-    blocks.assignAll(noteData.blocks);
+    // Text content
+    if (note.content != null && note.content!.isNotEmpty) {
+      rebuiltBlocks.add(KeepBlock(type: KeepNoteType.text, data: note.content));
+    }
+    
+    // Checklist items
+    if (note.checkItems.isNotEmpty) {
+      final items = note.checkItems
+          .map((ci) => ChecklistItem(text: ci.text, isDone: ci.isDone))
+          .toList();
+      rebuiltBlocks.add(KeepBlock(type: KeepNoteType.checklist, data: items));
+    }
+    
+    // Attachments
+    for (final att in note.attachments) {
+      final type = KeepNoteType.values.firstWhere(
+        (e) => e.name == att.type,
+        orElse: () => KeepNoteType.image,
+      );
+      rebuiltBlocks.add(KeepBlock(type: type, data: att.relativePath));
+    }
+    
+    blocks.assignAll(rebuiltBlocks);
     
     // If empty, add a default text block
     if (blocks.isEmpty) {
@@ -833,6 +826,43 @@ class KeepController extends GetxController {
     );
   }
 
+  /// Build KeepNoteData from a KeepNote (for views that still need block-based rendering)
+  static KeepNoteData noteToData(KeepNote note) {
+    final blocks = <KeepBlock>[];
+
+    if (note.content != null && note.content!.isNotEmpty) {
+      blocks.add(KeepBlock(type: KeepNoteType.text, data: note.content));
+    }
+    if (note.checkItems.isNotEmpty) {
+      blocks.add(KeepBlock(
+        type: KeepNoteType.checklist,
+        data: note.checkItems
+            .map((ci) => ChecklistItem(text: ci.text, isDone: ci.isDone))
+            .toList(),
+      ));
+    }
+    for (final att in note.attachments) {
+      final type = KeepNoteType.values.firstWhere(
+        (e) => e.name == att.type,
+        orElse: () => KeepNoteType.image,
+      );
+      blocks.add(KeepBlock(type: type, data: att.relativePath));
+    }
+
+    return KeepNoteData(
+      blocks: blocks,
+      backgroundIndex: note.backgroundIndex,
+      backgroundBlur: note.backgroundBlur,
+      textAlign: note.textAlign,
+      textSize: note.textSize,
+      isBold: note.isBold,
+      isItalic: note.isItalic,
+      isUnderline: note.isUnderline,
+      textColorIndex: note.textColorIndex,
+      reminderAt: note.reminderAt,
+    );
+  }
+
   Color getBoardColor(int? colorIndex, bool isDark) {
     if (colorIndex == null || colorIndex < 0 || colorIndex >= boardColors.length) {
       return isDark ? const Color(0xFF1E1E1E) : Colors.white;
@@ -855,4 +885,3 @@ class KeepController extends GetxController {
     super.onClose();
   }
 }
-

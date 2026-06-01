@@ -79,6 +79,10 @@ const Map<String, String> ruRU = {
   'saturday': 'Суббота',
   'sunday': 'Воскресенье',
   'monday': 'Понедельник',
+  'tuesday': 'Вторник',
+  'wednesday': 'Среда',
+  'thursday': 'Четверг',
+  'friday': 'Пятница',
   'backup': 'Резервное копирование',
   'amazing': 'Отлично',
 

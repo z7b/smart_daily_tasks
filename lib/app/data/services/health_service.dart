@@ -322,42 +322,17 @@ class HealthService extends GetxService {
       // ✅ 1. Steps (Direct Aggregate - Google High Standard)
       int steps = await health.getTotalStepsInInterval(midnight, endWindow) ?? 0;
       
-      // ✅ 2. Exclusive Metrics Extraction (No Estimates)
-      // On Android 16/Samsung, we check multiple source types to ensure we miss nothing
-      // We strictly fetch what the platform supports to avoid crashes
-      final List<HealthDataType> metricsToFetch = [
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-        HealthDataType.DISTANCE_DELTA,
-      ];
-      
-      // ✅ Expert Fix: Platform-Specific Distance Handling
-      if (Platform.isIOS) {
-        metricsToFetch.add(HealthDataType.DISTANCE_WALKING_RUNNING);
-      }
-      
-      final List<HealthDataPoint> dataPoints = await health.getHealthDataFromTypes(
-        startTime: midnight, 
-        endTime: endWindow, 
-        types: metricsToFetch,
-      );
-      
+      // ✅ 2. Exclusive Metrics Extraction (Optimized for Speed)
+      // We rely EXCLUSIVELY on the fast 'steps' aggregate.
+      // Fetching raw thousands of ACTIVE_ENERGY_BURNED and DISTANCE_DELTA points
+      // was causing 338KB+ Binder payloads and 85+ skipped frames on the UI thread.
       double calories = 0.0;
       double distance = 0.0;
       
-      talker.info('📥 Exclusive Audit: Received ${dataPoints.length} points from Health Connect. Steps found: $steps');
-      
-      for (var p in dataPoints) {
-        final val = _extractNumericValue(p.value);
-        if (p.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
-          calories += val;
-        } else if (p.type == HealthDataType.DISTANCE_DELTA || p.type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-          distance += val;
-        }
-      }
-
       // ✅ 2.5 Smart Estimation Fallback (Biomechanical Logic)
-      // If Health Connect returns 0 for calories or distance, we estimate them based on steps.
-      if (steps > 0 && (calories == 0 || distance == 0)) {
+      // Since we deliberately skip fetching raw calories/distance to prevent UI freezes,
+      // we estimate them based on steps and user biology.
+      if (steps > 0) {
         final h = (_storage.read('user_height') ?? 170.0).toDouble();
         final w = (_storage.read('user_weight') ?? 70.0).toDouble();
         final g = _storage.read('user_gender') ?? 'male';
@@ -365,14 +340,10 @@ class HealthService extends GetxService {
         final double multiplier = g == 'female' ? 0.413 : 0.415;
         final double strideLength = (h / 100) * multiplier; // meters
 
-        if (distance == 0) {
-          distance = (steps * strideLength).toDouble(); // meters
-        }
+        distance = (steps * strideLength).toDouble(); // meters
+        // MET-based calculation: (dist in km) * weight * 0.73
+        calories = ((distance / 1000) * w * 0.73).toDouble();
         
-        if (calories == 0) {
-          // MET-based calculation: (dist in km) * weight * 0.73
-          calories = ((distance / 1000) * w * 0.73).toDouble();
-        }
         talker.info('🧪 Smart Estimation Applied: ${calories.toStringAsFixed(1)} kcal | ${distance.toStringAsFixed(1)}m');
       }
 
@@ -463,21 +434,19 @@ class HealthService extends GetxService {
         talker.info('📅 Syncing Bucket: $start to $end');
         
         try {
-            // Get all data points for this month safely
+            // Get only the STEPS data points (fastest metric)
             final List<HealthDataPoint> data = [];
-            for (var type in types) {
-              try {
-                final points = await health.getHealthDataFromTypes(
-                  startTime: start, 
-                  endTime: end, 
-                  types: [type],
-                );
-                data.addAll(points);
-              } on PlatformException catch (e) {
-                talker.warning('🚨 Deep Sync: Platform rejected type $type: ${e.message}');
-              } catch (e) {
-                talker.error('⚠️ Deep Sync: Skipping type $type');
-              }
+            try {
+              final points = await health.getHealthDataFromTypes(
+                startTime: start, 
+                endTime: end, 
+                types: [HealthDataType.STEPS],
+              );
+              data.addAll(points);
+            } on PlatformException catch (e) {
+              talker.warning('🚨 Deep Sync: Platform rejected STEPS: ${e.message}');
+            } catch (e) {
+              talker.error('⚠️ Deep Sync: Skipping STEPS');
             }
             
             if (data.isNotEmpty) {
@@ -488,13 +457,7 @@ class HealthService extends GetxService {
                     dailyBuckets.putIfAbsent(day, () => {'steps': 0, 'cal': 0, 'dist': 0});
                     
                     final val = _extractNumericValue(p.value);
-                    if (p.type == HealthDataType.STEPS) {
-                        dailyBuckets[day]!['steps'] = dailyBuckets[day]!['steps']! + val;
-                    } else if (p.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
-                        dailyBuckets[day]!['cal'] = dailyBuckets[day]!['cal']! + val;
-                    } else if (p.type == HealthDataType.DISTANCE_DELTA || p.type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-                        dailyBuckets[day]!['dist'] = dailyBuckets[day]!['dist']! + val;
-                    }
+                    dailyBuckets[day]!['steps'] = dailyBuckets[day]!['steps']! + val;
                 }
                 
                 // Bulk Persist - RULE: No writes outside Repository
@@ -506,19 +469,19 @@ class HealthService extends GetxService {
                     final metrics = entry.value;
                     
                     // ✅ Smart Estimation for Historical Data
-                    double finalCal = metrics['cal']!;
-                    double finalDist = metrics['dist']!;
                     int finalSteps = metrics['steps']!.toInt();
+                    double finalCal = 0.0;
+                    double finalDist = 0.0;
                     
-                    if (finalSteps > 0 && (finalCal == 0 || finalDist == 0)) {
+                    if (finalSteps > 0) {
                       final h = (_storage.read('user_height') ?? 170.0).toDouble();
                       final w = (_storage.read('user_weight') ?? 70.0).toDouble();
                       final g = _storage.read('user_gender') ?? 'male';
                       final double multiplier = g == 'female' ? 0.413 : 0.415;
                       final double strideLength = (h / 100) * multiplier;
                       
-                      if (finalDist == 0) finalDist = (finalSteps * strideLength).toDouble();
-                      if (finalCal == 0) finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
+                      finalDist = (finalSteps * strideLength).toDouble();
+                      finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
                     }
 
                     final existing = await stepRepo.getStepLog(midnight);

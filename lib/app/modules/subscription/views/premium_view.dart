@@ -258,7 +258,7 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
                   ),
                   BoxShadow(
                     color: const Color(0xFFFF8C00).withValues(alpha: 0.3),
-                    blurRadius: 50,
+                    blurRadius: 24,
                     spreadRadius: 8,
                   ),
                 ],

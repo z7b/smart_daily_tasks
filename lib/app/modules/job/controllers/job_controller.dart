@@ -649,12 +649,22 @@ class JobController extends GetxController {
     }
   }
 
+  Map<String, dynamic>? _cachedSchedules;
+  String? _lastSchedulesJson;
+
   // Support for custom daily schedules
   Map<String, dynamic> getCustomSchedules() {
-    if (profile.value.customSchedulesJson == null) return {};
+    final currentJson = profile.value.customSchedulesJson;
+    if (currentJson == null) return {};
+    
+    if (currentJson == _lastSchedulesJson && _cachedSchedules != null) {
+      return _cachedSchedules!;
+    }
+
     try {
-      return jsonDecode(profile.value.customSchedulesJson!)
-          as Map<String, dynamic>;
+      _cachedSchedules = jsonDecode(currentJson) as Map<String, dynamic>;
+      _lastSchedulesJson = currentJson;
+      return _cachedSchedules!;
     } catch (_) {
       return {};
     }

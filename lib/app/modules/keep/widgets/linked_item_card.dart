@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 
-import '../../../data/models/note_model.dart';
+import '../../../data/models/keep_note_model.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/models/medication_model.dart';
 import '../../../data/models/appointment_model.dart';
@@ -26,7 +26,7 @@ import '../../books/views/widgets/book_tile.dart';
 import '../controllers/keep_controller.dart';
 
 class LinkedItemCard extends StatelessWidget {
-  final Note note;
+  final KeepNote note;
   final int index;
 
   const LinkedItemCard({

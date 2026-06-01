@@ -40,7 +40,12 @@ class RewardedAdService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _loadAd();
+    // ✅ Performance Fix: Defer AdMob video preloading by 30 seconds.
+    // This prevents Android's Native MediaCodec from starving the UI thread
+    // during cold boot (which causes a massive ~46 skipped frames freeze).
+    Future.delayed(const Duration(seconds: 30), () {
+      _loadAd();
+    });
   }
 
   /// Check if a specific feature has been temporarily unlocked
