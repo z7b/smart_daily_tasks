@@ -269,6 +269,20 @@ class KeepController extends GetxController {
   void onInit() {
     super.onInit();
     _notesSub = _repository.watchAll().listen((allNotes) {
+      // Sort notes consistently in Dart to match the drag-and-drop sort order fallback
+      allNotes.sort((a, b) {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        
+        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
+        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
+        
+        if (orderA != orderB) return orderB.compareTo(orderA);
+        
+        final aDate = a.updatedAt ?? a.createdAt;
+        final bDate = b.updatedAt ?? b.createdAt;
+        return bDate.compareTo(aDate);
+      });
       keepNotes.value = allNotes;
       _applyFilter();
     });

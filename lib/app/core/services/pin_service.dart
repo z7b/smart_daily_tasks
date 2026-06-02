@@ -65,7 +65,8 @@ class PinService extends GetxService {
           ..createdAt = DateTime.now()
           ..linkedItemType = type
           ..linkedItemId = id
-          ..isPinned = false;
+          ..isPinned = false
+          ..sortOrder = DateTime.now().millisecondsSinceEpoch.toDouble();
         
         await _isar.writeTxn(() async {
           await _isar.keepNotes.put(note);

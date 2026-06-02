@@ -59,6 +59,7 @@ class LinkedItemCard extends StatelessWidget {
         child = _buildScaledTile(
           TaskTile(
             task: task,
+            isBoardMode: true,
             onTap: () => Get.toNamed('/tasks'),
             onCompleted: (val) {
                taskCtrl.markTaskCompleted(task);
@@ -83,6 +84,7 @@ class LinkedItemCard extends StatelessWidget {
             MedicationTile(
               med: med,
               index: index,
+              isBoardMode: true,
               onDelete: () {
                 medCtrl.deleteMedication(med);
                 Get.find<KeepController>().deleteNote(note.id);
@@ -101,6 +103,7 @@ class LinkedItemCard extends StatelessWidget {
         child = _buildScaledTile(
           AppointmentTile(
             appointment: appt,
+            isBoardMode: true,
             onTap: () => Get.toNamed('/appointments'),
             onComplete: () {
               apptCtrl.markAsCompleted(appt.id);
