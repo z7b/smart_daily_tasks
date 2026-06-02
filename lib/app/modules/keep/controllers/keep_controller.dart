@@ -274,8 +274,8 @@ class KeepController extends GetxController {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
-        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
+        double orderA = _getEffectiveSortOrder(a);
+        double orderB = _getEffectiveSortOrder(b);
         
         if (orderA != orderB) return orderB.compareTo(orderA);
         
@@ -544,6 +544,58 @@ class KeepController extends GetxController {
     );
   }
 
+  // ── Drag and Drop Helpers ──────────────────────────────────────────────────
+  double _getEffectiveSortOrder(KeepNote note) {
+    if (note.sortOrder != 0.0) return note.sortOrder;
+    return (note.updatedAt ?? note.createdAt).millisecondsSinceEpoch.toDouble();
+  }
+
+  double _estimateNoteHeight(KeepNote note) {
+    if (note.linkedItemType != null) {
+      switch (note.linkedItemType) {
+        case 'task': return 140.0;
+        case 'medication': return 120.0;
+        case 'appointment': return 160.0;
+        case 'book': return 220.0;
+        default: return 120.0;
+      }
+    }
+    double height = 70.0;
+    if (note.title.isNotEmpty) {
+      height += 24.0;
+    }
+    if (note.content != null && note.content!.isNotEmpty) {
+      final charCount = note.content!.length;
+      final lines = (charCount / 25).ceil();
+      height += lines * 18.0;
+    }
+    if (note.checkItems.isNotEmpty) {
+      height += note.checkItems.length * 24.0;
+    }
+    if (note.attachments.isNotEmpty) {
+      height += 120.0;
+    }
+    return height;
+  }
+
+  Map<int, int> _estimateColumnAssignments(List<KeepNote> notes) {
+    double col0Height = 0;
+    double col1Height = 0;
+    final assignments = <int, int>{};
+
+    for (final note in notes) {
+      final h = _estimateNoteHeight(note);
+      if (col0Height <= col1Height) {
+        assignments[note.id] = 0;
+        col0Height += h + 12.0;
+      } else {
+        assignments[note.id] = 1;
+        col1Height += h + 12.0;
+      }
+    }
+    return assignments;
+  }
+
   // ── Drag and Drop Reordering ──────────────────────────────────────────────
   Future<void> reorderNotes(int draggedId, int targetId) async {
     final draggedNote = keepNotes.firstWhereOrNull((n) => n.id == draggedId);
@@ -560,40 +612,45 @@ class KeepController extends GetxController {
 
     if (targetIndex == -1 || draggedIndex == -1) return;
 
-    double newOrder;
+    // Layout-aware column assignment search
+    final initialCols = _estimateColumnAssignments(unpinnedNotes);
+    final targetCol = initialCols[targetId]!;
 
-    // Calculate an sortOrder that inserts draggedNote before or after targetNote.
-    // Notes are sorted DESCENDING (highest sortOrder at top).
-    if (draggedIndex < targetIndex) {
-      // Dragging downwards. Insert AFTER targetNote.
-      if (targetIndex == unpinnedNotes.length - 1) {
-        double tOrder = unpinnedNotes[targetIndex].sortOrder;
-        if (tOrder == 0.0) tOrder = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
-        newOrder = tOrder - 10000.0;
-      } else {
-        double tOrder1 = unpinnedNotes[targetIndex].sortOrder;
-        if (tOrder1 == 0.0) tOrder1 = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
-        
-        double tOrder2 = unpinnedNotes[targetIndex + 1].sortOrder;
-        if (tOrder2 == 0.0) tOrder2 = (unpinnedNotes[targetIndex + 1].updatedAt ?? unpinnedNotes[targetIndex + 1].createdAt).millisecondsSinceEpoch.toDouble();
-        
-        newOrder = (tOrder1 + tOrder2) / 2.0;
+    final listWithoutDragged = List<KeepNote>.from(unpinnedNotes)..removeAt(draggedIndex);
+    final baseTargetIndex = listWithoutDragged.indexWhere((n) => n.id == targetId);
+
+    int bestInsertIndex = -1;
+    final searchOffsets = [0, 1, -1, 2, -2, 3, -3];
+
+    for (final offset in searchOffsets) {
+      final candidateIndex = baseTargetIndex + offset;
+      if (candidateIndex < 0 || candidateIndex > listWithoutDragged.length) continue;
+
+      final testList = List<KeepNote>.from(listWithoutDragged);
+      testList.insert(candidateIndex, draggedNote);
+
+      final testCols = _estimateColumnAssignments(testList);
+      if (testCols[draggedId] == targetCol) {
+        bestInsertIndex = candidateIndex;
+        break;
       }
+    }
+
+    if (bestInsertIndex == -1) {
+      bestInsertIndex = baseTargetIndex;
+    }
+
+    double newOrder;
+    if (bestInsertIndex == 0) {
+      double tOrder = _getEffectiveSortOrder(listWithoutDragged[0]);
+      newOrder = tOrder + 10000.0;
+    } else if (bestInsertIndex == listWithoutDragged.length) {
+      double tOrder = _getEffectiveSortOrder(listWithoutDragged[listWithoutDragged.length - 1]);
+      newOrder = tOrder - 10000.0;
     } else {
-      // Dragging upwards. Insert BEFORE targetNote.
-      if (targetIndex == 0) {
-        double tOrder = unpinnedNotes[targetIndex].sortOrder;
-        if (tOrder == 0.0) tOrder = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
-        newOrder = tOrder + 10000.0;
-      } else {
-        double tOrder1 = unpinnedNotes[targetIndex].sortOrder;
-        if (tOrder1 == 0.0) tOrder1 = (unpinnedNotes[targetIndex].updatedAt ?? unpinnedNotes[targetIndex].createdAt).millisecondsSinceEpoch.toDouble();
-        
-        double tOrder2 = unpinnedNotes[targetIndex - 1].sortOrder;
-        if (tOrder2 == 0.0) tOrder2 = (unpinnedNotes[targetIndex - 1].updatedAt ?? unpinnedNotes[targetIndex - 1].createdAt).millisecondsSinceEpoch.toDouble();
-        
-        newOrder = (tOrder1 + tOrder2) / 2.0;
-      }
+      double orderBefore = _getEffectiveSortOrder(listWithoutDragged[bestInsertIndex - 1]);
+      double orderAfter = _getEffectiveSortOrder(listWithoutDragged[bestInsertIndex]);
+      newOrder = (orderBefore + orderAfter) / 2.0;
     }
 
     final updatedDragged = draggedNote.copyWith(sortOrder: newOrder);
@@ -608,8 +665,8 @@ class KeepController extends GetxController {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
-        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
+        double orderA = _getEffectiveSortOrder(a);
+        double orderB = _getEffectiveSortOrder(b);
         
         if (orderA != orderB) return orderB.compareTo(orderA);
         
@@ -634,10 +691,7 @@ class KeepController extends GetxController {
     final unpinnedNotes = keepNotes.where((n) => !n.isPinned).toList();
     if (unpinnedNotes.isEmpty) return;
 
-    double minOrder = unpinnedNotes.map((n) {
-      if (n.sortOrder == 0.0) return (n.updatedAt ?? n.createdAt).millisecondsSinceEpoch.toDouble();
-      return n.sortOrder;
-    }).reduce(min);
+    double minOrder = unpinnedNotes.map((n) => _getEffectiveSortOrder(n)).reduce(min);
 
     // Move to end by assigning a sortOrder smaller than the minimum
     final newOrder = minOrder - 10000.0;
@@ -650,8 +704,8 @@ class KeepController extends GetxController {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         
-        double orderA = a.sortOrder == 0.0 ? (a.updatedAt ?? a.createdAt).millisecondsSinceEpoch.toDouble() : a.sortOrder;
-        double orderB = b.sortOrder == 0.0 ? (b.updatedAt ?? b.createdAt).millisecondsSinceEpoch.toDouble() : b.sortOrder;
+        double orderA = _getEffectiveSortOrder(a);
+        double orderB = _getEffectiveSortOrder(b);
         
         if (orderA != orderB) return orderB.compareTo(orderA);
         

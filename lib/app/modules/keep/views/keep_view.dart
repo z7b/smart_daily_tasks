@@ -502,7 +502,7 @@ class KeepView extends StatelessWidget {
                     ),
                   ),
                 ),
-                childWhenDragging: child, // Keeps original fully visible to avoid layout spaces
+                childWhenDragging: Opacity(opacity: 0.3, child: child),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
