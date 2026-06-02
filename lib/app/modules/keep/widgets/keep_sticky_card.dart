@@ -599,7 +599,8 @@ class _MiniCanvasPainter extends CustomPainter {
         ..strokeWidth = strokeWidth * 0.4 // scale down for preview
         ..style = PaintingStyle.stroke;
         
-      final lines = parts[2].split('|');
+      final String linesStr = parts.length >= 4 ? parts[3] : parts[2];
+      final lines = linesStr.split('|');
       
       // The original canvas width is likely ~320-360, height 260
       final scaleX = size.width / 320.0;

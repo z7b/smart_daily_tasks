@@ -1844,7 +1844,19 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
         _penColor = Color(int.parse(parts[0]));
         _strokeWidth = double.parse(parts[1]);
         _strokes.clear();
-        final lines = parts[2].split('|');
+        
+        final String linesStr;
+        if (parts.length >= 4) {
+          final heightVal = double.tryParse(parts[2]);
+          if (heightVal != null) {
+            _canvasHeight = heightVal.clamp(_minHeight, _maxHeight);
+          }
+          linesStr = parts[3];
+        } else {
+          linesStr = parts[2];
+        }
+
+        final lines = linesStr.split('|');
         for (final line in lines) {
           if (line.isEmpty) continue;
           // Format per stroke: "colorInt;width;x1,y1,x2,y2..."
@@ -1872,8 +1884,6 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
   }
 
   String _serialize() {
-    if (_strokes.isEmpty) return '';
-    // New format: penColor:strokeWidth:colorInt;width;x,y,...|...
     final lines = <String>[];
     for (final stroke in _strokes) {
       final pts = <String>[];
@@ -1884,7 +1894,7 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
         lines.add('${stroke.color.toARGB32()};${stroke.width.toStringAsFixed(1)};${pts.join(',')}');
       }
     }
-    return '${_penColor.toARGB32()}:$_strokeWidth:${lines.join('|')}';
+    return '${_penColor.toARGB32()}:$_strokeWidth:${_canvasHeight.toStringAsFixed(1)}:${lines.join('|')}';
   }
 
   @override
@@ -1963,6 +1973,9 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
               _canvasHeight = (_canvasHeight + d.delta.dy)
                   .clamp(_minHeight, _maxHeight);
             });
+          },
+          onVerticalDragEnd: (_) {
+            widget.onDrawingChanged(_serialize());
           },
           child: Container(
             height: 24,
