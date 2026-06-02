@@ -293,6 +293,7 @@ class KeepStickyCard extends StatelessWidget {
 
       return LayoutBuilder(
         builder: (context, constraints) {
+          final calculatedHeight = constraints.maxWidth * (canvasHeight / 360.0);
           return ClipRRect(
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(4),
@@ -301,9 +302,9 @@ class KeepStickyCard extends StatelessWidget {
             child: Container(
               color: Colors.white,
               width: double.infinity,
-              height: canvasHeight,
+              height: calculatedHeight,
               child: CustomPaint(
-                size: Size(constraints.maxWidth, canvasHeight),
+                size: Size(constraints.maxWidth, calculatedHeight),
                 painter: _MiniCanvasPainter(content),
               ),
             ),
@@ -420,7 +421,7 @@ class KeepStickyCard extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 6),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final calculatedHeight = canvasHeight;
+              final calculatedHeight = constraints.maxWidth * (canvasHeight / 360.0);
               return Container(
                 width: double.infinity,
                 height: calculatedHeight,
