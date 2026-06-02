@@ -48,7 +48,8 @@ class KeepStickyCard extends StatelessWidget {
     final customTextColor = ctrl.getTextColor(note.textColorIndex);
     final textColor = customTextColor ?? (isImageBg ? Colors.white : _contrastColor(bgColor));
     final blocks = noteData.blocks;
-    final hasHeroImage = blocks.isNotEmpty && blocks.first.type == KeepNoteType.image;
+    final hasHeroImage = blocks.isNotEmpty &&
+        (blocks.first.type == KeepNoteType.image || blocks.first.type == KeepNoteType.drawing);
     final heroBlock = hasHeroImage ? blocks.first : null;
     final contentBlocks = hasHeroImage ? blocks.skip(1).toList() : blocks;
 
@@ -281,6 +282,22 @@ class KeepStickyCard extends StatelessWidget {
   Widget _buildHeroImage(KeepBlock block, Color textColor) {
     final content = block.data as String?;
     if (content == null || content.isEmpty) return const SizedBox.shrink();
+    if (block.type == KeepNoteType.drawing) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(4),
+            ),
+            child: CustomPaint(
+              size: Size(constraints.maxWidth, constraints.maxWidth * 0.8),
+              painter: _MiniCanvasPainter(content),
+            ),
+          );
+        },
+      );
+    }
     final file = File(content);
     if (!file.existsSync()) return const SizedBox.shrink();
     return ClipRRect(
