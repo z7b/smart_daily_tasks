@@ -166,25 +166,22 @@ class LinkedItemCard extends StatelessWidget {
                 ? Border.all(color: Colors.blueAccent, width: 2)
                 : Border.all(color: Colors.transparent, width: 2),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AbsorbPointer(
-              absorbing: isSelection,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  child,
-                  if (note.isPinned)
-                    Positioned(
-                      top: 2,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: _buildPinWidget(),
-                      ),
+          child: AbsorbPointer(
+            absorbing: isSelection,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                child,
+                if (note.isPinned)
+                  Positioned(
+                    top: 2,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: _buildPinWidget(),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
