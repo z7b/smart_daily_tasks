@@ -283,6 +283,14 @@ class KeepStickyCard extends StatelessWidget {
     final content = block.data as String?;
     if (content == null || content.isEmpty) return const SizedBox.shrink();
     if (block.type == KeepNoteType.drawing) {
+      double canvasHeight = 240.0;
+      try {
+        final parts = content.split(':');
+        if (parts.length >= 4) {
+          canvasHeight = double.tryParse(parts[2]) ?? 240.0;
+        }
+      } catch (_) {}
+
       return LayoutBuilder(
         builder: (context, constraints) {
           return ClipRRect(
@@ -290,9 +298,14 @@ class KeepStickyCard extends StatelessWidget {
               topLeft: Radius.circular(4),
               topRight: Radius.circular(4),
             ),
-            child: CustomPaint(
-              size: Size(constraints.maxWidth, constraints.maxWidth * 0.8),
-              painter: _MiniCanvasPainter(content),
+            child: Container(
+              color: Colors.white,
+              width: double.infinity,
+              height: canvasHeight,
+              child: CustomPaint(
+                size: Size(constraints.maxWidth, canvasHeight),
+                painter: _MiniCanvasPainter(content),
+              ),
             ),
           );
         },
@@ -407,7 +420,7 @@ class KeepStickyCard extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 6),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final calculatedHeight = constraints.maxWidth * (canvasHeight / 360.0);
+              final calculatedHeight = canvasHeight;
               return Container(
                 width: double.infinity,
                 height: calculatedHeight,
