@@ -634,17 +634,17 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
       textColor: textColor,
       initialData: block.data as String? ?? '',
       onDrawingChanged: (data) => _ctrl.updateBlockData(index, data),
-      viewOnly: widget.viewOnly,
+      viewOnly: _isViewOnly,
     );
   }
 
   Widget _buildVoiceBlock(int index, KeepBlock block, Color textColor) {
-    if (widget.viewOnly && (block.data as String? ?? '').isEmpty) return const SizedBox.shrink();
+    if (_isViewOnly && (block.data as String? ?? '').isEmpty) return const SizedBox.shrink();
     return _VoiceRecorderWidget(
       textColor: textColor,
       initialPath: block.data as String? ?? '',
       onPathChanged: (path) => _ctrl.updateBlockData(index, path),
-      viewOnly: widget.viewOnly,
+      viewOnly: _isViewOnly,
     );
   }
 

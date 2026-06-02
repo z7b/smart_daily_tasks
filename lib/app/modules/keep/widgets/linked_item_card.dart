@@ -147,21 +147,49 @@ class LinkedItemCard extends StatelessWidget {
         child = const SizedBox.shrink();
     }
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        child,
-        if (note.isPinned)
-          Positioned(
-            top: 2,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: _buildPinWidget(),
+    final ctrl = Get.find<KeepController>();
+
+    return Obx(() {
+      final isSelected = ctrl.selectedNoteIds.contains(note.id);
+      final isSelection = ctrl.isSelectionMode;
+
+      return GestureDetector(
+        onTap: () {
+          if (isSelection) {
+            ctrl.toggleSelection(note.id);
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: isSelected
+                ? Border.all(color: Colors.blueAccent, width: 2)
+                : Border.all(color: Colors.transparent, width: 2),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AbsorbPointer(
+              absorbing: isSelection,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  child,
+                  if (note.isPinned)
+                    Positioned(
+                      top: 2,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _buildPinWidget(),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-      ],
-    );
+        ),
+      );
+    });
   }
 
   Widget _buildPinWidget() {
