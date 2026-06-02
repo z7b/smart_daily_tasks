@@ -13,8 +13,20 @@ import '../views/add_keep_note_view.dart';
 import '../../../widgets/ad_banner_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-class KeepView extends StatelessWidget {
+class KeepView extends StatefulWidget {
   const KeepView({super.key});
+
+  @override
+  State<KeepView> createState() => _KeepViewState();
+}
+
+class _KeepViewState extends State<KeepView> {
+  // Local reorder buffer — single source of truth during drag
+  List<KeepNote>? _localNotes;
+  // ID of the card being dragged; null when idle
+  int? _draggingId;
+  // Debounce flag: prevents rapid re-entry during onWillAccept
+  bool _isSwapping = false;
 
   @override
   Widget build(BuildContext context) {
@@ -88,13 +100,18 @@ class KeepView extends StatelessWidget {
                     ),
                   ),
                   Obx(() {
-                    if (ctrl.filteredNotes.isEmpty) {
+                    // Sync local list from controller only when not mid-drag
+                    if (_draggingId == null) {
+                      _localNotes = List<KeepNote>.from(ctrl.filteredNotes);
+                    }
+                    final notes = _localNotes ?? ctrl.filteredNotes;
+                    if (notes.isEmpty) {
                       return SliverFillRemaining(
                         hasScrollBody: false,
                         child: _buildEmptyBoard(context, isDark),
                       );
                     }
-                    return _buildSliverStickyGrid(context, ctrl, keyboardHeight);
+                    return _buildSliverStickyGrid(context, ctrl, keyboardHeight, notes);
                   }),
                 ],
               );
@@ -419,8 +436,12 @@ class KeepView extends StatelessWidget {
   }
 
   // ── Sticky grid (masonry-style) ────────────────────────────────────────────
-  Widget _buildSliverStickyGrid(BuildContext context, KeepController ctrl, double keyboardHeight) {
-    final notes = ctrl.filteredNotes;
+  Widget _buildSliverStickyGrid(
+    BuildContext context,
+    KeepController ctrl,
+    double keyboardHeight,
+    List<KeepNote> notes,
+  ) {
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(8, 8, 8, 400 + keyboardHeight),
       sliver: SliverMasonryGrid.count(
@@ -460,59 +481,123 @@ class KeepView extends StatelessWidget {
             );
           }
 
-          return DragTarget<int>(
+          // RepaintBoundary with a stable key prevents unrelated cards from
+          // repainting when the list reorders.
+          return RepaintBoundary(
             key: ValueKey(note.id),
-            onWillAcceptWithDetails: (details) {
-              return true;
-            },
-            onAcceptWithDetails: (details) {
-              if (details.data == note.id) return;
-              ctrl.reorderNotes(details.data, note.id);
-            },
-            builder: (context, candidateData, rejectedData) {
-              final isHovered = candidateData.isNotEmpty;
-              
-              return LongPressDraggable<int>(
-                data: note.id,
-                delay: const Duration(milliseconds: 350),
-                onDragStarted: () {
-                  HapticFeedback.mediumImpact();
-                  if (!ctrl.selectedNoteIds.contains(note.id)) {
-                    ctrl.toggleSelection(note.id);
-                  }
-                },
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: SizedBox(
-                    // Estimate width for feedback since it's floating outside grid
-                    width: (MediaQuery.of(context).size.width - 48) / _crossAxisCount(context),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 8),
-                          )
-                        ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return DragTarget<int>(
+                  onWillAcceptWithDetails: (details) {
+                    // Live visual swap: reorder _localNotes in-place so the grid
+                    // reflects the intended position while the finger is still down.
+                    if (details.data != note.id &&
+                        _localNotes != null &&
+                        !_isSwapping) {
+                      _isSwapping = true;
+                      setState(() {
+                        final fromIdx = _localNotes!.indexWhere((n) => n.id == details.data);
+                        final toIdx = _localNotes!.indexWhere((n) => n.id == note.id);
+                        if (fromIdx != -1 && toIdx != -1) {
+                          final item = _localNotes!.removeAt(fromIdx);
+                          _localNotes!.insert(toIdx, item);
+                        }
+                      });
+                      // Short debounce to avoid thrashing on fast movements
+                      Future.delayed(const Duration(milliseconds: 150), () {
+                        if (mounted) _isSwapping = false;
+                      });
+                    }
+                    return true;
+                  },
+                  onAcceptWithDetails: (details) {
+                    if (details.data == note.id) return;
+                    // Commit the final order to controller + DB
+                    ctrl.reorderNotes(details.data, note.id);
+                    if (mounted) {
+                      setState(() {
+                        _draggingId = null;
+                      });
+                    }
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    final isHovered = candidateData.isNotEmpty;
+
+                    return LongPressDraggable<int>(
+                      data: note.id,
+                      delay: const Duration(milliseconds: 350),
+                      onDragStarted: () {
+                        HapticFeedback.mediumImpact();
+                        // Snapshot the current controller order as our drag buffer
+                        setState(() {
+                          _draggingId = note.id;
+                          _localNotes ??= List<KeepNote>.from(ctrl.filteredNotes);
+                        });
+                        if (!ctrl.selectedNoteIds.contains(note.id)) {
+                          ctrl.toggleSelection(note.id);
+                        }
+                      },
+                      onDraggableCanceled: (velocity, offset) {
+                        // User lifted without a valid drop target — revert to
+                        // controller order so no stale local state lingers.
+                        if (mounted) {
+                          setState(() {
+                            _draggingId = null;
+                            _localNotes = List<KeepNote>.from(ctrl.filteredNotes);
+                          });
+                        }
+                      },
+                      onDragEnd: (_) {
+                        if (mounted && _draggingId != null) {
+                          setState(() {
+                            _draggingId = null;
+                          });
+                        }
+                      },
+                      feedback: Material(
+                        color: Colors.transparent,
+                        // Use the actual measured width from LayoutBuilder instead
+                        // of the estimated MediaQuery calculation.
+                        child: SizedBox(
+                          width: constraints.maxWidth,
+                          child: Transform.rotate(
+                            angle: 0.02,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: child,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: child,
-                    ),
-                  ),
-                ),
-                childWhenDragging: child, // Keeps original fully visible to avoid layout spaces
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  transform: isHovered ? Matrix4.diagonal3Values(0.95, 0.95, 1.0) : Matrix4.identity(),
-                  transformAlignment: Alignment.center,
-                  child: isHovered
-                      ? Opacity(opacity: 0.6, child: child)
-                      : child,
-                ),
-              );
-            },
+                      childWhenDragging: Opacity(
+                        opacity: 0.0,
+                        child: child,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        transform: isHovered
+                            ? Matrix4.diagonal3Values(0.95, 0.95, 1.0)
+                            : Matrix4.identity(),
+                        transformAlignment: Alignment.center,
+                        child: isHovered
+                            ? Opacity(opacity: 0.6, child: child)
+                            : child,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),
