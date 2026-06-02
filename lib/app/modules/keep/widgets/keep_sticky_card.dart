@@ -394,13 +394,43 @@ class KeepStickyCard extends StatelessWidget {
       case KeepNoteType.drawing:
         final content = block.data as String?;
         if (content == null || content.isEmpty) return const SizedBox.shrink();
+        
+        double canvasHeight = 240.0;
+        try {
+          final parts = content.split(':');
+          if (parts.length >= 4) {
+            canvasHeight = double.tryParse(parts[2]) ?? 240.0;
+          }
+        } catch (_) {}
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return CustomPaint(
-                size: Size(constraints.maxWidth, constraints.maxWidth * 0.8), // Maintain aspect ratio roughly
-                painter: _MiniCanvasPainter(content),
+              final calculatedHeight = constraints.maxWidth * (canvasHeight / 360.0);
+              return Container(
+                width: double.infinity,
+                height: calculatedHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    color: Colors.white,
+                    child: CustomPaint(
+                      size: Size(constraints.maxWidth, calculatedHeight),
+                      painter: _MiniCanvasPainter(content),
+                    ),
+                  ),
+                ),
               );
             },
           ),
@@ -619,9 +649,16 @@ class _MiniCanvasPainter extends CustomPainter {
       final String linesStr = parts.length >= 4 ? parts[3] : parts[2];
       final lines = linesStr.split('|');
       
-      // The original canvas width is likely ~320-360, height 260
-      final scaleX = size.width / 320.0;
-      final scaleY = size.height / 260.0;
+      double canvasHeight = 240.0;
+      if (parts.length >= 4) {
+        final heightVal = double.tryParse(parts[2]);
+        if (heightVal != null) {
+          canvasHeight = heightVal;
+        }
+      }
+      
+      final scaleX = size.width / 360.0;
+      final scaleY = size.height / canvasHeight;
       final scale = min(scaleX, scaleY);
       
       canvas.scale(scale, scale);
