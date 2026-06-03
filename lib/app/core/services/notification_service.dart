@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -312,8 +311,8 @@ class NotificationService extends GetxService {
 
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
-        title,
-        body,
+        _stripHtml(title),
+        _stripHtml(body),
         tzTime,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -483,8 +482,8 @@ class NotificationService extends GetxService {
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
-        title,
-        body,
+        _stripHtml(title),
+        _stripHtml(body),
         scheduledDate,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -560,8 +559,8 @@ class NotificationService extends GetxService {
 
       await flutterLocalNotificationsPlugin.show(
         stepsOffset + id,
-        title,
-        body,
+        _stripHtml(title),
+        _stripHtml(body),
         NotificationDetails(
           android: AndroidNotificationDetails(
             'steps_smart_channel',
@@ -593,8 +592,8 @@ class NotificationService extends GetxService {
       );
       await flutterLocalNotificationsPlugin.show(
         stepsOffset + id,
-        title,
-        body,
+        _stripHtml(title),
+        _stripHtml(body),
         NotificationDetails(
           android: AndroidNotificationDetails(
             'steps_smart_channel',
@@ -1026,5 +1025,10 @@ class NotificationService extends GetxService {
     } catch (e) {
       talker.warning('⚠️ Timezone detection error: $e');
     }
+  }
+
+  String _stripHtml(String? text) {
+    if (text == null) return '';
+    return text.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&nbsp;', ' ').trim();
   }
 }

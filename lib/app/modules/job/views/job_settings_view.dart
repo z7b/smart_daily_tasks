@@ -583,7 +583,13 @@ class JobSettingsView extends GetView<JobController> {
               ],
             ),
           ),
-          const Icon(CupertinoIcons.arrow_right, color: Colors.grey, size: 16),
+          Icon(
+            Get.locale?.languageCode == 'ar'
+                ? CupertinoIcons.arrow_left
+                : CupertinoIcons.arrow_right,
+            color: Colors.grey,
+            size: 16,
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -663,6 +669,8 @@ class JobSettingsView extends GetView<JobController> {
         : daysList
             .map((day) => DateFormat.E(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + day)))
             .join(', ');
+    final isRtl = Get.locale?.languageCode == 'ar';
+    final arrow = isRtl ? '←' : '➔';
     
     Get.dialog(
       Dialog(
@@ -684,99 +692,113 @@ class JobSettingsView extends GetView<JobController> {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withAlpha(20),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(CupertinoIcons.briefcase, color: AppTheme.primary, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'confirm_save_settings'.tr,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'confirm_save_message'.tr,
-                style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-              ),
-              const SizedBox(height: 20),
-              
-              // Job Title card
-              _buildConfirmationItem(
-                context,
-                icon: CupertinoIcons.tag,
-                label: 'job_title'.tr,
-                value: title,
-              ),
-              const SizedBox(height: 12),
-              
-              // Salary Day card
-              _buildConfirmationItem(
-                context,
-                icon: CupertinoIcons.calendar,
-                label: 'salary_day'.tr,
-                value: controller.profile.value.salaryDay.f,
-              ),
-              const SizedBox(height: 12),
-              
-              // Official Work Hours card
-              _buildConfirmationItem(
-                context,
-                icon: CupertinoIcons.timer,
-                label: 'official_work_hours'.tr,
-                value: '${hours.f} ${'hours'.tr}',
-              ),
-              const SizedBox(height: 12),
-
-              // Working Days card
-              _buildConfirmationItem(
-                context,
-                icon: CupertinoIcons.calendar_today,
-                label: 'working_days'.tr,
-                value: formattedDays,
-              ),
-              
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withAlpha(20),
+                        shape: BoxShape.circle,
                       ),
-                      child: Text('cancel'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Icon(CupertinoIcons.briefcase, color: AppTheme.primary, size: 22),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onConfirm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'confirm_save_settings'.tr,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      child: Text('confirm'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'confirm_save_message'.tr,
+                  style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+                ),
+                const SizedBox(height: 20),
+                
+                // Job Title card
+                _buildConfirmationItem(
+                  context,
+                  icon: CupertinoIcons.tag,
+                  label: 'job_title'.tr,
+                  value: title,
+                ),
+                const SizedBox(height: 12),
+                
+                // Salary Day card
+                _buildConfirmationItem(
+                  context,
+                  icon: CupertinoIcons.calendar,
+                  label: 'salary_day'.tr,
+                  value: controller.profile.value.salaryDay.f,
+                ),
+                const SizedBox(height: 12),
+                
+                // Official Work Hours card
+                _buildConfirmationItem(
+                  context,
+                  icon: CupertinoIcons.timer,
+                  label: 'official_work_hours'.tr,
+                  value: '${hours.f} ${'hours'.tr}',
+                ),
+                const SizedBox(height: 12),
+  
+                // Working Days card
+                _buildConfirmationItem(
+                  context,
+                  icon: CupertinoIcons.calendar_today,
+                  label: 'working_days'.tr,
+                  value: formattedDays,
+                ),
+                const SizedBox(height: 12),
+  
+                // Shift Period card
+                _buildConfirmationItem(
+                  context,
+                  icon: CupertinoIcons.clock,
+                  label: 'shift_period'.tr,
+                  value: '${controller.formatMinutes(controller.profile.value.startMinutes).f} $arrow ${controller.formatMinutes(controller.profile.value.endMinutes).f}',
+                ),
+                
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Get.back(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text('cancel'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: onConfirm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: Text('confirm'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

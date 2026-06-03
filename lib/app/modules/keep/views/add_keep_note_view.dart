@@ -1407,10 +1407,12 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
       final today = DateTime(now.year, now.month, now.day);
       final tomorrow = today.add(const Duration(days: 1));
       final nextWeek = today.add(const Duration(days: 7));
+      final nextMonth = DateTime(now.year, now.month + 1, now.day);
       final dtDay = DateTime(dt.year, dt.month, dt.day);
       if (dtDay == today) return 'later_today';
       if (dtDay == tomorrow) return 'tomorrow';
       if (dtDay == nextWeek) return 'next_week';
+      if (dtDay == nextMonth) return 'next_month';
       return 'custom';
     }
 
@@ -1528,14 +1530,13 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                       ),
                       const SizedBox(height: 8),
 
-                      if (now.hour < 20)
-                        buildOption(
-                          'later_today',
-                          'remind_later_today',
-                          const TimeOfDay(hour: 20, minute: 0),
-                          Icons.schedule,
-                          (t) => DateTime(now.year, now.month, now.day, t.hour, t.minute),
-                        ),
+                      buildOption(
+                        'later_today',
+                        'remind_later_today',
+                        TimeOfDay.fromDateTime(now.add(const Duration(minutes: 5))),
+                        Icons.schedule,
+                        (t) => DateTime(now.year, now.month, now.day, t.hour, t.minute),
+                      ),
 
                       buildOption(
                         'tomorrow',
@@ -1551,6 +1552,14 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView> with SingleTickerProv
                         const TimeOfDay(hour: 8, minute: 0),
                         Icons.next_week_outlined,
                         (t) => DateTime(now.year, now.month, now.day + 7, t.hour, t.minute),
+                      ),
+
+                      buildOption(
+                        'next_month',
+                        'remind_next_month',
+                        const TimeOfDay(hour: 8, minute: 0),
+                        Icons.calendar_month_outlined,
+                        (t) => DateTime(now.year, now.month + 1, now.day, t.hour, t.minute),
                       ),
 
                       const Padding(

@@ -140,6 +140,9 @@ class JobView extends GetView<JobController> {
               // ── Performance/Consistency Score ──
               SliverToBoxAdapter(child: _buildConsistencyScore(context)),
 
+              // ── Job Schedule Details ──
+              SliverToBoxAdapter(child: _buildJobDetailsCard(context)),
+
               // ── Ad Banner ──
               SliverToBoxAdapter(
                 child: const Padding(
@@ -1721,6 +1724,292 @@ class JobView extends GetView<JobController> {
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  // ─── Job Details Card ──────────────────────────────────────────
+  Widget _buildJobDetailsCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final profile = controller.profile.value;
+    final workingDays = profile.workingDays;
+    final weekendDays = List.generate(7, (i) => i).where((d) => !workingDays.contains(d)).toList();
+    
+    final isRtl = Get.locale?.languageCode == 'ar';
+    final arrow = isRtl ? '←' : '➔';
+    final shiftPeriodStr = '${controller.formatMinutes(profile.startMinutes).f} $arrow ${controller.formatMinutes(profile.endMinutes).f}';
+    final hoursStr = '${profile.officialWorkHours?.f ?? '8'.f} ${'hours_abbr'.tr}';
+    
+    final customSchedules = controller.getCustomSchedules();
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: theme.dividerColor.withAlpha(12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withAlpha(20),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(CupertinoIcons.info_circle_fill, color: AppTheme.primary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'work_details_title'.tr,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Row 1: Default Shift Period & Work Hours
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailsItem(
+                  context,
+                  icon: CupertinoIcons.clock_fill,
+                  label: 'shift_period'.tr,
+                  value: shiftPeriodStr,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDetailsItem(
+                  context,
+                  icon: CupertinoIcons.timer,
+                  label: 'official_work_hours'.tr,
+                  value: hoursStr,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Row 2: Working Days Wrap
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(CupertinoIcons.calendar_today, size: 14, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'working_days'.tr,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: List.generate(7, (i) {
+                  final dayName = DateFormat.E(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + i));
+                  final isActive = workingDays.contains(i);
+                  return _buildDayChip(context, dayName, isActive: isActive);
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Row 3: Weekend/Holidays Wrap
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(CupertinoIcons.bed_double_fill, size: 14, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'weekly_holidays'.tr,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (weekendDays.isEmpty)
+                Text(
+                  'no_holidays'.tr,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                )
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: weekendDays.map((day) {
+                    final dayName = DateFormat.E(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + day));
+                    return _buildDayChip(context, dayName, isActive: false, isHoliday: true);
+                  }).toList(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Row 4: Custom Schedules (Overrides)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(CupertinoIcons.slider_horizontal_3, size: 14, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'custom_schedules'.tr,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (customSchedules.isEmpty)
+                Text(
+                  'no_custom_schedules'.tr,
+                  style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor.withAlpha(5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: theme.dividerColor.withAlpha(10)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: customSchedules.entries.map((entry) {
+                      final dayIndex = int.tryParse(entry.key) ?? 0;
+                      final dayName = DateFormat.EEEE(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + dayIndex));
+                      final data = entry.value as Map<String, dynamic>;
+                      final isHoliday = data['isHoliday'] ?? false;
+                      final startMin = data['start'] ?? profile.startMinutes;
+                      final endMin = data['end'] ?? profile.endMinutes;
+                      
+                      String details = '';
+                      if (isHoliday) {
+                        details = 'holiday'.tr;
+                      } else {
+                        final sTime = controller.formatMinutes(startMin).f;
+                        final eTime = controller.formatMinutes(endMin).f;
+                        details = '$sTime $arrow $eTime';
+                      }
+                      
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '$dayName:',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Text(
+                              details,
+                              style: TextStyle(
+                                fontSize: 12, 
+                                color: isHoliday ? Colors.green : AppTheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.dividerColor.withAlpha(5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withAlpha(8)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayChip(BuildContext context, String label, {required bool isActive, bool isHoliday = false}) {
+    Color chipColor = isActive 
+        ? AppTheme.primary 
+        : (isHoliday ? const Color(0xFFAF52DE) : Colors.grey);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: chipColor.withAlpha(isActive || isHoliday ? 20 : 10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: chipColor.withAlpha(isActive || isHoliday ? 40 : 15),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isActive || isHoliday ? chipColor : Colors.grey,
+        ),
       ),
     );
   }

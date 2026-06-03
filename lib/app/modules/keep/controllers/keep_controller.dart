@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/helpers/log_helper.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../data/models/keep_note_model.dart';
@@ -440,8 +441,11 @@ class KeepController extends GetxController {
             title: title.isNotEmpty ? title : 'keep_notes'.tr,
             body: previewText,
             scheduledTime: reminderAt.value!,
-            channelId: 'reminders_channel',
-            channelName: 'Reminders',
+            channelId: 'system_alarms_channel',
+            channelName: 'System Alarms',
+            isAlarm: true,
+            importance: Importance.max,
+            priority: Priority.max,
           );
           talker.info('🔔 Keep reminder scheduled: id=$notifId at ${reminderAt.value}');
         } else {
