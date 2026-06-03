@@ -94,13 +94,17 @@ class HomeView extends GetView<HomeController> {
 
         // Reorderable Cards
         Obx(() {
-          // ── only rebuild the sliver when the *list itself* changes ──
+          final isReorder = controller.isReorderMode.value;
           final order = controller.cardOrder.toList();
+          final displayedOrder = isReorder
+              ? order
+              : order.where((k) => !controller.hiddenCards.contains(k)).toList();
+
           return SliverReorderableList(
-            itemCount: order.length,
+            itemCount: displayedOrder.length,
             onReorder: controller.reorderCards,
             itemBuilder: (context, index) {
-              final key = order[index];
+              final key = displayedOrder[index];
               final child = _buildCardByKey(key, context);
 
               // ── Each item reacts to reorder-mode independently ──
@@ -108,9 +112,11 @@ class HomeView extends GetView<HomeController> {
                 key: ValueKey(key),
                 child: Obx(() {
                   final active = controller.isReorderMode.value;
+                  final isHidden = controller.hiddenCards.contains(key);
+
                   return ReorderableDragStartListener(
                     index: index,
-                    enabled: active,
+                    enabled: active && !isHidden,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: EdgeInsets.only(
@@ -124,16 +130,56 @@ class HomeView extends GetView<HomeController> {
                               borderRadius: BorderRadius.circular(32),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(
-                                    context,
-                                  ).primaryColor.withValues(alpha: 0.15),
+                                  color: isHidden
+                                      ? Colors.redAccent.withValues(alpha: 0.25)
+                                      : Theme.of(context).primaryColor.withValues(alpha: 0.15),
                                   blurRadius: 15,
                                   spreadRadius: 2,
                                 ),
                               ],
                             )
                           : const BoxDecoration(),
-                      child: child,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Opacity(
+                            opacity: isHidden ? 0.45 : 1.0,
+                            child: child,
+                          ),
+                          if (active)
+                            Positioned(
+                              top: 0,
+                              right: 32,
+                              child: GestureDetector(
+                                onTap: () => controller.toggleCardVisibility(key),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isHidden
+                                        ? Colors.redAccent.withValues(alpha: 0.9)
+                                        : Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    isHidden
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 }),

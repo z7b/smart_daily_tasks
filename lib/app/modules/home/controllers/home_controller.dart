@@ -156,6 +156,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     'reading',
     'bento',
   ].obs;
+  final hiddenCards = <String>[].obs;
 
   void toggleReorderMode() {
     isReorderMode.value = !isReorderMode.value;
@@ -166,6 +167,26 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     final item = cardOrder.removeAt(oldIndex);
     cardOrder.insert(newIndex, item);
     GetStorage().write('dashboard_card_order', cardOrder.toList());
+  }
+
+  void toggleCardVisibility(String key) {
+    if (hiddenCards.contains(key)) {
+      hiddenCards.remove(key);
+    } else {
+      final activeCount = cardOrder.length - hiddenCards.length;
+      if (activeCount <= 2) {
+        Get.snackbar(
+          'warning'.tr,
+          'must_keep_at_least_2_cards'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+          colorText: Colors.white,
+        );
+        return;
+      }
+      hiddenCards.add(key);
+    }
+    GetStorage().write('dashboard_hidden_cards', hiddenCards.toList());
   }
 
   @override
@@ -194,6 +215,12 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     final savedOrder = GetStorage().read<List>('dashboard_card_order');
     if (savedOrder != null) {
       cardOrder.assignAll(savedOrder.cast<String>());
+    }
+
+    // Load hidden cards
+    final savedHidden = GetStorage().read<List>('dashboard_hidden_cards');
+    if (savedHidden != null) {
+      hiddenCards.assignAll(savedHidden.cast<String>());
     }
 
     _updateGreeting();

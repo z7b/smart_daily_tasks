@@ -835,6 +835,7 @@ class Messages extends Translations {
       'premium_terms': 'Renews automatically. Cancel anytime in store settings.',
       'reorder_cards': 'Reorder',
       'save_order': 'Save Order',
+      'must_keep_at_least_2_cards': 'You must keep at least 2 cards active.',
 
       // ─── Rewarded Ads ────────────────────────
       'watch_ad_unlocked': 'Feature unlocked! Enjoy it for this session ✨',
@@ -1775,6 +1776,7 @@ class Messages extends Translations {
       'premium_terms': 'يتم التجديد تلقائيًا. يمكنك الإلغاء في أي وقت من إعدادات المتجر.',
       'reorder_cards': 'إعادة ترتيب',
       'save_order': 'حفظ الترتيب',
+      'must_keep_at_least_2_cards': 'يجب إبقاء بطاقتين على الأقل مفعلتين.',
 
       // ─── Rewarded Ads ────────────────────────
       'watch_ad_unlocked': 'تم فتح الميزة! استمتع بها في هذه الجلسة ✨',
