@@ -31,16 +31,59 @@ class JobSettingsView extends GetView<JobController> {
         actions: [
           TextButton(
             onPressed: () {
-              // Get current status from the toggle state (using profile status for simplicity, 
-              // or just calling updateJobSettings with the employed status if they filled the form)
-              controller.updateJobSettings(
-                employmentStatus: controller.isUnemployed ? EmploymentStatus.unemployed : EmploymentStatus.employed,
-                title: titleController.text,
-                company: companyController.text,
-                officialWorkHours: double.tryParse(hoursController.text),
-              );
-              Get.back();
-              Get.snackbar('success'.tr, 'task_update_success'.tr, snackPosition: SnackPosition.BOTTOM);
+              if (!controller.isUnemployed) {
+                final title = titleController.text.trim();
+                final company = companyController.text.trim();
+                
+                if (title.isEmpty) {
+                  Get.snackbar(
+                    'warning'.tr,
+                    'job_title_required'.tr,
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.orangeAccent.withValues(alpha: 0.9),
+                    colorText: Colors.white,
+                  );
+                  return;
+                }
+                
+                if (company.isEmpty) {
+                  Get.snackbar(
+                    'warning'.tr,
+                    'company_required'.tr,
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.orangeAccent.withValues(alpha: 0.9),
+                    colorText: Colors.white,
+                  );
+                  return;
+                }
+
+                _showSaveConfirmationDialog(
+                  context,
+                  title: title,
+                  company: company,
+                  hours: double.tryParse(hoursController.text) ?? 8.0,
+                  onConfirm: () {
+                    controller.updateJobSettings(
+                      employmentStatus: EmploymentStatus.employed,
+                      title: title,
+                      company: company,
+                      officialWorkHours: double.tryParse(hoursController.text),
+                    );
+                    Get.back(); // Close Dialog
+                    Get.back(); // Go back from settings view
+                    Get.snackbar('success'.tr, 'task_update_success'.tr, snackPosition: SnackPosition.BOTTOM);
+                  },
+                );
+              } else {
+                controller.updateJobSettings(
+                  employmentStatus: EmploymentStatus.unemployed,
+                  title: titleController.text,
+                  company: companyController.text,
+                  officialWorkHours: double.tryParse(hoursController.text),
+                );
+                Get.back();
+                Get.snackbar('success'.tr, 'task_update_success'.tr, snackPosition: SnackPosition.BOTTOM);
+              }
             },
             child: Text('save'.tr, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
           ),
@@ -601,6 +644,165 @@ class JobSettingsView extends GetView<JobController> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSaveConfirmationDialog(
+    BuildContext context, {
+    required String title,
+    required String company,
+    required double hours,
+    required VoidCallback onConfirm,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E).withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withAlpha(20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(CupertinoIcons.briefcase, color: AppTheme.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'confirm_save_settings'.tr,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'confirm_save_message'.tr,
+                style: TextStyle(fontSize: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
+              ),
+              const SizedBox(height: 20),
+              
+              // Job Title card
+              _buildConfirmationItem(
+                context,
+                icon: CupertinoIcons.tag,
+                label: 'job_title'.tr,
+                value: title,
+              ),
+              const SizedBox(height: 12),
+              
+              // Salary Day card
+              _buildConfirmationItem(
+                context,
+                icon: CupertinoIcons.calendar,
+                label: 'salary_day'.tr,
+                value: controller.profile.value.salaryDay.f,
+              ),
+              const SizedBox(height: 12),
+              
+              // Official Work Hours card
+              _buildConfirmationItem(
+                context,
+                icon: CupertinoIcons.timer,
+                label: 'official_work_hours'.tr,
+                value: '${hours.f} ${'hours'.tr}',
+              ),
+              
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Text('cancel'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Text('confirm'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfirmationItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.dividerColor.withAlpha(5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withAlpha(8)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
