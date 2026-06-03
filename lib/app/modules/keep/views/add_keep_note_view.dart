@@ -118,12 +118,15 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView>
 
       // Apply legacy global formatting if migrating from plaintext
       if (isLegacyPlaintext && text.isNotEmpty) {
-        if (_ctrl.isBold.value)
+        if (_ctrl.isBold.value) {
           controller.formatText(0, doc.length, quill.Attribute.bold);
-        if (_ctrl.isItalic.value)
+        }
+        if (_ctrl.isItalic.value) {
           controller.formatText(0, doc.length, quill.Attribute.italic);
-        if (_ctrl.isUnderline.value)
+        }
+        if (_ctrl.isUnderline.value) {
           controller.formatText(0, doc.length, quill.Attribute.underline);
+        }
 
         final alignVal = _ctrl.textAlign.value;
         quill.Attribute alignAttr;
@@ -744,8 +747,9 @@ class _AddKeepNoteViewState extends State<AddKeepNoteView>
   }
 
   Widget _buildVoiceBlock(int index, KeepBlock block, Color textColor) {
-    if (_isViewOnly && (block.data as String? ?? '').isEmpty)
+    if (_isViewOnly && (block.data as String? ?? '').isEmpty) {
       return const SizedBox.shrink();
+    }
     return _VoiceRecorderWidget(
       textColor: textColor,
       initialPath: block.data as String? ?? '',
@@ -2425,8 +2429,9 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
     for (final stroke in _strokes) {
       final pts = <String>[];
       for (final p in stroke.points) {
-        if (p != null)
+        if (p != null) {
           pts.add('${p.dx.toStringAsFixed(1)},${p.dy.toStringAsFixed(1)}');
+        }
       }
       if (pts.isNotEmpty) {
         lines.add(
@@ -2991,11 +2996,13 @@ class _VoiceRecorderState extends State<_VoiceRecorderWidget>
               onTap: widget.viewOnly && (!isRecorded && !isPlaying)
                   ? null
                   : () {
-                      if (_state == _RecorderState.idle && !widget.viewOnly)
+                      if (_state == _RecorderState.idle && !widget.viewOnly) {
                         _startRecording();
+                      }
                       if (_state == _RecorderState.recording &&
-                          !widget.viewOnly)
+                          !widget.viewOnly) {
                         _stopRecording();
+                      }
                       if (_state == _RecorderState.recorded) _playRecording();
                       if (_state == _RecorderState.playing) _stopPlaying();
                     },
