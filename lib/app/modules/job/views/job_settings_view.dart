@@ -657,6 +657,12 @@ class JobSettingsView extends GetView<JobController> {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final daysList = controller.profile.value.workingDays.toList()..sort();
+    final formattedDays = daysList.isEmpty
+        ? '-'
+        : daysList
+            .map((day) => DateFormat.E(Get.locale?.languageCode).format(DateTime(2024, 1, 7 + day)))
+            .join(', ');
     
     Get.dialog(
       Dialog(
@@ -730,6 +736,15 @@ class JobSettingsView extends GetView<JobController> {
                 icon: CupertinoIcons.timer,
                 label: 'official_work_hours'.tr,
                 value: '${hours.f} ${'hours'.tr}',
+              ),
+              const SizedBox(height: 12),
+
+              // Working Days card
+              _buildConfirmationItem(
+                context,
+                icon: CupertinoIcons.calendar_today,
+                label: 'working_days'.tr,
+                value: formattedDays,
               ),
               
               const SizedBox(height: 28),
