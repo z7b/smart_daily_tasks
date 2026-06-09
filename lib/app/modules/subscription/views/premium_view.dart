@@ -258,7 +258,7 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
                   ),
                   BoxShadow(
                     color: const Color(0xFFFF8C00).withValues(alpha: 0.3),
-                    blurRadius: 50,
+                    blurRadius: 24,
                     spreadRadius: 8,
                   ),
                 ],
@@ -401,8 +401,8 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
       children: [
         Expanded(child: _planCard(
           label: 'premium_yearly'.tr,
-          price: '\$5',
-          period: 'premium_month_short'.tr,
+          price: _sub.getYearlyPrice(),
+          period: '',
           savings: 'premium_save_29'.tr,
           isSelected: _selectedPlan.value == 'yearly',
           isDark: isDark,
@@ -412,7 +412,7 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
         const SizedBox(width: 12),
         Expanded(child: _planCard(
           label: 'premium_monthly'.tr,
-          price: '\$7',
+          price: _sub.getMonthlyPrice(),
           period: 'premium_month_short'.tr,
           isSelected: _selectedPlan.value == 'monthly',
           isDark: isDark,
@@ -501,23 +501,26 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
               color: isSelected ? AppTheme.primary : (isDark ? Colors.white70 : Colors.black54),
             )),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(price, style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: isSelected ? AppTheme.primary : (isDark ? Colors.white : Colors.black87),
-                )),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(period, style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white38 : Colors.black38,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(price, style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: isSelected ? AppTheme.primary : (isDark ? Colors.white : Colors.black87),
                   )),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(period, style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    )),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -529,6 +532,41 @@ class _PremiumViewState extends State<PremiumView> with TickerProviderStateMixin
   Widget _buildSubscribeButton(bool isDark) {
     return Obx(() {
       final loading = _sub.isLoading.value;
+      final alreadyPremium = _sub.isPremium.value;
+
+      // If already premium, show a confirmation state
+      if (alreadyPremium) {
+        return Container(
+          width: double.infinity,
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF34C759), Color(0xFF30D158)],
+            ),
+          ),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'premium_active'.tr.isNotEmpty ? 'premium_active'.tr : 'You are Premium ✨',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
       return GestureDetector(
         onTap: loading ? null : _handleSubscribe,

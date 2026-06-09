@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../controllers/steps_controller.dart';
 import '../../../core/helpers/number_extension.dart';
 import '../../../data/models/achievement_model.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 // --- Dynamic Colors for Light/Dark Mode ---
 Color get _bg =>
@@ -61,6 +62,11 @@ class StepsView extends GetView<StepsController> {
                     SizedBox(height: 12),
                     _buildNewWeeklyChart(context),
                     SizedBox(height: 12),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: AdBannerWidget(),
+                    ),
+                    SizedBox(height: 12),
                     _buildWeeklySummary(context),
                     SizedBox(height: 12),
                     _buildStatsGrid(context),
@@ -74,6 +80,7 @@ class StepsView extends GetView<StepsController> {
                     _todayActivity(),
                     SizedBox(height: 12),
                     _tipCard(),
+                    SizedBox(height: 100),
                   ],
                 ),
               ),

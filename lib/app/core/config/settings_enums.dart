@@ -37,7 +37,8 @@ enum StartScreen {
   steps('my_steps'),
   job('my_job'),
   medication('my_medications'),
-  books('my_library');
+  books('my_library'),
+  keep('keep');
 
   const StartScreen(this.key);
 
@@ -73,6 +74,8 @@ enum StartScreen {
         return '/medication';
       case StartScreen.books:
         return '/books';
+      case StartScreen.keep:
+        return '/keep';
     }
   }
 }

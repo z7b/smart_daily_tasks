@@ -39,7 +39,7 @@ class BookmarksView extends GetView<BookmarksController> {
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                 title: Text(
                   'bookmarks'.tr,
                   style: TextStyle(

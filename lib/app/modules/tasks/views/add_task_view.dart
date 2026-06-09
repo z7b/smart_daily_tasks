@@ -150,7 +150,7 @@ class AddTaskView extends GetView<TaskFormController> {
                           Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
                           _buildModernListTile(
                             context,
-                            title: 'start_time'.tr,
+                            title: 'task_start_time'.tr,
                             icon: CupertinoIcons.time,
                             iconColor: const Color(0xFF007AFF),
                             trailing: Obx(() => _buildModernPickerPill(
@@ -162,7 +162,7 @@ class AddTaskView extends GetView<TaskFormController> {
                           Divider(height: 1, indent: 56, color: theme.dividerColor.withAlpha(20)),
                           _buildModernListTile(
                             context,
-                            title: 'end_time'.tr,
+                            title: 'task_end_time'.tr,
                             icon: CupertinoIcons.time_solid,
                             iconColor: const Color(0xFF5E5CE6),
                             trailing: Obx(() {
@@ -395,6 +395,7 @@ class AddTaskView extends GetView<TaskFormController> {
 
   Widget _buildModernColorPalette(ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
+    final labels = ['importance_normal'.tr, 'importance_high'.tr, 'importance_medium'.tr];
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -412,7 +413,7 @@ class AddTaskView extends GetView<TaskFormController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'color'.tr,
+            'importance'.tr,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: theme.dividerColor),
           ),
           const SizedBox(height: 16),
@@ -427,36 +428,50 @@ class AddTaskView extends GetView<TaskFormController> {
                 child: Obx(() {
                   final isSelected = controller.selectedColor.value == index;
                   final colorOptions = [
-                    const Color(0xFF007AFF),
-                    const Color(0xFFFF2D55),
-                    const Color(0xFFFF9500),
+                    const Color(0xFF06B6D4), // 0 = Cyan (normal)
+                    const Color(0xFFEC4899), // 1 = Magenta/Pink (high)
+                    const Color(0xFFEAB308), // 2 = Yellow (medium)
                   ];
                   final color = colorOptions[index];
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    width: isSelected ? 48 : 36,
-                    height: isSelected ? 48 : 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                      border: Border.all(
-                        color: isSelected ? theme.cardColor : Colors.transparent,
-                        width: isSelected ? 3 : 0,
-                      ),
-                      boxShadow: [
-                        if (isSelected)
-                          BoxShadow(
-                            color: color.withAlpha(100),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        width: isSelected ? 48 : 36,
+                        height: isSelected ? 48 : 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                          border: Border.all(
+                            color: isSelected ? theme.cardColor : Colors.transparent,
+                            width: isSelected ? 3 : 0,
                           ),
-                      ],
-                    ),
-                    child: isSelected
-                        ? const Icon(CupertinoIcons.checkmark_alt, color: Colors.white, size: 20)
-                        : null,
+                          boxShadow: [
+                            if (isSelected)
+                              BoxShadow(
+                                color: color.withAlpha(100),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 4),
+                              ),
+                          ],
+                        ),
+                        child: isSelected
+                            ? const Icon(CupertinoIcons.checkmark_alt, color: Colors.white, size: 20)
+                            : null,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        labels[index],
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? color : theme.dividerColor,
+                        ),
+                      ),
+                    ],
                   );
                 }),
               );

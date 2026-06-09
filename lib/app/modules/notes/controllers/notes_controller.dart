@@ -34,7 +34,7 @@ class NotesController extends GetxController {
   void onInit() {
     super.onInit();
     _notesSub = _repository.watchAllNotes()
-        .listen((data) => notes.value = data);
+        .listen((data) => notes.value = data.where((n) => n.category != 'keep').toList());
     debounce(searchQuery, (_) => _applySearchFilter(), time: const Duration(milliseconds: 300));
     ever(notes, (_) => _applySearchFilter());
   }

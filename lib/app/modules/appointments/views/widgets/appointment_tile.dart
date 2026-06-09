@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import '../../../../data/models/appointment_model.dart';
 import '../../../../core/services/appointment_time_service.dart';
+import '../../../../widgets/glassy_pin_button.dart';
 
 class AppointmentTile extends StatelessWidget {
   final Appointment appointment;
@@ -10,6 +11,7 @@ class AppointmentTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onComplete;
   final VoidCallback? onPostpone;
+  final bool isBoardMode;
 
   const AppointmentTile({
     super.key,
@@ -18,6 +20,7 @@ class AppointmentTile extends StatelessWidget {
     required this.onDelete,
     required this.onComplete,
     this.onPostpone,
+    this.isBoardMode = false,
   });
 
   @override
@@ -70,7 +73,7 @@ class AppointmentTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: isDark ? theme.cardColor.withValues(alpha: 0.6) : Colors.white,
             borderRadius: BorderRadius.circular(32),
@@ -83,16 +86,19 @@ class AppointmentTile extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: (isToday ? medicalBlue : color).withValues(alpha: isDark ? 0.05 : 0.08),
-                blurRadius: 20,
+                blurRadius: 12,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                // Medical Side Indicator (Gradient)
-                Container(
+          child: Stack(
+            children: [
+              // Medical Side Indicator (Gradient) - Moved to Positioned to avoid IntrinsicHeight
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
                   width: 8,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -109,8 +115,11 @@ class AppointmentTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                
-                const SizedBox(width: 20),
+              ),
+              
+              Row(
+                children: [
+                  const SizedBox(width: 28), // 8 (width) + 20 (spacing)
                 
                 Expanded(
                   child: Padding(
@@ -123,6 +132,8 @@ class AppointmentTile extends StatelessWidget {
                           children: [
                             _buildStatusBadge(context, appointment, isToday),
                             const Spacer(),
+                            GlassyPinButton(itemType: 'appointment', itemId: appointment.id),
+                            const SizedBox(width: 8),
                             if (!isInactive) ...[
                               if (onPostpone != null)
                                 _CircleActionButton(
@@ -232,11 +243,12 @@ class AppointmentTile extends StatelessWidget {
                 const SizedBox(width: 20),
               ],
             ),
-          ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatusBadge(BuildContext context, Appointment appt, bool isToday) {
     String label = 'upcoming'.tr;

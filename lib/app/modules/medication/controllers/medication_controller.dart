@@ -1,3 +1,4 @@
+import 'package:smart_daily_tasks/app/core/helpers/medication_scheduler_helper.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
@@ -84,47 +85,53 @@ class MedicationController extends GetxController {
     }
   }
 
-  // ✅ Professional Scheduler Logic
+  // ✅ Professional Scheduler Logic — delegates to MedicationSchedulerHelper (pure Dart, unit-tested)
   List<String> generateReminderTimes({
     required TimeOfDay startTime,
     int? frequency, // 1, 2, 3, 4 times a day
     int? intervalHours, // 4, 6, 8, 12 hours
   }) {
-    final List<String> times = [];
-    
+    late final ({List<int> kept, List<int> skipped}) result;
+
     if (intervalHours != null) {
-      if (intervalHours <= 0) return times;
-      int count = (24 / intervalHours).ceil(); 
-      for (int i = 0; i < count; i++) {
-        int hour = (startTime.hour + (i * intervalHours)) % 24;
-        
-        // ✅ Phase 3: Sleep-Zone Clamping (Prevent doses during 00:00 - 05:00)
-        // Shift midnight doses to 23:00 (before sleep) or 06:00 (upon waking) depending on proximity
-        // ✅ Fix: hour == 0 (midnight) is valid for some medications
-        if (hour >= 1 && hour <= 5) {
-          hour = hour < 3 ? 23 : 6;
-        }
-        
-        // Prevent duplicate hours after clamping
-        final time = TimeOfDay(hour: hour, minute: startTime.minute);
-        final formatted = _formatTimeOfDay(time);
-        if (!times.contains(formatted)) times.add(formatted);
-      }
+      result = MedicationSchedulerHelper.generateIntervalTimes(
+        startHour: startTime.hour,
+        startMinute: startTime.minute,
+        intervalHours: intervalHours,
+      );
     } else if (frequency != null) {
-      if (frequency <= 0 || frequency > 24) return times;
-      // ✅ Phase 3: Spread frequency over Waking Hours (configurable, defaults to 16)
-      final int wakingHours = GetStorage().read<int>('wakingHours') ?? 16;  
-      final int interval = frequency > 1 ? wakingHours ~/ (frequency - 1) : 0;
-      for (int i = 0; i < frequency; i++) {
-        int hour = ((startTime.hour + (i * interval)) % 24).toInt();
-        final time = TimeOfDay(hour: hour, minute: startTime.minute);
-        final formatted = _formatTimeOfDay(time);
-        if (!times.contains(formatted)) times.add(formatted);
-      }
+      final int wakingHours = GetStorage().read<int>('wakingHours') ?? 16;
+      result = MedicationSchedulerHelper.generateFrequencyTimes(
+        startHour: startTime.hour,
+        startMinute: startTime.minute,
+        frequency: frequency,
+        wakingHours: wakingHours,
+      );
+    } else {
+      return [];
     }
-    
-    times.sort((a, b) => _parseRobustTime(a).compareTo(_parseRobustTime(b)));
-    return times;
+
+    // 🛡️ Notify the user if any doses were removed for safety
+    if (result.skipped.isNotEmpty) {
+      final skippedStr = result.skipped
+          .map((m) => MedicationSchedulerHelper.minutesToHhmm(m))
+          .join(', ');
+      talker.warning(
+          '🛡️ Medical Safety: Removed ${result.skipped.length} dose(s) at [$skippedStr] — too close to adjacent dose.');
+      Get.snackbar(
+        'dose_spacing_warning_title'.tr,
+        'dose_spacing_warning_body'
+            .trParams({'count': result.skipped.length.toString(), 'times': skippedStr}),
+        duration: const Duration(seconds: 5),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+
+    // Convert minutes-from-midnight back to display strings
+    return result.kept.map((m) {
+      final time = TimeOfDay(hour: m ~/ 60, minute: m % 60);
+      return _formatTimeOfDay(time);
+    }).toList();
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -218,7 +225,7 @@ class MedicationController extends GetxController {
     await _isar.writeTxn(() async {
       await _isar.medications.put(updatedMed);
     });
-    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now).replaceAll('AM', 'AM'.tr).replaceAll('PM', 'PM'.tr).f}));
+    Get.snackbar('success'.tr, 'dose_taken'.trParams({'time': DateFormat.jm().format(now).replaceAll('AM', 'am_short'.tr).replaceAll('PM', 'pm_short'.tr).f}));
   }
 
   Future<void> toggleActive(Medication med) async {

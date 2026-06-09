@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
+
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/subscription_service.dart';
+import '../../../core/services/rewarded_ad_service.dart';
 import '../../subscription/views/premium_view.dart';
+import '../../../widgets/ad_banner_widget.dart';
 import '../controllers/settings_controller.dart';
 
 class SettingsView extends GetView<SettingsController> {
@@ -92,7 +94,14 @@ class SettingsView extends GetView<SettingsController> {
             _buildStartScreenTile(context, isAr),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
+        // ─── Banner Ad (above Security) ──────────────
+        const AdBannerWidget(
+          padding: EdgeInsets.symmetric(vertical: 8),
+        ),
+
+        const SizedBox(height: 16),
 
         // ─── Security Group ───────────────────────────
         _groupTitle(context, 'security'.tr),
@@ -284,11 +293,7 @@ class SettingsView extends GetView<SettingsController> {
     return Obx(() {
       final useArabic = controller.useArabicNumbers.value;
 
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
+      return Container(
             height: 36,
             width: 100,
             decoration: BoxDecoration(
@@ -354,9 +359,7 @@ class SettingsView extends GetView<SettingsController> {
                 ),
               ],
             ),
-          ),
-        ),
-      );
+          );
     });
   }
 
@@ -390,10 +393,13 @@ class SettingsView extends GetView<SettingsController> {
   /// Subscription-gated prevent-screenshots tile
   Widget _buildScreenshotTile(BuildContext context) {
     final sub = Get.find<SubscriptionService>();
+    final adService = Get.find<RewardedAdService>();
     final theme = Theme.of(context);
 
     return Obx(() {
-      final isPro = sub.isPremium.value;
+      final isProUser = sub.isPremium.value;
+      final isAdUnlocked = adService.isFeatureUnlocked('prevent_screenshots');
+      final isPro = isProUser || isAdUnlocked;
 
       return ListTile(
         onTap: () {
@@ -426,7 +432,7 @@ class SettingsView extends GetView<SettingsController> {
                 ),
               ),
             ),
-            if (!isPro) ...[
+            if (!isProUser && !isAdUnlocked) ...[
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
@@ -445,6 +451,11 @@ class SettingsView extends GetView<SettingsController> {
                     letterSpacing: 0.5,
                   ),
                 ),
+              ),
+              const SizedBox(width: 4),
+              _buildAdUnlockIcon(
+                context: context,
+                featureKey: 'prevent_screenshots',
               ),
             ],
           ],
@@ -467,10 +478,13 @@ class SettingsView extends GetView<SettingsController> {
   /// Subscription-gated start-screen tile
   Widget _buildStartScreenTile(BuildContext context, bool isAr) {
     final sub = Get.find<SubscriptionService>();
+    final adService = Get.find<RewardedAdService>();
     final theme = Theme.of(context);
 
     return Obx(() {
-      final isPro = sub.isPremium.value;
+      final isProUser = sub.isPremium.value;
+      final isAdUnlocked = adService.isFeatureUnlocked('start_screen');
+      final isPro = isProUser || isAdUnlocked;
 
       return ListTile(
         onTap: () {
@@ -503,7 +517,7 @@ class SettingsView extends GetView<SettingsController> {
                 ),
               ),
             ),
-            if (!isPro) ...[
+            if (!isProUser && !isAdUnlocked) ...[
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
@@ -522,6 +536,11 @@ class SettingsView extends GetView<SettingsController> {
                     letterSpacing: 0.5,
                   ),
                 ),
+              ),
+              const SizedBox(width: 4),
+              _buildAdUnlockIcon(
+                context: context,
+                featureKey: 'start_screen',
               ),
             ],
           ],
@@ -546,5 +565,91 @@ class SettingsView extends GetView<SettingsController> {
         ),
       );
     });
+  }
+
+  /// Glassmorphic video ad unlock icon — appears next to PRO badge
+  Widget _buildAdUnlockIcon({required BuildContext context, required String featureKey}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final adService = Get.find<RewardedAdService>();
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        adService.showAdToUnlock(
+          featureKey: featureKey,
+          onRewarded: () {
+            Get.rawSnackbar(
+              title: 'success'.tr,
+              message: 'watch_ad_unlocked'.tr,
+              backgroundColor: const Color(0xFF34C759),
+              duration: const Duration(seconds: 3),
+            );
+          },
+          onFailed: () {
+            Get.rawSnackbar(
+              title: 'error'.tr,
+              message: 'watch_ad_not_ready'.tr,
+              backgroundColor: const Color(0xFFFF3B30),
+              duration: const Duration(seconds: 2),
+            );
+          },
+        );
+      },
+      child: Obx(() {
+            final isLoaded = adService.isAdLoaded.value;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isLoaded
+                      ? [const Color(0xFF007AFF).withValues(alpha: 0.25), const Color(0xFF5856D6).withValues(alpha: 0.25)]
+                      : [Colors.grey.withValues(alpha: 0.15), Colors.grey.withValues(alpha: 0.15)],
+                ),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: isLoaded ? 0.25 : 0.1)
+                      : Colors.black.withValues(alpha: isLoaded ? 0.15 : 0.06),
+                  width: 0.5,
+                ),
+                boxShadow: isLoaded
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.play_rectangle_fill,
+                    size: 11,
+                    color: isLoaded
+                        ? (isDark ? const Color(0xFF64D2FF) : const Color(0xFF007AFF))
+                        : Colors.grey.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'beta_badge'.tr,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: isLoaded
+                          ? (isDark ? const Color(0xFF64D2FF) : const Color(0xFF007AFF))
+                          : Colors.grey.withValues(alpha: 0.5),
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+    );
   }
 }

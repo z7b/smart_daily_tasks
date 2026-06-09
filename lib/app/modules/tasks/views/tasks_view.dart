@@ -13,6 +13,8 @@ import '../controllers/task_form_controller.dart';
 import 'widgets/task_tile.dart';
 import 'widgets/task_section_header.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/services/time_service.dart';
+import '../../../core/extensions/date_time_extensions.dart';
 
 class TasksView extends GetView<TaskListController> {
   const TasksView({super.key});
@@ -72,6 +74,7 @@ class TasksView extends GetView<TaskListController> {
                       lastDate: DateTime(2100),
                     );
                     if (picked != null) {
+                      controller.isDateFiltering.value = true;
                       controller.selectedDate.value = picked;
                     }
                   },
@@ -100,45 +103,72 @@ class TasksView extends GetView<TaskListController> {
                       onChanged: (val) => controller.searchQuery.value = val,
                     ),
                   ),
-                  Obx(() => Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    child: Row(
+                  const SizedBox(height: 16),
+                  Obx(() {
+                    final selectedDate = controller.selectedDate.value.normalized;
+                    final now = Get.find<TimeService>().now.normalized;
+                    final diff = selectedDate.difference(now).inDays;
+                    
+                    String prefix;
+                    if (diff == 0) {
+                      prefix = 'today'.tr;
+                    } else if (diff == 1) {
+                      prefix = 'tomorrow'.tr;
+                    } else if (diff == -1) {
+                      prefix = 'yesterday'.tr;
+                    } else {
+                      switch (selectedDate.weekday) {
+                        case DateTime.saturday: prefix = 'saturday'.tr; break;
+                        case DateTime.sunday: prefix = 'sunday'.tr; break;
+                        case DateTime.monday: prefix = 'monday'.tr; break;
+                        case DateTime.tuesday: prefix = 'tuesday'.tr; break;
+                        case DateTime.wednesday: prefix = 'wednesday'.tr; break;
+                        case DateTime.thursday: prefix = 'thursday'.tr; break;
+                        case DateTime.friday: prefix = 'friday'.tr; break;
+                        default: prefix = '';
+                      }
+                    }
+
+                    final dateStr = DateFormat('dd / MM / yyyy').format(selectedDate).f;
+
+                    final isFiltering = controller.isDateFiltering.value;
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(CupertinoIcons.chevron_left_circle, size: 24),
-                          onPressed: controller.previousDay,
-                          color: AppTheme.primary.withValues(alpha: 0.6),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: controller.resetToToday,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  DateFormat.yMMMMEEEEd(Get.locale?.languageCode).format(controller.selectedDate.value).f,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.textTheme.titleMedium?.color,
-                                  ),
-                                ),
-                              ),
-                            ),
+                        Text(
+                          '$prefix : ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isFiltering
+                                ? AppTheme.primary.withValues(alpha: 0.6)
+                                : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(CupertinoIcons.chevron_right_circle, size: 24),
-                          onPressed: controller.nextDay,
-                          color: AppTheme.primary.withValues(alpha: 0.6),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                            letterSpacing: 1.2,
+                          ),
                         ),
+                        if (isFiltering) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: controller.resetToToday,
+                            child: Icon(
+                              CupertinoIcons.xmark_circle_fill,
+                              size: 16,
+                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ],
                       ],
-                    ),
-                  )),
+                    );
+                  }),
                 ],
               ),
             ),

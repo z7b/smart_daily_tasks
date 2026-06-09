@@ -135,6 +135,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     // ✅ Sprint 1 Fix: Listen for day rotation (Midnight Bug Fix)
     _timeService.dayChangedStream.listen((newToday) {
       talker.info('🌅 StepsController: Day rotated to $newToday. Re-binding streams.');
+      // ✅ Fix: Reset daily notification flags so they fire again for the new day
+      _hasNotified80 = false;
+      _hasNotifiedGoal = false;
       _listenToTodayStepLog();
       _syncAndRefreshAll();
     });
@@ -155,6 +158,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     _stepLogSub = _repository.watchStepLog(today).listen((log) {
       // Direct binding! The UI will react to `todayLog.value` changing
       todayLog.value = log;
+      todayLog.refresh(); // ✅ Force GetX rebuild: Isar reuses same object reference
       
       _evaluateAchievements();
       _check80PercentGoal();
@@ -312,20 +316,24 @@ class StepsController extends GetxController with WidgetsBindingObserver {
 
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (isHealthAuthorized.value == true && !isLoading.value && !_isSyncing.value) {
-        talker.info('⏱️ Real-time Polling Triggered (30s)');
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (isHealthAuthorized.value == true && !_isSyncing.value) {
+        talker.info('⏱️ Real-time Polling Triggered (10s)');
         syncData();
       }
     });
   }
 
   Future<void> syncData() async {
-    if (isLoading.value || _isSyncing.value) return;
+    if (_isSyncing.value) return;
+    
+    // ✅ Fix: Only show loading spinner on first load (when no data exists yet).
+    // Background polling should be SILENT to avoid triggering full Obx rebuilds.
+    final isFirstLoad = todayLog.value == null;
     
     try {
       _isSyncing.value = true;
-      isLoading.value = true;
+      if (isFirstLoad) isLoading.value = true;
       talker.info('🔄 Syncing Life OS Steps (Authorized: ${isHealthAuthorized.value})');
       
       final today = DateTime.now();
@@ -650,13 +658,9 @@ class StepsController extends GetxController with WidgetsBindingObserver {
     // Filter data for Achievements: Only count logs >= installDate
     final validWeeklyLogs = weeklyLogs.where((l) => !l.date.isBefore(startBoundary)).toList();
     
-    // Calculate effective total since install (for medals)
-    // Note: totalStepsAllTime still shows historical data for the chart/stats
-    int totalSinceInstall = stepsToday;
-    if (validWeeklyLogs.isNotEmpty) {
-      // Avoid double counting today if it's in weeklyLogs
-      totalSinceInstall = validWeeklyLogs.fold<int>(0, (p, e) => p + e.steps);
-    }
+    // ✅ Fix: Use totalStepsAllTime (full DB aggregate) for cumulative achievements.
+    // Previous code used validWeeklyLogs (7 days only), making 'millionaire' impossible.
+    int totalSinceInstall = totalStepsAllTime.value;
     
     final currentStepsToday = stepsToday;
     final maxInWeek = validWeeklyLogs.isNotEmpty 
@@ -730,7 +734,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
       title: 'new_achievement'.tr,
       body: 'achievement_earned'.trParams({'name': achievement.titleKey.tr}),
       bigText: '${'new_achievement'.tr}\n\n${'achievement_earned'.trParams({'name': achievement.titleKey.tr})}\n${achievement.descKey.tr}\n\n${'keep_achieving'.tr}',
-      largeIcon: 'achievement',
+      imageAssetPath: 'assets/images/cat/grade.png',
     );
   }
 
@@ -775,7 +779,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         title: 'almost_there_title'.tr,
         body: 'steps_remaining_msg'.trParams({'count': '$remaining'}),
         bigText: '${'steps_remaining_msg'.trParams({'count': '$remaining'})} 💪\n${'goal_today_msg'.trParams({'goal': '${dailyGoal.value}'})}',
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/thinking.png',
       );
     }
   }
@@ -788,7 +792,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
         title: 'goal_complete_title'.tr,
         body: 'goal_complete_body'.tr,
         bigText: '${'goal_complete_body'.tr} 🎉\n$stepsToday ${'step_unit'.tr} ${'of'.tr} ${dailyGoal.value}\n${'rest_well'.tr}',
-        largeIcon: 'walker',
+        imageAssetPath: 'assets/images/cat/champion.png',
       );
     }
   }

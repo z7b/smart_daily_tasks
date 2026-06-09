@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smart_daily_tasks/app/core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/bindings/initial_binding.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:smart_daily_tasks/app/core/translations/messages.dart';
 import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
@@ -17,9 +18,12 @@ import 'package:smart_daily_tasks/app/core/services/security_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_service.dart';
 import 'package:smart_daily_tasks/app/core/services/app_lock_observer.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
+import 'package:smart_daily_tasks/app/core/services/pin_service.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/task_time_service.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
+import 'package:smart_daily_tasks/app/core/services/rewarded_ad_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:smart_daily_tasks/app/data/models/task_model.dart';
 import 'package:smart_daily_tasks/app/data/models/note_model.dart';
@@ -33,6 +37,7 @@ import 'package:smart_daily_tasks/app/data/models/step_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/work_profile_model.dart';
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/data/models/appointment_model.dart';
+import 'package:smart_daily_tasks/app/data/models/keep_note_model.dart';
 
 import 'package:smart_daily_tasks/app/data/providers/task_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/note_repository.dart';
@@ -43,6 +48,8 @@ import 'package:smart_daily_tasks/app/data/providers/medication_repository.dart'
 import 'package:smart_daily_tasks/app/data/providers/step_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/job_repository.dart';
 import 'package:smart_daily_tasks/app/data/providers/appointment_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/keep_repository.dart';
+import 'package:smart_daily_tasks/app/data/providers/keep_migration_service.dart';
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/core/services/time_service.dart';
 import 'package:smart_daily_tasks/app/routes/app_pages.dart';
@@ -74,6 +81,7 @@ void callbackDispatcher() {
           WorkProfileSchema,
           AttendanceLogSchema,
           AppointmentSchema,
+          KeepNoteSchema,
         ],
         directory: dir.path,
         inspector: false,
@@ -121,7 +129,17 @@ void main() {
       Workmanager().initialize(callbackDispatcher);
 
       tz.initializeTimeZones();
+      await initializeDateFormatting();
       await GetStorage.init();
+
+      // ✅ Initialize Google Mobile Ads SDK (Delayed to protect Android Main Thread)
+      // The native AdMob SDK blocks the Android platform thread during initialization.
+      // Delaying it ensures the initial app animations render buttery smooth.
+      Future.delayed(const Duration(seconds: 3), () {
+        MobileAds.instance.initialize().then((status) {
+          talker.info('📢 AdMob SDK Initialized in background');
+        });
+      });
 
       runApp(const AppBootstrapper());
     },
@@ -186,6 +204,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
                 WorkProfileSchema,
                 AttendanceLogSchema,
                 AppointmentSchema,
+                KeepNoteSchema,
               ],
               directory: dir.path,
               inspector: false,
@@ -253,6 +272,13 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
       Get.put(JobRepository(isar), permanent: true);
       Get.put(AppointmentRepository(isar), permanent: true);
+      Get.put(KeepRepository(isar), permanent: true);
+
+      // One-time migration: Note → KeepNote
+      await KeepMigrationService(isar).migrateIfNeeded();
+
+      // Inject Global State Services
+      Get.put(PinService(isar), permanent: true);
       
       talker.info('⏱️ [Trace] Phase 3 (Repositories) completed in ${phaseSw.elapsedMilliseconds}ms');
       phaseSw.reset();
@@ -270,6 +296,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       Get.put(AppointmentTimeService(), permanent: true);
       Get.put(TaskTimeService(), permanent: true);
       Get.put(SubscriptionService(), permanent: true);
+      Get.put(RewardedAdService(), permanent: true);
 
       // ✅ Phase 6: Register AI Assistant Services (Tool Execution)
       Get.put(

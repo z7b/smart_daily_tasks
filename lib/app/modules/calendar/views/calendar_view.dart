@@ -40,7 +40,7 @@ class CalendarView extends GetView<CalendarController> {
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                 title: Text(
                   'calendar'.tr,
                   style: TextStyle(

@@ -33,7 +33,7 @@ class JournalView extends GetView<JournalController> {
                 onPressed: () => Get.back(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
                 title: Text(
                   'journal'.tr,
                   style: TextStyle(

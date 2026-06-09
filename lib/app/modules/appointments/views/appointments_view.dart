@@ -7,6 +7,7 @@ import '../controllers/appointment_form_controller.dart';
 import 'widgets/appointment_tile.dart';
 import '../../../routes/app_routes.dart';
 import '../../../data/models/appointment_model.dart';
+import '../../../widgets/ad_banner_widget.dart';
 
 class AppointmentsView extends GetView<AppointmentsController> {
   const AppointmentsView({super.key});
@@ -42,10 +43,10 @@ class AppointmentsView extends GetView<AppointmentsController> {
             ),
             actions: [
               Container(
-                margin: const EdgeInsets.only(right: 16),
+                margin: const EdgeInsetsDirectional.only(end: 16),
                 decoration: BoxDecoration(
                   color: medicalBlue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
                   icon: const Icon(CupertinoIcons.add, size: 24),
@@ -83,7 +84,9 @@ class AppointmentsView extends GetView<AppointmentsController> {
                       },
                     );
                   }),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                  const AdBannerWidget(),
+                  const SizedBox(height: 24),
                   Obx(() {
                     if (controller.pastAppointments.isEmpty) {
                       return const SizedBox.shrink();
@@ -114,6 +117,7 @@ class AppointmentsView extends GetView<AppointmentsController> {
               ),
             ),
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );

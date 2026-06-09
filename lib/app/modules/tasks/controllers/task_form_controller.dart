@@ -83,13 +83,32 @@ class TaskFormController extends GetxController {
         startTime.value.minute,
       );
 
-      final endDateTime = DateTime(
+      var endDateTime = DateTime(
         selectedDate.value.year,
         selectedDate.value.month,
         selectedDate.value.day,
         endTime.value.hour,
         endTime.value.minute,
       );
+
+      // ✅ Fix: Handle overnight tasks crossing midnight
+      if (endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
+
+      // ✅ Bug Fix: Duplicate Task Check (UX Governance)
+      final existingTasks = await _repository.getTasksForDate(startDateTime);
+      final isDuplicate = existingTasks.any((t) => 
+        t.title.toLowerCase() == titleController.text.trim().toLowerCase() && 
+        t.scheduledAt.hour == startDateTime.hour &&
+        t.scheduledAt.minute == startDateTime.minute
+      );
+
+      if (isDuplicate) {
+        Get.snackbar('error'.tr, 'task_already_exists'.trParams({'title': titleController.text.trim()}), backgroundColor: Get.theme.colorScheme.errorContainer);
+        isLoading.value = false;
+        return;
+      }
 
       final task = Task(
         id: Isar.autoIncrement,
@@ -124,6 +143,10 @@ class TaskFormController extends GetxController {
   Future<void> updateTask(Task existingTask) async {
     if (titleController.text.trim().isEmpty) return;
     if (isLoading.value) return;
+    if (existingTask.status == TaskStatus.completed) {
+      talker.warning('🛡️ Blocked edit on completed task: ${existingTask.title}');
+      return;
+    }
 
     try {
       isLoading.value = true;
@@ -135,13 +158,18 @@ class TaskFormController extends GetxController {
         startTime.value.minute,
       );
 
-      final endDateTime = DateTime(
+      var endDateTime = DateTime(
         selectedDate.value.year,
         selectedDate.value.month,
         selectedDate.value.day,
         endTime.value.hour,
         endTime.value.minute,
       );
+
+      // ✅ Fix: Handle overnight tasks crossing midnight
+      if (endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
 
       final updatedTask = existingTask.copyWith(
         title: titleController.text.trim(),

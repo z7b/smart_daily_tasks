@@ -28,6 +28,7 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
 
   final selectedDate = DateTime.now().obs;
   final searchQuery = ''.obs;
+  final isDateFiltering = false.obs;
   
   final isDeleting = false.obs;
   final isCompleting = false.obs;
@@ -51,6 +52,9 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
 
     // Automatically re-subscribe when selectedDate changes
     ever(selectedDate, (_) => _listenToTasksForSelectedDate());
+    // Re-apply local filter when selectedDate or isDateFiltering changes
+    ever(selectedDate, (_) => _applySearchFilter());
+    ever(isDateFiltering, (_) => _applySearchFilter());
 
     debounce(searchQuery, (_) => _applySearchFilter(), time: const Duration(milliseconds: 300));
     ever(tasks, (_) => _applySearchFilter());
@@ -89,6 +93,7 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
   }
 
   void resetToToday() {
+    isDateFiltering.value = false;
     selectedDate.value = _timeService.now.normalized;
   }
 
@@ -99,16 +104,27 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
     });
   }
   void _applySearchFilter() {
-    if (searchQuery.value.isEmpty) {
-      filteredTasks.assignAll(tasks);
-      return;
+    var result = tasks.toList();
+
+    // 1. Date filter: ONLY when user explicitly picked a date
+    if (isDateFiltering.value) {
+      final startOfDay = DateTime(selectedDate.value.year, selectedDate.value.month, selectedDate.value.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      result = result.where((t) =>
+        !t.scheduledAt.isBefore(startOfDay) && t.scheduledAt.isBefore(endOfDay)
+      ).toList();
     }
-    final query = searchQuery.value.toLowerCase();
-    final filtered = tasks.where((t) => 
-      t.title.toLowerCase().contains(query) ||
-      (t.note?.toLowerCase().contains(query) ?? false)
-    ).toList();
-    filteredTasks.assignAll(filtered);
+
+    // 2. Search text filter
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      result = result.where((t) =>
+        t.title.toLowerCase().contains(query) ||
+        (t.note?.toLowerCase().contains(query) ?? false)
+      ).toList();
+    }
+
+    filteredTasks.assignAll(result);
   }
 
   void _categorizeTasks() {

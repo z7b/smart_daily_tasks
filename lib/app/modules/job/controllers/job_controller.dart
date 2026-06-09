@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -6,7 +7,8 @@ import '../../../data/models/work_profile_model.dart';
 import '../../../data/models/attendance_log_model.dart';
 import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
-import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
+import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
 
 import 'package:isar/isar.dart';
 
@@ -44,6 +46,9 @@ class JobController extends GetxController {
   final workBalanceMinutes = 0.obs; // Surplus or deficit vs official hours
   
   final isLoading = false.obs;
+  
+  final minuteTick = 0.obs;
+  Timer? _minuteTimer;
 
   // Weekly Chart Data (Sorted)
   final weeklyChartData = <AttendanceLog>[].obs;
@@ -62,6 +67,17 @@ class JobController extends GetxController {
   void onInit() {
     super.onInit();
     refreshData();
+    _minuteTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      minuteTick.value++;
+    });
+
+    // ✅ Instant AM/PM update on locale change
+    ever(Get.find<ThemeService>().localeVersion, (_) {
+      minuteTick.value++;
+      if (todayLog.value?.checkInTime != null) {
+        _calculateTodayPredictiveExit();
+      }
+    });
   }
 
   Future<void> refreshData() async {
@@ -484,7 +500,7 @@ class JobController extends GetxController {
       
       final expectedExitTime = checkIn.add(Duration(minutes: spanMinutes));
       
-      expectedCheckOut.value = DateFormat.jm(Get.locale?.languageCode).format(expectedExitTime).f;
+      expectedCheckOut.value = TimeFormatHelper.formatTime(expectedExitTime);
     } else {
       expectedCheckOut.value = '--:--';
     }
@@ -633,12 +649,22 @@ class JobController extends GetxController {
     }
   }
 
+  Map<String, dynamic>? _cachedSchedules;
+  String? _lastSchedulesJson;
+
   // Support for custom daily schedules
   Map<String, dynamic> getCustomSchedules() {
-    if (profile.value.customSchedulesJson == null) return {};
+    final currentJson = profile.value.customSchedulesJson;
+    if (currentJson == null) return {};
+    
+    if (currentJson == _lastSchedulesJson && _cachedSchedules != null) {
+      return _cachedSchedules!;
+    }
+
     try {
-      return jsonDecode(profile.value.customSchedulesJson!)
-          as Map<String, dynamic>;
+      _cachedSchedules = jsonDecode(currentJson) as Map<String, dynamic>;
+      _lastSchedulesJson = currentJson;
+      return _cachedSchedules!;
     } catch (_) {
       return {};
     }
@@ -731,7 +757,12 @@ class JobController extends GetxController {
           final endMin = (s['end'] as num?)?.toInt() ?? profile.value.endMinutes;
           
           final shiftStart = DateTime(d.year, d.month, d.day, startMin ~/ 60, startMin % 60);
-          final shiftEnd = DateTime(d.year, d.month, d.day, endMin ~/ 60, endMin % 60);
+          DateTime shiftEnd = DateTime(d.year, d.month, d.day, endMin ~/ 60, endMin % 60);
+
+          // Fix for cross-midnight night shifts
+          if (endMin < startMin) {
+            shiftEnd = shiftEnd.add(const Duration(days: 1));
+          }
 
           if (now.isBefore(shiftEnd)) {
              return {
@@ -831,6 +862,12 @@ class JobController extends GetxController {
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
     final anchor = DateTime(2000, 1, 1, hours, minutes);
-    return DateFormat.jm(Get.locale?.languageCode).format(anchor);
+    return TimeFormatHelper.formatTime(anchor);
+  }
+
+  @override
+  void onClose() {
+    _minuteTimer?.cancel();
+    super.onClose();
   }
 }

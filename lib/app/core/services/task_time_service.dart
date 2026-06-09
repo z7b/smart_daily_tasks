@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../data/models/task_model.dart';
 import '../../core/helpers/number_extension.dart';
+import '../../core/helpers/time_format_helper.dart';
 
 enum TaskStatusUI {
   active,
@@ -42,11 +42,10 @@ class TaskTimeService extends GetxService {
   String getTimeLabel(Task task) {
     final status = getStatus(task);
     final now = DateTime.now();
-    final locale = Get.locale?.languageCode ?? 'en';
 
     if (status == TaskStatusUI.completed) {
       if (task.completedAt != null) {
-        return 'done_at'.trParams({'time': DateFormat.jm(locale).format(task.completedAt!).f});
+        return 'done_at'.trParams({'time': TimeFormatHelper.formatTime(task.completedAt!)});
       }
       return 'task_completed'.tr;
     }
@@ -89,7 +88,7 @@ class TaskTimeService extends GetxService {
       case TaskStatusUI.active:
         return const Color(0xFF3B82F6); // Blue 500
       case TaskStatusUI.upcoming:
-        return const Color(0xFF6B7280); // Gray 500
+        return const Color(0xFF8B5CF6); // Violet 500 — planned/future
       case TaskStatusUI.overdue:
         return const Color(0xFFEF4444); // Red 500
       case TaskStatusUI.completed:

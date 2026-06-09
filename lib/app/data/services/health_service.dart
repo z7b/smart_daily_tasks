@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:workmanager/workmanager.dart';
 import '../../core/helpers/log_helper.dart';
 import '../models/step_log_model.dart';
@@ -127,6 +128,15 @@ class HealthService extends GetxService {
       final bool hadPriorConnection = _storage.read(_authIntentKey) ?? false;
       bool? hasHealth = await health.hasPermissions(types, permissions: permissions);
       
+      // ✅ Bug Fix: Explicitly check Activity Recognition for Android 10-12
+      // Android 10 allows notifications by default, but Activity Recognition is separate and required
+      if (Platform.isAndroid) {
+        final activityStatus = await Permission.activityRecognition.status;
+        if (!activityStatus.isGranted) {
+          hasHealth = false;
+        }
+      }
+
       talker.info('📊 Health Permission Check: hasHealth=$hasHealth, hadPriorConnection=$hadPriorConnection');
       
       if (hasHealth == true) {
@@ -218,9 +228,13 @@ class HealthService extends GetxService {
         }
       } catch (_) {}
 
-      // 2. Official Health Interface (Health Connect / HealthKit)
+      // 2. Official Health Interface (Health Connect / HealthKit) & Activity Recognition
       talker.info('🏥 Official Handshake: Requesting Health Connect/HealthKit access...');
       
+      if (Platform.isAndroid) {
+        await Permission.activityRecognition.request();
+      }
+
       bool granted = false;
       for (int i = 0; i < 3; i++) {
         granted = await health.requestAuthorization(types, permissions: permissions);
@@ -308,42 +322,17 @@ class HealthService extends GetxService {
       // ✅ 1. Steps (Direct Aggregate - Google High Standard)
       int steps = await health.getTotalStepsInInterval(midnight, endWindow) ?? 0;
       
-      // ✅ 2. Exclusive Metrics Extraction (No Estimates)
-      // On Android 16/Samsung, we check multiple source types to ensure we miss nothing
-      // We strictly fetch what the platform supports to avoid crashes
-      final List<HealthDataType> metricsToFetch = [
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-        HealthDataType.DISTANCE_DELTA,
-      ];
-      
-      // ✅ Expert Fix: Platform-Specific Distance Handling
-      if (Platform.isIOS) {
-        metricsToFetch.add(HealthDataType.DISTANCE_WALKING_RUNNING);
-      }
-      
-      final List<HealthDataPoint> dataPoints = await health.getHealthDataFromTypes(
-        startTime: midnight, 
-        endTime: endWindow, 
-        types: metricsToFetch,
-      );
-      
+      // ✅ 2. Exclusive Metrics Extraction (Optimized for Speed)
+      // We rely EXCLUSIVELY on the fast 'steps' aggregate.
+      // Fetching raw thousands of ACTIVE_ENERGY_BURNED and DISTANCE_DELTA points
+      // was causing 338KB+ Binder payloads and 85+ skipped frames on the UI thread.
       double calories = 0.0;
       double distance = 0.0;
       
-      talker.info('📥 Exclusive Audit: Received ${dataPoints.length} points from Health Connect. Steps found: $steps');
-      
-      for (var p in dataPoints) {
-        final val = _extractNumericValue(p.value);
-        if (p.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
-          calories += val;
-        } else if (p.type == HealthDataType.DISTANCE_DELTA || p.type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-          distance += val;
-        }
-      }
-
       // ✅ 2.5 Smart Estimation Fallback (Biomechanical Logic)
-      // If Health Connect returns 0 for calories or distance, we estimate them based on steps.
-      if (steps > 0 && (calories == 0 || distance == 0)) {
+      // Since we deliberately skip fetching raw calories/distance to prevent UI freezes,
+      // we estimate them based on steps and user biology.
+      if (steps > 0) {
         final h = (_storage.read('user_height') ?? 170.0).toDouble();
         final w = (_storage.read('user_weight') ?? 70.0).toDouble();
         final g = _storage.read('user_gender') ?? 'male';
@@ -351,14 +340,10 @@ class HealthService extends GetxService {
         final double multiplier = g == 'female' ? 0.413 : 0.415;
         final double strideLength = (h / 100) * multiplier; // meters
 
-        if (distance == 0) {
-          distance = (steps * strideLength).toDouble(); // meters
-        }
+        distance = (steps * strideLength).toDouble(); // meters
+        // MET-based calculation: (dist in km) * weight * 0.73
+        calories = ((distance / 1000) * w * 0.73).toDouble();
         
-        if (calories == 0) {
-          // MET-based calculation: (dist in km) * weight * 0.73
-          calories = ((distance / 1000) * w * 0.73).toDouble();
-        }
         talker.info('🧪 Smart Estimation Applied: ${calories.toStringAsFixed(1)} kcal | ${distance.toStringAsFixed(1)}m');
       }
 
@@ -369,18 +354,62 @@ class HealthService extends GetxService {
       final existing = await stepRepo.getStepLog(midnight);
       final currentGoal = _storage.read('daily_step_goal') ?? 10000;
       
+      // ✅ DEFENSIVE SYNC: Protect against 3 critical data corruption scenarios
+      int finalSteps = steps;
+      double finalCalories = calories;
+      double finalDistance = distance;
+      bool finalIsManual = false;
+
+      if (existing != null) {
+        // 🛡️ Guard 1: Zero-Overwrite Protection
+        // Health Connect sometimes returns 0 due to API delays or sensor batching.
+        // Never overwrite real data with zeros.
+        if (steps == 0 && existing.steps > 0) {
+          talker.warning('🛡️ Zero-Guard: Health Connect returned 0 but DB has ${existing.steps}. Keeping existing.');
+          finalSteps = existing.steps;
+          finalCalories = existing.calories;
+          finalDistance = existing.distance;
+        }
+
+        // 🛡️ Guard 2: Downward Protection
+        // Steps physically cannot decrease during a single day.
+        // If sensor returns a lower number (glitch/recalculation), keep the higher value.
+        if (finalSteps < existing.steps) {
+          talker.warning('🛡️ Regression-Guard: Sensor=$finalSteps < DB=${existing.steps}. Keeping higher value.');
+          finalSteps = existing.steps;
+        }
+
+        // 🛡️ Guard 3: Manual → Sensor Transition
+        // When sensor data arrives for a day that had manual entries,
+        // take the HIGHER value (trust sensor if it's higher, keep manual if user entered more).
+        // Then CLEAR the isManual flag so subsequent syncs don't re-trigger this guard.
+        if (existing.isManual && steps > 0) {
+          finalSteps = steps > existing.steps ? steps : existing.steps;
+          finalIsManual = false; // ✅ Sensor is now SSOT — clear manual flag permanently
+          talker.info('🛡️ Manual-Guard: Transition manual(${existing.steps}) → sensor($steps). Final=$finalSteps');
+        }
+
+        // Protect calories and distance from regression too
+        if (finalCalories < existing.calories && existing.calories > 0) {
+          finalCalories = existing.calories;
+        }
+        if (finalDistance < existing.distance && existing.distance > 0) {
+          finalDistance = existing.distance;
+        }
+      }
+
       final updated = (existing ?? StepLog(date: midnight, goal: currentGoal)).copyWith(
-        steps: steps,
-        calories: calories,
-        distance: distance,
+        steps: finalSteps,
+        calories: finalCalories,
+        distance: finalDistance,
         goal: currentGoal,
-        isManual: false, 
+        isManual: finalIsManual, 
         lastSyncedAt: now,
       );
       lastSynced.value = updated.lastSyncedAt;
       await stepRepo.saveStepLog(updated);
 
-      return steps;
+      return finalSteps;
     } catch (e, stack) {
       talker.handle(e, stack, '❌ Error in Master pulse sync');
       return 0;
@@ -405,21 +434,19 @@ class HealthService extends GetxService {
         talker.info('📅 Syncing Bucket: $start to $end');
         
         try {
-            // Get all data points for this month safely
+            // Get only the STEPS data points (fastest metric)
             final List<HealthDataPoint> data = [];
-            for (var type in types) {
-              try {
-                final points = await health.getHealthDataFromTypes(
-                  startTime: start, 
-                  endTime: end, 
-                  types: [type],
-                );
-                data.addAll(points);
-              } on PlatformException catch (e) {
-                talker.warning('🚨 Deep Sync: Platform rejected type $type: ${e.message}');
-              } catch (e) {
-                talker.error('⚠️ Deep Sync: Skipping type $type');
-              }
+            try {
+              final points = await health.getHealthDataFromTypes(
+                startTime: start, 
+                endTime: end, 
+                types: [HealthDataType.STEPS],
+              );
+              data.addAll(points);
+            } on PlatformException catch (e) {
+              talker.warning('🚨 Deep Sync: Platform rejected STEPS: ${e.message}');
+            } catch (e) {
+              talker.error('⚠️ Deep Sync: Skipping STEPS');
             }
             
             if (data.isNotEmpty) {
@@ -430,13 +457,7 @@ class HealthService extends GetxService {
                     dailyBuckets.putIfAbsent(day, () => {'steps': 0, 'cal': 0, 'dist': 0});
                     
                     final val = _extractNumericValue(p.value);
-                    if (p.type == HealthDataType.STEPS) {
-                        dailyBuckets[day]!['steps'] = dailyBuckets[day]!['steps']! + val;
-                    } else if (p.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
-                        dailyBuckets[day]!['cal'] = dailyBuckets[day]!['cal']! + val;
-                    } else if (p.type == HealthDataType.DISTANCE_DELTA || p.type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-                        dailyBuckets[day]!['dist'] = dailyBuckets[day]!['dist']! + val;
-                    }
+                    dailyBuckets[day]!['steps'] = dailyBuckets[day]!['steps']! + val;
                 }
                 
                 // Bulk Persist - RULE: No writes outside Repository
@@ -448,19 +469,19 @@ class HealthService extends GetxService {
                     final metrics = entry.value;
                     
                     // ✅ Smart Estimation for Historical Data
-                    double finalCal = metrics['cal']!;
-                    double finalDist = metrics['dist']!;
                     int finalSteps = metrics['steps']!.toInt();
+                    double finalCal = 0.0;
+                    double finalDist = 0.0;
                     
-                    if (finalSteps > 0 && (finalCal == 0 || finalDist == 0)) {
+                    if (finalSteps > 0) {
                       final h = (_storage.read('user_height') ?? 170.0).toDouble();
                       final w = (_storage.read('user_weight') ?? 70.0).toDouble();
                       final g = _storage.read('user_gender') ?? 'male';
                       final double multiplier = g == 'female' ? 0.413 : 0.415;
                       final double strideLength = (h / 100) * multiplier;
                       
-                      if (finalDist == 0) finalDist = (finalSteps * strideLength).toDouble();
-                      if (finalCal == 0) finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
+                      finalDist = (finalSteps * strideLength).toDouble();
+                      finalCal = ((finalDist / 1000) * w * 0.73).toDouble();
                     }
 
                     final existing = await stepRepo.getStepLog(midnight);

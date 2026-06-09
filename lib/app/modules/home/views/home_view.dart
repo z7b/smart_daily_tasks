@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'dart:ui';
+
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 
@@ -13,12 +13,16 @@ import 'package:smart_daily_tasks/app/modules/home/widgets/quick_log_strip.dart'
 import 'package:smart_daily_tasks/app/modules/home/widgets/floating_navigation_bar.dart';
 import 'package:smart_daily_tasks/app/routes/app_routes.dart';
 import 'package:smart_daily_tasks/app/modules/home/views/spaces_view.dart';
+import 'package:smart_daily_tasks/app/modules/keep/views/keep_view.dart';
+
 import 'package:smart_daily_tasks/app/data/services/health_service.dart';
 import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dart';
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
+import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
 import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
-import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart' show NextTaskKind;
+import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart'
+    show NextTaskKind;
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -28,6 +32,7 @@ class HomeView extends GetView<HomeController> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: theme.scaffoldBackgroundColor,
       extendBody: true,
       body: Stack(
@@ -35,19 +40,22 @@ class HomeView extends GetView<HomeController> {
           Obx(() {
             switch (controller.currentIndex.value) {
               case 0:
-                return _buildDashboard(context);
+                return const KeepView();
               case 1:
-                return const SpacesView();
+                return _buildDashboard(context);
               case 2:
+                return const SpacesView();
+              case 3:
                 return const SettingsView();
               default:
-                return _buildDashboard(context);
+                return const KeepView();
             }
           }),
-          const Align(
-            alignment: Alignment.bottomCenter,
-            child: FloatingNavigationBar(),
-          ),
+          if (MediaQuery.of(context).viewInsets.bottom == 0)
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: FloatingNavigationBar(),
+            ),
         ],
       ),
     );
@@ -82,20 +90,21 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
 
-        // Glassmorphism Toggle Button
-        SliverToBoxAdapter(
-          child: _buildReorderToggle(context),
-        ),
+        SliverToBoxAdapter(child: _buildReorderToggle(context)),
 
         // Reorderable Cards
         Obx(() {
-          // ── only rebuild the sliver when the *list itself* changes ──
+          final isReorder = controller.isReorderMode.value;
           final order = controller.cardOrder.toList();
+          final displayedOrder = isReorder
+              ? order
+              : order.where((k) => !controller.hiddenCards.contains(k)).toList();
+
           return SliverReorderableList(
-            itemCount: order.length,
+            itemCount: displayedOrder.length,
             onReorder: controller.reorderCards,
             itemBuilder: (context, index) {
-              final key = order[index];
+              final key = displayedOrder[index];
               final child = _buildCardByKey(key, context);
 
               // ── Each item reacts to reorder-mode independently ──
@@ -103,9 +112,11 @@ class HomeView extends GetView<HomeController> {
                 key: ValueKey(key),
                 child: Obx(() {
                   final active = controller.isReorderMode.value;
+                  final isHidden = controller.hiddenCards.contains(key);
+
                   return ReorderableDragStartListener(
                     index: index,
-                    enabled: active,
+                    enabled: active && !isHidden,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: EdgeInsets.only(
@@ -119,14 +130,56 @@ class HomeView extends GetView<HomeController> {
                               borderRadius: BorderRadius.circular(32),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                  color: isHidden
+                                      ? Colors.redAccent.withValues(alpha: 0.25)
+                                      : Theme.of(context).primaryColor.withValues(alpha: 0.15),
                                   blurRadius: 15,
                                   spreadRadius: 2,
-                                )
+                                ),
                               ],
                             )
                           : const BoxDecoration(),
-                      child: child,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Opacity(
+                            opacity: isHidden ? 0.45 : 1.0,
+                            child: child,
+                          ),
+                          if (active)
+                            Positioned(
+                              top: 0,
+                              right: 32,
+                              child: GestureDetector(
+                                onTap: () => controller.toggleCardVisibility(key),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isHidden
+                                        ? Colors.redAccent.withValues(alpha: 0.9)
+                                        : Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    isHidden
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 }),
@@ -150,31 +203,40 @@ class HomeView extends GetView<HomeController> {
           padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
           child: GestureDetector(
             onTap: controller.toggleReorderMode,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: AnimatedContainer(
+            child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: isReorder 
+                    color: isReorder
                         ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                        : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                        : (isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05)),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isReorder 
-                          ? Theme.of(context).primaryColor.withValues(alpha: 0.4)
-                          : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
+                      color: isReorder
+                          ? Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.4)
+                          : (isDark
+                                ? Colors.white.withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.1)),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isReorder ? Icons.check_circle_outline : Icons.swap_vert_rounded,
+                        isReorder
+                            ? Icons.check_circle_outline
+                            : Icons.swap_vert_rounded,
                         size: 16,
-                        color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                        color: isReorder
+                            ? Theme.of(context).primaryColor
+                            : (isDark ? Colors.white70 : Colors.black87),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -182,7 +244,9 @@ class HomeView extends GetView<HomeController> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isReorder ? Theme.of(context).primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                          color: isReorder
+                              ? Theme.of(context).primaryColor
+                              : (isDark ? Colors.white70 : Colors.black87),
                         ),
                       ),
                     ],
@@ -190,27 +254,44 @@ class HomeView extends GetView<HomeController> {
                 ),
               ),
             ),
-          ),
-        ),
-      );
+          );
     });
   }
 
   Widget _buildCardByKey(String key, BuildContext context) {
     Widget child;
     switch (key) {
-      case 'mood': child = _buildMoodSection(context); break;
-      case 'salary': child = _buildSalaryHomeCard(context); break;
-      case 'next_shift': child = _buildNextShiftHomeCard(context); break;
-      case 'activity': child = _buildActivityHomeCard(context); break;
-      case 'medication': child = _buildMedicationHomeCard(context); break;
-      case 'task': child = _buildTaskHomeCard(context); break;
-      case 'appointment': child = _buildAppointmentHomeCard(context); break;
-      case 'reading': child = _buildReadingCard(context); break;
-      case 'bento': child = _buildBentoGrid(context); break;
-      default: child = const SizedBox.shrink();
+      case 'mood':
+        child = _buildMoodSection(context);
+        break;
+      case 'salary':
+        child = _buildSalaryHomeCard(context);
+        break;
+      case 'next_shift':
+        child = _buildNextShiftHomeCard(context);
+        break;
+      case 'activity':
+        child = _buildActivityHomeCard(context);
+        break;
+      case 'medication':
+        child = _buildMedicationHomeCard(context);
+        break;
+      case 'task':
+        child = _buildTaskHomeCard(context);
+        break;
+      case 'appointment':
+        child = _buildAppointmentHomeCard(context);
+        break;
+      case 'reading':
+        child = _buildReadingCard(context);
+        break;
+      case 'bento':
+        child = _buildBentoGrid(context);
+        break;
+      default:
+        child = const SizedBox.shrink();
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: child,
@@ -226,10 +307,46 @@ class HomeView extends GetView<HomeController> {
       crossAxisSpacing: 16,
       childAspectRatio: 1.2,
       children: [
-        Obx(() => _buildBentoItem(context, 'notes'.tr, '${controller.noteCount.value.f} ${'entries'.tr}', Icons.edit_note, const Color(0xFFFF9500), Routes.NOTES)),
-        Obx(() => _buildBentoItem(context, 'journal'.tr, '${controller.journalCount.value.f} ${'logs'.tr}', Icons.book, const Color(0xFF34C759), Routes.JOURNAL)),
-        Obx(() => _buildBentoItem(context, 'bookmarks'.tr, '${controller.bookmarkCount.value.f} ${'saved'.tr}', Icons.bookmark, const Color(0xFFFF3B30), Routes.BOOKMARKS)),
-        Obx(() => _buildBentoItem(context, 'calendar'.tr, '${controller.calendarEventCount.value.f} ${'events'.tr}', Icons.calendar_month, const Color(0xFFBF5AF2), Routes.CALENDAR)),
+        Obx(
+          () => _buildBentoItem(
+            context,
+            'notes'.tr,
+            '${controller.noteCount.value.f} ${'entries'.tr}',
+            Icons.edit_note,
+            const Color(0xFFFF9500),
+            Routes.NOTES,
+          ),
+        ),
+        Obx(
+          () => _buildBentoItem(
+            context,
+            'journal'.tr,
+            '${controller.journalCount.value.f} ${'logs'.tr}',
+            Icons.book,
+            const Color(0xFF34C759),
+            Routes.JOURNAL,
+          ),
+        ),
+        Obx(
+          () => _buildBentoItem(
+            context,
+            'bookmarks'.tr,
+            '${controller.bookmarkCount.value.f} ${'saved'.tr}',
+            Icons.bookmark,
+            const Color(0xFFFF3B30),
+            Routes.BOOKMARKS,
+          ),
+        ),
+        Obx(
+          () => _buildBentoItem(
+            context,
+            'calendar'.tr,
+            '${controller.calendarEventCount.value.f} ${'events'.tr}',
+            Icons.calendar_month,
+            const Color(0xFFBF5AF2),
+            Routes.CALENDAR,
+          ),
+        ),
       ],
     );
   }
@@ -330,7 +447,7 @@ class HomeView extends GetView<HomeController> {
               if (isDark)
                 BoxShadow(
                   color: bookColor.withValues(alpha: 0.05),
-                  blurRadius: 30,
+                  blurRadius: 16,
                   offset: const Offset(0, 10),
                 ),
             ],
@@ -407,56 +524,61 @@ class HomeView extends GetView<HomeController> {
                       ),
                     ),
                     Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: bookColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'read_verb'.tr,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: bookColor,
-                            ),
-                          ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: bookColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'read_verb'.tr,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: bookColor,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: bookColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          controller.currentBookProgress.value.clamp(0.0, 1.0),
-                      decoration: BoxDecoration(
-                        color: bookColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: bookColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: bookColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width:
+                              constraints.maxWidth *
+                              controller.currentBookProgress.value.clamp(
+                                0.0,
+                                1.0,
+                              ),
+                          decoration: BoxDecoration(
+                            color: bookColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: bookColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ] else ...[
                 Text(
@@ -482,12 +604,14 @@ class HomeView extends GetView<HomeController> {
     String subtitle,
     IconData icon,
     Color color,
-    String route,
-  ) {
+    String route, {
+    VoidCallback? onTapOverride,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => route.isNotEmpty ? Get.toNamed(route) : null,
+      onTap:
+          onTapOverride ?? () => route.isNotEmpty ? Get.toNamed(route) : null,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -505,7 +629,7 @@ class HomeView extends GetView<HomeController> {
             if (isDark)
               BoxShadow(
                 color: color.withValues(alpha: 0.05),
-                blurRadius: 20,
+                blurRadius: 12,
                 offset: const Offset(0, 8),
               ),
           ],
@@ -632,8 +756,8 @@ class HomeView extends GetView<HomeController> {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: isDark 
-                        ? Colors.white.withValues(alpha: 0.2) 
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.2)
                         : Colors.black.withValues(alpha: 0.2),
                   ),
                 ],
@@ -642,23 +766,19 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
       ),
-    ).animate().fadeIn();
+    );
   }
 
   Widget _buildSalaryHomeCard(BuildContext context) {
     if (!Get.isRegistered<JobController>()) return const SizedBox();
     final jobCtrl = Get.find<JobController>();
-    
+
     return Obx(() {
       if (!jobCtrl.isEmployed) return const SizedBox();
-      
-      final days = jobCtrl.daysUntilSalary.value;
-      final now = DateTime.now();
-      final isDark = Theme.of(context).brightness == Brightness.dark;
 
-      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-      final elapsedDays = now.day;
-      final progress = (elapsedDays / daysInMonth).clamp(0.0, 1.0);
+      final days = jobCtrl.daysUntilSalary.value;
+      final progress = jobCtrl.salaryProgress.value.clamp(0.0, 1.0);
+      final isDark = Theme.of(context).brightness == Brightness.dark;
 
       final Color primaryColor = const Color(0xFF4F46E5); // Indigo 600
       final Color secondaryColor = const Color(0xFF9333EA); // Purple 600
@@ -796,12 +916,12 @@ class HomeView extends GetView<HomeController> {
                 ? [
                     BoxShadow(
                       color: glowColor.withValues(alpha: 0.1),
-                      blurRadius: 40,
+                      blurRadius: 16,
                       offset: const Offset(0, 10),
                     ),
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
+                      blurRadius: 12,
                       offset: const Offset(0, 10),
                     ),
                   ]
@@ -875,7 +995,10 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'streak_x_days'.trParams({'count': controller.currentStreak.value.f}),
+                                      'streak_x_days'.trParams({
+                                        'count':
+                                            controller.currentStreak.value.f,
+                                      }),
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 10,
@@ -884,7 +1007,7 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                   ],
                                 ),
-                              ).animate().fadeIn().scale(),
+                              ),
                             ],
                           ],
                         ),
@@ -1149,11 +1272,15 @@ class HomeView extends GetView<HomeController> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: jobCtrl.isUnemployed ? Colors.grey.withAlpha(20) : jobColor.withAlpha(20),
+                      color: jobCtrl.isUnemployed
+                          ? Colors.grey.withAlpha(20)
+                          : jobColor.withAlpha(20),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      jobCtrl.isUnemployed ? CupertinoIcons.bed_double_fill : CupertinoIcons.briefcase_fill,
+                      jobCtrl.isUnemployed
+                          ? CupertinoIcons.bed_double_fill
+                          : CupertinoIcons.briefcase_fill,
                       color: jobCtrl.isUnemployed ? Colors.grey : jobColor,
                       size: 24,
                     ),
@@ -1164,22 +1291,29 @@ class HomeView extends GetView<HomeController> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          jobCtrl.isUnemployed ? 'unemployed'.tr : 'setup_job_title'.tr,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          jobCtrl.isUnemployed
+                              ? 'unemployed'.tr
+                              : 'setup_job_title'.tr,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          jobCtrl.isUnemployed ? 'unemployed_desc'.tr : 'setup_job_desc'.tr,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey,
-                              ),
+                          jobCtrl.isUnemployed
+                              ? 'unemployed_desc'.tr
+                              : 'setup_job_desc'.tr,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(CupertinoIcons.chevron_right, color: Colors.grey, size: 16),
+                  const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: Colors.grey,
+                    size: 16,
+                  ),
                 ],
               ),
             ),
@@ -1236,7 +1370,7 @@ class HomeView extends GetView<HomeController> {
                 if (isDark)
                   BoxShadow(
                     color: jobColor.withValues(alpha: 0.05),
-                    blurRadius: 30,
+                    blurRadius: 16,
                     offset: const Offset(0, 10),
                   ),
               ],
@@ -1318,25 +1452,23 @@ class HomeView extends GetView<HomeController> {
                         ),
                       ),
                       Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: jobColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${TimeOfDay.fromDateTime(start!).format(context).f} - ${TimeOfDay.fromDateTime(end!).format(context).f}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                color: jobColor,
-                              ),
-                            ),
-                          )
-                          .animate(onPlay: (c) => c.repeat())
-                          .shimmer(duration: const Duration(seconds: 2)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: jobColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${TimeFormatHelper.formatTime(start!)} - ${TimeFormatHelper.formatTime(end!)}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: jobColor,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -1350,24 +1482,26 @@ class HomeView extends GetView<HomeController> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 800),
-                        height: 8,
-                        width:
-                            (Get.width - 96) *
-                            (totalDays > 0
-                                ? (presentCount / totalDays).clamp(0.0, 1.0)
-                                : 0.0),
-                        decoration: BoxDecoration(
-                          color: jobColor,
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: jobColor.withValues(alpha: 0.3),
-                              blurRadius: 8,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 800),
+                            height: 8,
+                            width:
+                                constraints.maxWidth *
+                                jobCtrl.attendanceRate.value.clamp(0.0, 1.0),
+                            decoration: BoxDecoration(
+                              color: jobColor,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: jobColor.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1417,7 +1551,7 @@ class HomeView extends GetView<HomeController> {
               if (isDark)
                 BoxShadow(
                   color: medColor.withValues(alpha: 0.05),
-                  blurRadius: 30,
+                  blurRadius: 16,
                   offset: const Offset(0, 10),
                 ),
             ],
@@ -1493,59 +1627,62 @@ class HomeView extends GetView<HomeController> {
                       ),
                     ),
                     Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: medColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            controller.nextMedicationTime.value,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: medColor,
-                            ),
-                          ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: medColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        controller.nextMedicationTime.value,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: medColor,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: medColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          (controller.medExpectedDoses.value > 0
-                              ? (controller.medTakenDoses.value /
-                                    controller.medExpectedDoses.value)
-                              : 0.0),
-                      decoration: BoxDecoration(
-                        color: medColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: medColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: medColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width:
+                              constraints.maxWidth *
+                              (controller.medExpectedDoses.value > 0
+                                  ? (controller.medTakenDoses.value /
+                                            controller.medExpectedDoses.value)
+                                        .clamp(0.0, 1.0)
+                                  : 0.0),
+                          decoration: BoxDecoration(
+                            color: medColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: medColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ] else ...[
                 Text(
@@ -1617,7 +1754,7 @@ class HomeView extends GetView<HomeController> {
               if (isDark)
                 BoxShadow(
                   color: accentColor.withValues(alpha: 0.05),
-                  blurRadius: 30,
+                  blurRadius: 16,
                   offset: const Offset(0, 10),
                 ),
             ],
@@ -1633,11 +1770,7 @@ class HomeView extends GetView<HomeController> {
                       color: accentColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      statusIcon,
-                      color: accentColor,
-                      size: 16,
-                    ),
+                    child: Icon(statusIcon, color: accentColor, size: 16),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -1652,17 +1785,20 @@ class HomeView extends GetView<HomeController> {
                   if (hasTask && kind != NextTaskKind.upcoming) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.12),
+                        color: accentColor,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         statusLabel,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: accentColor,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -1673,10 +1809,11 @@ class HomeView extends GetView<HomeController> {
                       final activeTasks =
                           controller.taskCount.value -
                           controller.cancelledTasksCount.value;
+                      
+                      if (activeTasks <= 0) return const SizedBox.shrink();
+
                       return Text(
-                        activeTasks > 0
-                            ? '${controller.completedTasksCount.value} / $activeTasks'
-                            : '0',
+                        '${controller.completedTasksCount.value} / $activeTasks',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
@@ -1708,77 +1845,84 @@ class HomeView extends GetView<HomeController> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            controller.nextTaskTimeLeft.value,
+                            '${'remaining'.tr}: ${controller.nextTaskTimeLeft.value}',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: (kind == NextTaskKind.overdueToday || kind == NextTaskKind.overduePast)
+                              color:
+                                  (kind == NextTaskKind.overdueToday ||
+                                      kind == NextTaskKind.overduePast)
                                   ? accentColor.withValues(alpha: 0.8)
                                   : (isDark
-                                      ? Colors.white.withValues(alpha: 0.4)
-                                      : Colors.black.withValues(alpha: 0.4)),
+                                        ? Colors.white.withValues(alpha: 0.4)
+                                        : Colors.black.withValues(alpha: 0.4)),
                             ),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            controller.nextTaskEndTime.value.isNotEmpty
-                                ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
-                                : controller.nextTaskTime.value,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: accentColor,
-                            ),
-                          ),
-                        )
-                        .animate(onPlay: (c) => c.repeat())
-                        .shimmer(duration: const Duration(seconds: 2)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        controller.nextTaskEndTime.value.isNotEmpty
+                            ? '${controller.nextTaskTime.value} - ${controller.nextTaskEndTime.value}'
+                            : controller.nextTaskTime.value,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 800),
-                      height: 8,
-                      width:
-                          (Get.width - 96) *
-                          (controller.taskCount.value > 0
-                              ? ((controller.taskCount.value -
-                                        controller.tasksLeftCount.value) /
-                                    controller.taskCount.value)
-                              : 0.0),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          width: constraints.maxWidth,
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          height: 8,
+                          width:
+                              constraints.maxWidth *
+                              (controller.taskCount.value > 0
+                                  ? ((controller.taskCount.value -
+                                                controller
+                                                    .tasksLeftCount
+                                                    .value) /
+                                            controller.taskCount.value)
+                                        .clamp(0.0, 1.0)
+                                  : 0.0),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ] else ...[
                 Text(
@@ -2025,8 +2169,11 @@ class HomeView extends GetView<HomeController> {
                     color: accentColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(CupertinoIcons.calendar_badge_plus,
-                      color: accentColor, size: 24),
+                  child: const Icon(
+                    CupertinoIcons.calendar_badge_plus,
+                    color: accentColor,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -2069,7 +2216,11 @@ class HomeView extends GetView<HomeController> {
                       ),
                     ],
                   ),
-                  child: const Icon(CupertinoIcons.add, color: Colors.white, size: 18),
+                  child: const Icon(
+                    CupertinoIcons.add,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -2083,42 +2234,40 @@ class HomeView extends GetView<HomeController> {
         child: Builder(
           builder: (context) {
             final timeService = Get.find<AppointmentTimeService>();
-            final badgeColor = timeService.getBadgeColor(appt.scheduledAt, appt.status, theme);
-            final smartLabel = timeService.getSmartTimeLabel(appt.scheduledAt, appt.status);
-            
+            final badgeColor = timeService.getBadgeColor(
+              appt.scheduledAt,
+              appt.status,
+              theme,
+            );
+            final smartLabel = timeService.getSmartTimeLabel(
+              appt.scheduledAt,
+              appt.status,
+            );
+
             return Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white.withValues(alpha: 0.7),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(
-                  color: isDark ? badgeColor.withValues(alpha: 0.15) : badgeColor.withValues(alpha: 0.1),
+                  color: isDark
+                      ? badgeColor.withValues(alpha: 0.15)
+                      : badgeColor.withValues(alpha: 0.1),
                   width: 1.5,
                 ),
                 boxShadow: [
                   if (!isDark)
                     BoxShadow(
                       color: badgeColor.withValues(alpha: 0.06),
-                      blurRadius: 24,
+                      blurRadius: 12,
                       offset: const Offset(0, 8),
                     ),
                 ],
               ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Stack(
+              child: Stack(
                   children: [
-                    // Decorative Background Icon
-                    Positioned(
-                      right: -24,
-                      bottom: -24,
-                      child: Icon(
-                        CupertinoIcons.heart_circle_fill,
-                        size: 140,
-                        color: badgeColor.withValues(alpha: isDark ? 0.03 : 0.04),
-                      ),
-                    ),
-                    
                     Padding(
                       padding: const EdgeInsets.all(22),
                       child: Column(
@@ -2130,27 +2279,39 @@ class HomeView extends GetView<HomeController> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // Time Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: badgeColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(CupertinoIcons.clock_fill, size: 16, color: badgeColor),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      smartLabel,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: badgeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.clock_fill,
+                                        size: 16,
                                         color: badgeColor,
-                                        fontSize: 13,
-                                        letterSpacing: -0.3,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          smartLabel,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: badgeColor,
+                                            fontSize: 13,
+                                            letterSpacing: -0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               // Header Label
@@ -2158,7 +2319,13 @@ class HomeView extends GetView<HomeController> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (appt.alarmEnabled) ...[
-                                    Icon(CupertinoIcons.bell_fill, size: 14, color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3)),
+                                    Icon(
+                                      CupertinoIcons.bell_fill,
+                                      size: 14,
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.3)
+                                          : Colors.black.withValues(alpha: 0.3),
+                                    ),
                                     const SizedBox(width: 6),
                                   ],
                                   Text(
@@ -2166,7 +2333,9 @@ class HomeView extends GetView<HomeController> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.4),
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.4)
+                                          : Colors.black.withValues(alpha: 0.4),
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -2175,7 +2344,7 @@ class HomeView extends GetView<HomeController> {
                             ],
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // DOCTOR INFO SECTION
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -2202,7 +2371,11 @@ class HomeView extends GetView<HomeController> {
                                     ),
                                   ],
                                 ),
-                                child: const Icon(CupertinoIcons.doc_person_fill, color: Colors.white, size: 28),
+                                child: const Icon(
+                                  CupertinoIcons.doc_person_fill,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                               ),
                               const SizedBox(width: 16),
                               // Details
@@ -2216,12 +2389,19 @@ class HomeView extends GetView<HomeController> {
                                       text: TextSpan(
                                         children: [
                                           TextSpan(
-                                            text: Get.locale?.languageCode == 'ar' ? 'الدكتور: ' : 'Dr: ',
+                                            text: 'doctor_prefix'.tr,
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
-                                              color: theme.textTheme.titleLarge?.color?.withValues(alpha: 0.6),
-                                              fontFamily: theme.textTheme.titleLarge?.fontFamily,
+                                              color: theme
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.color
+                                                  ?.withValues(alpha: 0.6),
+                                              fontFamily: theme
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.fontFamily,
                                             ),
                                           ),
                                           TextSpan(
@@ -2230,19 +2410,30 @@ class HomeView extends GetView<HomeController> {
                                               fontSize: 20,
                                               fontWeight: FontWeight.w900,
                                               letterSpacing: -0.5,
-                                              color: theme.textTheme.titleLarge?.color,
-                                              fontFamily: theme.textTheme.titleLarge?.fontFamily,
+                                              color: theme
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.color,
+                                              fontFamily: theme
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.fontFamily,
                                               height: 1.2,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    if (appt.clinicName?.isNotEmpty ?? false) ...[
+                                    if (appt.clinicName?.isNotEmpty ??
+                                        false) ...[
                                       const SizedBox(height: 6),
                                       Row(
                                         children: [
-                                          Icon(CupertinoIcons.location_solid, size: 12, color: theme.disabledColor),
+                                          Icon(
+                                            CupertinoIcons.location_solid,
+                                            size: 12,
+                                            color: theme.disabledColor,
+                                          ),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
@@ -2262,57 +2453,66 @@ class HomeView extends GetView<HomeController> {
                                   ],
                                 ),
                               ),
-                          ],
-                        ),
-
-                        // PATIENT INFO (IF EXISTS)
-                        if (appt.patientName.isNotEmpty) ...[
-                          const SizedBox(height: 20),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(CupertinoIcons.person_fill, size: 14, color: theme.disabledColor),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${'patient'.tr}:',
-                                  style: TextStyle(
-                                    color: theme.disabledColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    appt.patientName,
-                                    style: TextStyle(
-                                      color: theme.textTheme.bodyMedium?.color,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
+
+                          // PATIENT INFO (IF EXISTS)
+                          if (appt.patientName.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.03)
+                                    : Colors.black.withValues(alpha: 0.02),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.person_fill,
+                                    size: 14,
+                                    color: theme.disabledColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${'patient'.tr}:',
+                                    style: TextStyle(
+                                      color: theme.disabledColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      appt.patientName,
+                                      style: TextStyle(
+                                        color:
+                                            theme.textTheme.bodyMedium?.color,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              ),
+                  ],
+                ),
             );
-          }
+          },
         ),
-      ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.05, curve: Curves.easeOutBack);
+      );
     });
   }
 }
@@ -2349,8 +2549,12 @@ class _AdFreeBadgeState extends State<_AdFreeBadge>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Get.to(() => const PremiumView(), transition: Transition.downToUp),
-      child: _AdFreeShimmerBadge(controller: _shimmer, isPremium: widget.isPremium),
+      onTap: () =>
+          Get.to(() => const PremiumView(), transition: Transition.downToUp),
+      child: _AdFreeShimmerBadge(
+        controller: _shimmer,
+        isPremium: widget.isPremium,
+      ),
     );
   }
 }
@@ -2358,8 +2562,10 @@ class _AdFreeBadgeState extends State<_AdFreeBadge>
 /// ✅ Lifecycle-safe shimmer widget for Ad-Free badge
 class _AdFreeShimmerBadge extends AnimatedWidget {
   final bool isPremium;
-  const _AdFreeShimmerBadge({required AnimationController controller, required this.isPremium})
-      : super(listenable: controller);
+  const _AdFreeShimmerBadge({
+    required AnimationController controller,
+    required this.isPremium,
+  }) : super(listenable: controller);
 
   @override
   Widget build(BuildContext context) {
@@ -2367,22 +2573,30 @@ class _AdFreeShimmerBadge extends AnimatedWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Colors based on subscription status
-    final Color color1 = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
-    final Color color2 = isPremium ? const Color(0xFFFFA500) : const Color(0xFFFFD700);
-    final Color color3 = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
-    final Color borderColor = isPremium ? const Color(0xFFFFD700) : const Color(0xFFC0C0C0);
-    final Color iconColor = isPremium ? const Color(0xFFFFB800) : const Color(0xFF9E9E9E);
-    final Color textColor = isPremium 
+    final Color color1 = isPremium
+        ? const Color(0xFFFFD700)
+        : const Color(0xFFC0C0C0);
+    final Color color2 = isPremium
+        ? const Color(0xFFFFA500)
+        : const Color(0xFFFFD700);
+    final Color color3 = isPremium
+        ? const Color(0xFFFFD700)
+        : const Color(0xFFC0C0C0);
+    final Color borderColor = isPremium
+        ? const Color(0xFFFFD700)
+        : const Color(0xFFC0C0C0);
+    final Color iconColor = isPremium
+        ? const Color(0xFFFFB800)
+        : const Color(0xFF9E9E9E);
+    final Color textColor = isPremium
         ? (isDark ? const Color(0xFFFFD700) : const Color(0xFFB8860B))
         : (isDark ? const Color(0xFFE0E0E0) : const Color(0xFF757575));
 
-    final double shimmerAlpha = isPremium ? (isDark ? 0.20 : 0.10) : (isDark ? 0.70 : 0.60);
+    final double shimmerAlpha = isPremium
+        ? (isDark ? 0.20 : 0.10)
+        : (isDark ? 0.70 : 0.60);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-        child: Container(
+    return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -2419,8 +2633,6 @@ class _AdFreeShimmerBadge extends AnimatedWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

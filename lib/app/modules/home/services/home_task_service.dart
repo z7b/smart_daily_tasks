@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/task_model.dart';
 import '../../../data/providers/task_repository.dart';
 import '../../../core/helpers/number_extension.dart';
+import '../../../core/helpers/time_format_helper.dart';
 import '../../../core/services/time_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 
@@ -30,6 +31,7 @@ class TaskDailyStats {
   final String nextFullDate;
   final TaskPriority nextPriority;
   final DateTime? nextScheduledAt;
+  final DateTime? nextScheduledEndAt;
   final NextTaskKind nextTaskKind;
 
   TaskDailyStats({
@@ -44,6 +46,7 @@ class TaskDailyStats {
     required this.nextFullDate,
     required this.nextPriority,
     this.nextScheduledAt,
+    this.nextScheduledEndAt,
     this.nextTaskKind = NextTaskKind.upcoming,
   });
 }
@@ -83,6 +86,7 @@ class HomeTaskService extends GetxService {
     String nextFullDate = '';
     TaskPriority nextPriority = TaskPriority.medium;
     DateTime? nextTaskDate;
+    DateTime? nextTaskEndDate;
     NextTaskKind nextTaskKind = NextTaskKind.upcoming;
 
     final locale = Get.locale?.languageCode ?? 'en';
@@ -90,48 +94,35 @@ class HomeTaskService extends GetxService {
 
     if (isViewingToday || viewDate.isAfter(now)) {
       // ────────────────────────────────────────────────
-      // PRIORITY 1: Upcoming tasks (scheduled in the future)
+      // PRIORITY 1: Currently active task (time is now within window)
       // ────────────────────────────────────────────────
       Task? featuredTask;
 
-      final upcomingToday = dayTasks
-          .where((t) => t.status == TaskStatus.active && t.scheduledAt.isAfter(now))
-          .toList();
-      
-      if (upcomingToday.isNotEmpty) {
-        upcomingToday.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-        featuredTask = upcomingToday.first;
-        nextTaskKind = NextTaskKind.upcoming;
-      }
-
-      // ────────────────────────────────────────────────
-      // PRIORITY 2: Currently active task (time is now within window)
-      // ────────────────────────────────────────────────
-      if (featuredTask == null) {
-        final activeTasks = dayTasks.where((t) {
-          if (t.status != TaskStatus.active) return false;
-          // Task is active NOW: scheduledAt <= now < scheduledEnd
-          if (t.scheduledEnd != null) {
-            return !now.isBefore(t.scheduledAt) && now.isBefore(t.scheduledEnd!);
-          }
-          // No end time: consider active for 30 min after scheduledAt
-          return !now.isBefore(t.scheduledAt) && now.difference(t.scheduledAt).inMinutes <= 30;
-        }).toList();
-
-        if (activeTasks.isNotEmpty) {
-          // Pick the one ending soonest
-          activeTasks.sort((a, b) {
-            final aEnd = a.scheduledEnd ?? a.scheduledAt.add(const Duration(minutes: 30));
-            final bEnd = b.scheduledEnd ?? b.scheduledAt.add(const Duration(minutes: 30));
-            return aEnd.compareTo(bEnd);
-          });
-          featuredTask = activeTasks.first;
-          nextTaskKind = NextTaskKind.activeNow;
+      final activeTasks = dayTasks.where((t) {
+        if (t.status != TaskStatus.active) return false;
+        // Task is active NOW: scheduledAt <= now < scheduledEnd
+        if (t.scheduledEnd != null) {
+          return !now.isBefore(t.scheduledAt) && now.isBefore(t.scheduledEnd!);
         }
+        // No end time: consider active for 30 min after scheduledAt
+        return !now.isBefore(t.scheduledAt) && now.difference(t.scheduledAt).inMinutes <= 30;
+      }).toList();
+
+      if (activeTasks.isNotEmpty) {
+        // Highest priority first, then ending soonest
+        activeTasks.sort((a, b) {
+          final priorityCompare = b.priority.index.compareTo(a.priority.index);
+          if (priorityCompare != 0) return priorityCompare;
+          final aEnd = a.scheduledEnd ?? a.scheduledAt.add(const Duration(minutes: 30));
+          final bEnd = b.scheduledEnd ?? b.scheduledAt.add(const Duration(minutes: 30));
+          return aEnd.compareTo(bEnd);
+        });
+        featuredTask = activeTasks.first;
+        nextTaskKind = NextTaskKind.activeNow;
       }
 
       // ────────────────────────────────────────────────
-      // PRIORITY 3: Overdue today (time passed, not completed)
+      // PRIORITY 2: Overdue today (time passed, not completed)
       // ────────────────────────────────────────────────
       if (featuredTask == null) {
         final overdueTasks = dayTasks.where((t) {
@@ -144,7 +135,7 @@ class HomeTaskService extends GetxService {
         }).toList();
 
         if (overdueTasks.isNotEmpty) {
-          // Show the most recently overdue (highest priority first, then most recent)
+          // Highest priority first, then most recently overdue
           overdueTasks.sort((a, b) {
             final priorityCompare = b.priority.index.compareTo(a.priority.index);
             if (priorityCompare != 0) return priorityCompare;
@@ -152,6 +143,21 @@ class HomeTaskService extends GetxService {
           });
           featuredTask = overdueTasks.first;
           nextTaskKind = NextTaskKind.overdueToday;
+        }
+      }
+
+      // ────────────────────────────────────────────────
+      // PRIORITY 3: Upcoming tasks today (scheduled in the future)
+      // ────────────────────────────────────────────────
+      if (featuredTask == null) {
+        final upcomingToday = dayTasks
+            .where((t) => t.status == TaskStatus.active && t.scheduledAt.isAfter(now))
+            .toList();
+
+        if (upcomingToday.isNotEmpty) {
+          upcomingToday.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+          featuredTask = upcomingToday.first;
+          nextTaskKind = NextTaskKind.upcoming;
         }
       }
 
@@ -169,9 +175,10 @@ class HomeTaskService extends GetxService {
       // ── Populate fields from the featured task ──
       if (featuredTask != null) {
         nextTaskDate = featuredTask.scheduledAt;
+        nextTaskEndDate = featuredTask.scheduledEnd;
         nextTitle = featuredTask.title;
-        nextTime = DateFormat.jm(locale).format(featuredTask.scheduledAt).f;
-        nextEndTime = featuredTask.scheduledEnd != null ? DateFormat.jm(locale).format(featuredTask.scheduledEnd!).f : '';
+        nextTime = TimeFormatHelper.formatTime(featuredTask.scheduledAt);
+        nextEndTime = featuredTask.scheduledEnd != null ? TimeFormatHelper.formatTime(featuredTask.scheduledEnd!) : '';
         nextPriority = featuredTask.priority;
         nextFullDate = '${DateFormat('dd MMMM yyyy', locale).format(featuredTask.scheduledAt).f} • $nextTime';
         
@@ -191,6 +198,7 @@ class HomeTaskService extends GetxService {
       nextFullDate: nextFullDate,
       nextPriority: nextPriority,
       nextScheduledAt: nextTaskDate,
+      nextScheduledEndAt: nextTaskEndDate,
       nextTaskKind: nextTaskKind,
     );
   }

@@ -51,7 +51,7 @@ class SpacesView extends GetView<HomeController> {
                     ),
                     _buildSpaceCard(
                       context,
-                      title: 'notes'.tr, // ✅ Fixed: Showing "الملاحظات"
+                      title: 'notes'.tr,
                       colors: const [Color(0xFFFF9500), Color(0xFFFF2D55)],
                       fallbackIcon: Icons.edit_note_rounded,
                       onTap: () => Get.toNamed(Routes.NOTES),
@@ -97,6 +97,17 @@ class SpacesView extends GetView<HomeController> {
                       colors: const [Color(0xFFBF5AF2), Color(0xFFFF2D55)],
                       fallbackIcon: Icons.calendar_month_rounded,
                       onTap: () => Get.toNamed(Routes.CALENDAR),
+                    ),
+                    _buildSpaceCard(
+                      context,
+                      title: 'keep'.tr,
+                      colors: const [Color(0xFFFFB300), Color(0xFFFFCC00)],
+                      fallbackIcon: Icons.push_pin_rounded,
+                      onTap: () {
+                        // Switch to Home index 0 (Keep)
+                        Get.until((route) => Get.currentRoute == Routes.HOME);
+                        Get.find<HomeController>().currentIndex.value = 0;
+                      },
                     ),
                     _buildSpaceCard(
                       context,

@@ -14,9 +14,19 @@ class Note {
 
   bool isPinned = false;
   String? category;
+  
+  // Custom ordering for drag and drop
+  double orderIndex = 0.0;
 
   @Index()
   int? color;
+
+  // Linked Entity (for Pin-to-Board feature)
+  @Index()
+  String? linkedItemType; // e.g., 'task', 'medication'
+
+  @Index()
+  int? linkedItemId;
 
   // Computed property for search
   @Index(type: IndexType.value)
@@ -35,6 +45,9 @@ class Note {
     this.color,
     this.isPinned = false,
     this.category,
+    this.orderIndex = 0.0,
+    this.linkedItemType,
+    this.linkedItemId,
   });
 
   Note copyWith({
@@ -46,6 +59,9 @@ class Note {
     int? color,
     bool? isPinned,
     String? category,
+    double? orderIndex,
+    String? linkedItemType,
+    int? linkedItemId,
   }) {
     return Note(
       id: id ?? this.id,
@@ -56,6 +72,9 @@ class Note {
       color: color ?? this.color,
       isPinned: isPinned ?? this.isPinned,
       category: category ?? this.category,
+      orderIndex: orderIndex ?? this.orderIndex,
+      linkedItemType: linkedItemType ?? this.linkedItemType,
+      linkedItemId: linkedItemId ?? this.linkedItemId,
     );
   }
 
@@ -73,6 +92,8 @@ class Note {
       color: json['color'] as int?,
       isPinned: (json['isPinned'] as bool?) ?? false,
       category: json['category'] as String?,
+      linkedItemType: json['linkedItemType'] as String?,
+      linkedItemId: json['linkedItemId'] as int?,
     );
   }
 
@@ -86,6 +107,8 @@ class Note {
       'color': color,
       'isPinned': isPinned,
       'category': category,
+      'linkedItemType': linkedItemType,
+      'linkedItemId': linkedItemId,
     };
   }
 }

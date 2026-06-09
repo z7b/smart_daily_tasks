@@ -84,6 +84,20 @@
 -dontwarn org.conscrypt.**
 -dontwarn com.google.android.play.core.**
 
+# Google Mobile Ads
+-keep class com.google.android.gms.ads.** { *; }
+-dontwarn com.google.android.gms.ads.**
+
+# ✅ Bug Fix: Flutter Local Notifications / Gson (Missing type parameter crash)
+# R8 strips generic type metadata needed by Gson for serialization in notification scheduling.
+# This causes crashes on Android 10 release builds where notifications fire immediately.
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep class sun.misc.Unsafe { *; }
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+-keepclassmembers class com.dexterous.flutterlocalnotifications.** { *; }
+
 # Remove logging in release
 -assumenosideeffects class android.util.Log {
     public static *** d(...);

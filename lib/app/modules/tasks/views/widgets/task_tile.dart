@@ -3,13 +3,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/task_time_service.dart';
 import '../../../../data/models/task_model.dart';
 import '../../../../core/helpers/number_extension.dart';
+import '../../../../core/helpers/time_format_helper.dart';
 import '../../controllers/task_list_controller.dart';
+
+import '../../../../widgets/glassy_pin_button.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -18,6 +20,7 @@ class TaskTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onCancel;
+  final bool isBoardMode;
 
   const TaskTile({
     super.key,
@@ -27,6 +30,7 @@ class TaskTile extends StatelessWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onCancel,
+    this.isBoardMode = false,
   });
 
   @override
@@ -39,32 +43,58 @@ class TaskTile extends StatelessWidget {
     final isCompleted = task.status == TaskStatus.completed;
     final isCancelled = task.status == TaskStatus.cancelled;
 
+    // Priority glow: maps task.color to a glow color for importance
+    const priorityColors = [
+      Color(0xFF06B6D4), // 0 = Cyan (normal)
+      Color(0xFFEC4899), // 1 = Magenta/Pink (high)
+      Color(0xFFEAB308), // 2 = Yellow (medium)
+    ];
+    final glowColor = priorityColors[(task.color ?? 0).clamp(0, 2)];
+    final showGlow = !isCompleted && !isCancelled;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: isBoardMode ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? theme.cardColor.withValues(alpha: 0.5) : Colors.white,
+        color: isDark ? theme.cardColor : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: statusColor.withValues(alpha: isCompleted ? 0.05 : 0.12),
           width: 1.5,
         ),
         boxShadow: [
+          // Primary priority glow (bright, close)
+          if (showGlow)
+            BoxShadow(
+              color: glowColor.withValues(alpha: isDark ? 0.30 : 0.20),
+              blurRadius: 12,
+              spreadRadius: 4,
+            ),
+          // Secondary priority glow (diffuse, atmospheric)
+          if (showGlow)
+            BoxShadow(
+              color: glowColor.withValues(alpha: isDark ? 0.12 : 0.08),
+              blurRadius: 16,
+              spreadRadius: 6,
+            ),
+          // Subtle depth shadow
           BoxShadow(
-            color: statusColor.withValues(alpha: isDark ? 0.02 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          )
+            color: theme.shadowColor.withValues(alpha: isDark ? 0.02 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: () => _showOptions(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row: Icon + Status Badge + Actions
+        child: Stack(
+          children: [
+            InkWell(
+              onTap: onTap,
+              onLongPress: () => _showOptions(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row: Icon + Status Badge + Actions
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
                 child: Row(
@@ -83,9 +113,12 @@ class TaskTile extends StatelessWidget {
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: (isCompleted || isCancelled)
-                                  ? theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)
+                                  ? theme.textTheme.bodyMedium?.color
+                                        ?.withValues(alpha: 0.4)
                                   : theme.textTheme.titleLarge?.color,
-                              decoration: (isCompleted || isCancelled) ? TextDecoration.lineThrough : null,
+                              decoration: (isCompleted || isCancelled)
+                                  ? TextDecoration.lineThrough
+                                  : null,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -100,14 +133,19 @@ class TaskTile extends StatelessWidget {
               // Note Preview (if exists)
               if (task.note?.isNotEmpty ?? false)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: Text(
                     task.note!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.6,
+                      ),
                       height: 1.4,
                     ),
                   ),
@@ -116,14 +154,21 @@ class TaskTile extends StatelessWidget {
               // Bottom Info Strip (Glassmorphism style)
               Container(
                 margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   children: [
-                    Icon(CupertinoIcons.time, size: 14, color: statusColor.withValues(alpha: 0.7)),
+                    Icon(
+                      CupertinoIcons.time,
+                      size: 14,
+                      color: statusColor.withValues(alpha: 0.7),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -131,7 +176,9 @@ class TaskTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.8,
+                          ),
                         ),
                       ),
                     ),
@@ -153,8 +200,11 @@ class TaskTile extends StatelessWidget {
             ],
           ),
         ),
+
+          ],
+        ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.1);
+    );
   }
 
   Widget _buildStatusIcon(TaskStatusUI status, Color color) {
@@ -210,6 +260,8 @@ class TaskTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        GlassyPinButton(itemType: 'task', itemId: task.id),
+        const SizedBox(width: 8),
         if (!isCompleted && !isCancelled)
           _buildCircleButton(
             icon: CupertinoIcons.checkmark_alt,
@@ -251,12 +303,13 @@ class TaskTile extends StatelessWidget {
   String _formatTimeWithDate() {
     final locale = Get.locale?.languageCode ?? 'en';
     final now = DateTime.now();
-    final isToday = task.scheduledAt.year == now.year &&
+    final isToday =
+        task.scheduledAt.year == now.year &&
         task.scheduledAt.month == now.month &&
         task.scheduledAt.day == now.day;
 
     final timePart = _formatTimeRange();
-    
+
     if (isToday) return timePart;
 
     // Show date if not today
@@ -265,10 +318,9 @@ class TaskTile extends StatelessWidget {
   }
 
   String _formatTimeRange() {
-    final locale = Get.locale?.languageCode ?? 'en';
-    final start = DateFormat.jm(locale).format(task.scheduledAt).f;
+    final start = TimeFormatHelper.formatTime(task.scheduledAt);
     if (task.scheduledEnd == null) return start;
-    final end = DateFormat.jm(locale).format(task.scheduledEnd!).f;
+    final end = TimeFormatHelper.formatTime(task.scheduledEnd!);
     return '$start - $end';
   }
 
@@ -283,15 +335,19 @@ class TaskTile extends StatelessWidget {
                 Get.back();
                 onCancel();
               },
-              child: Text('cancel'.tr, style: const TextStyle(color: CupertinoColors.systemOrange)),
+              child: Text(
+                'cancel'.tr,
+                style: const TextStyle(color: CupertinoColors.systemOrange),
+              ),
             ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Get.back();
-              onEdit();
-            },
-            child: Text('edit'.tr),
-          ),
+          if (task.status != TaskStatus.completed)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Get.back();
+                onEdit();
+              },
+              child: Text('edit'.tr),
+            ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () {

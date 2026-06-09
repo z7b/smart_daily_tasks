@@ -3,7 +3,10 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_linux
   isar_flutter_libs
+  record_linux
+  syncfusion_pdfviewer_linux
   url_launcher_linux
 )
 
