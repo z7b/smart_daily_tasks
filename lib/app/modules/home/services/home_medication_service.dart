@@ -163,36 +163,34 @@ class HomeMedicationService extends GetxService {
   }
 
   DateTime? _parseRobustTime(String timeStr) {
-    try {
-      const english = ['0','1','2','3','4','5','6','7','8','9'];
-      const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-      String normalized = timeStr.trim();
-      for (int i = 0; i < english.length; i++) {
-        normalized = normalized.replaceAll(arabic[i], english[i]);
-      }
-      normalized = normalized
-          .replaceAll('صباحاً', 'AM')
-          .replaceAll('مساءً', 'PM')
-          .replaceAll('في الصباح', 'AM')
-          .replaceAll('في المساء', 'PM')
-          .replaceAll('ص', 'AM')
-          .replaceAll('م', 'PM')
-          .replaceAll('am', 'AM')
-          .replaceAll('pm', 'PM');
-          
-      return DateFormat.jm().parse(normalized);
-    } catch (e) {
-      try {
-        final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
-        if (match != null) {
-          final h = int.parse(match.group(1)!);
-          final m = int.parse(match.group(2)!);
-          if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-            return DateTime(1970, 1, 1, h, m);
-          }
-        }
-      } catch (_) {}
+    const english = ['0','1','2','3','4','5','6','7','8','9'];
+    const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    String normalized = timeStr.trim();
+    for (int i = 0; i < english.length; i++) {
+      normalized = normalized.replaceAll(arabic[i], english[i]);
     }
-    return null;
+    
+    // Regex extraction to avoid throwing FormatException in debuggers for non-standard locales
+    final match = RegExp(r'(\d{1,2})\D+(\d{2})').firstMatch(normalized);
+    if (match != null) {
+      int h = int.parse(match.group(1)!);
+      int m = int.parse(match.group(2)!);
+      final lower = normalized.toLowerCase();
+      bool isPm = lower.contains('pm') || lower.contains('م') || lower.contains('مساء') || lower.contains('下午');
+      bool isAm = lower.contains('am') || lower.contains('ص') || lower.contains('صباح') || lower.contains('上午');
+      
+      if (isPm && h < 12) h += 12;
+      if (isAm && h == 12) h = 0;
+      return DateTime(2000, 1, 1, h, m);
+    }
+
+    // Fallback using try-catch
+    try {
+      normalized = normalized.replaceAll('ص', 'AM').replaceAll('م', 'PM');
+      normalized = normalized.replaceAll('صباحاً', 'AM').replaceAll('مساءً', 'PM');
+      return DateFormat.jm().parse(normalized);
+    } catch (_) {
+      return null;
+    }
   }
 }

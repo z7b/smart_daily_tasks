@@ -132,7 +132,7 @@ class SpacesView extends GetView<HomeController> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 120),
+                SizedBox(height: 120 + MediaQuery.of(context).padding.bottom),
               ],
             ),
           ),

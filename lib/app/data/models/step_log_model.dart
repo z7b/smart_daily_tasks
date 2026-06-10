@@ -55,13 +55,13 @@ class StepLog {
 
   factory StepLog.fromJson(Map<String, dynamic> json) {
     return StepLog(
-      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      date: json['date'] != null ? (DateTime.tryParse(json['date']) ?? DateTime.now()) : DateTime.now(),
       steps: json['steps'] ?? 0,
       goal: json['goal'] ?? 10000,
       calories: (json['calories'] ?? 0.0).toDouble(),
       distance: (json['distance'] ?? 0.0).toDouble(),
       isManual: json['isManual'] ?? false,
-      lastSyncedAt: json['lastSyncedAt'] != null ? DateTime.parse(json['lastSyncedAt']) : null,
+      lastSyncedAt: json['lastSyncedAt'] != null ? DateTime.tryParse(json['lastSyncedAt']) : null,
     );
   }
 

@@ -48,10 +48,10 @@ class AttendanceLog {
 
   factory AttendanceLog.fromJson(Map<String, dynamic> json) {
     return AttendanceLog(
-      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      date: json['date'] != null ? (DateTime.tryParse(json['date']) ?? DateTime.now()) : DateTime.now(),
       status: AttendanceStatus.values[(json['status'] ?? 0).clamp(0, AttendanceStatus.values.length - 1)],
-      checkInTime: json['checkInTime'] != null ? DateTime.parse(json['checkInTime']) : null,
-      checkOutTime: json['checkOutTime'] != null ? DateTime.parse(json['checkOutTime']) : null,
+      checkInTime: json['checkInTime'] != null ? DateTime.tryParse(json['checkInTime']) : null,
+      checkOutTime: json['checkOutTime'] != null ? DateTime.tryParse(json['checkOutTime']) : null,
       note: json['note'],
     );
   }

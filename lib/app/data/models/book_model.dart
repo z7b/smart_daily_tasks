@@ -91,9 +91,9 @@ class Book {
       isCompleted: json['isCompleted'] ?? false,
       rating: (json['rating'] ?? 0.0).toDouble(),
       readingMood: Mood.values[(json['readingMood'] ?? 0).clamp(0, Mood.values.length - 1)],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      lastReadAt: json['lastReadAt'] != null ? DateTime.parse(json['lastReadAt']) : null,
-      completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null,
+      createdAt: json['createdAt'] != null ? (DateTime.tryParse(json['createdAt']) ?? DateTime.now()) : DateTime.now(),
+      lastReadAt: json['lastReadAt'] != null ? DateTime.tryParse(json['lastReadAt']) : null,
+      completedAt: json['completedAt'] != null ? DateTime.tryParse(json['completedAt']) : null,
     );
   }
 

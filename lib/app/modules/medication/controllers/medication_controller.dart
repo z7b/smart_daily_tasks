@@ -264,6 +264,22 @@ class MedicationController extends GetxController {
     for (int i = 0; i < english.length; i++) {
       normalized = normalized.replaceAll(arabic[i], english[i]);
     }
+    
+    // Regex extraction to avoid throwing FormatException in debuggers for non-standard locales
+    final match = RegExp(r'(\d{1,2})\D+(\d{2})').firstMatch(normalized);
+    if (match != null) {
+      int h = int.parse(match.group(1)!);
+      int m = int.parse(match.group(2)!);
+      final lower = normalized.toLowerCase();
+      bool isPm = lower.contains('pm') || lower.contains('م') || lower.contains('مساء') || lower.contains('下午');
+      bool isAm = lower.contains('am') || lower.contains('ص') || lower.contains('صباح') || lower.contains('上午');
+      
+      if (isPm && h < 12) h += 12;
+      if (isAm && h == 12) h = 0;
+      return DateTime(2000, 1, 1, h, m);
+    }
+
+    // Fallback
     normalized = normalized.replaceAll('ص', 'AM').replaceAll('م', 'PM');
     normalized = normalized.replaceAll('صباحاً', 'AM').replaceAll('مساءً', 'PM');
     return DateFormat.jm().parse(normalized);

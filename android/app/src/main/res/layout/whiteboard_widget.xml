@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Background Image that can be tinted dynamically -->
+    <ImageView
+        android:id="@+id/board_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/whiteboard_widget_bg"
+        android:scaleType="fitXY" />
+
+    <!-- Content Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/board_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📌 الصبورة"
+                android:textColor="#C7D2FE"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/board_pinned_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="مثبتة"
+                android:textColor="#818CF8"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Large Quote Mark -->
+        <TextView
+            android:id="@+id/board_quote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="❝"
+            android:textColor="#CA8A04"
+            android:textSize="22sp"
+            android:layout_marginTop="2dp" />
+
+        <!-- Note Content -->
+        <TextView
+            android:id="@+id/board_content"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:text="لا توجد ملاحظات مثبتة"
+            android:textColor="#E0E7FF"
+            android:textSize="12sp"
+            android:ellipsize="end"
+            android:maxLines="4"
+            android:layout_marginTop="2dp" />
+
+        <!-- Footer Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="#2D2B5E" />
+
+            <TextView
+                android:id="@+id/board_app_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="رتّب"
+                android:textColor="#4338CA"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

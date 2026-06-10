@@ -168,7 +168,7 @@ class StepsController extends GetxController with WidgetsBindingObserver {
 
   DateTime get installDate {
     final dateStr = _storage.read('app_install_date');
-    return dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
+    return dateStr != null ? (DateTime.tryParse(dateStr) ?? DateTime.now()) : DateTime.now();
   }
 
   void _initAchievementCatalog() {
