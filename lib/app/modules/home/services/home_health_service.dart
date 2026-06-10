@@ -4,7 +4,7 @@ import '../../../data/models/step_log_model.dart';
 import '../../../data/models/book_model.dart';
 import '../../../data/providers/step_repository.dart';
 import '../../../data/providers/journal_repository.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../../../core/services/time_service.dart';
 
 class HomeHealthStats {

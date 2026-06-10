@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../../../data/models/note_model.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../data/models/bookmark_model.dart';

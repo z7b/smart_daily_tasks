@@ -27,23 +27,16 @@ const AttendanceLogSchema = CollectionSchema(
       name: r'checkOutTime',
       type: IsarType.dateTime,
     ),
-    r'date': PropertySchema(
-      id: 2,
-      name: r'date',
-      type: IsarType.dateTime,
-    ),
-    r'note': PropertySchema(
-      id: 3,
-      name: r'note',
-      type: IsarType.string,
-    ),
+    r'date': PropertySchema(id: 2, name: r'date', type: IsarType.dateTime),
+    r'note': PropertySchema(id: 3, name: r'note', type: IsarType.string),
     r'status': PropertySchema(
       id: 4,
       name: r'status',
       type: IsarType.byte,
       enumMap: _AttendanceLogstatusEnumValueMap,
-    )
+    ),
   },
+
   estimateSize: _attendanceLogEstimateSize,
   serialize: _attendanceLogSerialize,
   deserialize: _attendanceLogDeserialize,
@@ -60,16 +53,17 @@ const AttendanceLogSchema = CollectionSchema(
           name: r'date',
           type: IndexType.value,
           caseSensitive: false,
-        )
+        ),
       ],
-    )
+    ),
   },
   links: {},
   embeddedSchemas: {},
+
   getId: _attendanceLogGetId,
   getLinks: _attendanceLogGetLinks,
   attach: _attendanceLogAttach,
-  version: '3.1.0+1',
+  version: '3.3.2',
 );
 
 int _attendanceLogEstimateSize(
@@ -114,7 +108,7 @@ AttendanceLog _attendanceLogDeserialize(
     note: reader.readStringOrNull(offsets[3]),
     status:
         _AttendanceLogstatusValueEnumMap[reader.readByteOrNull(offsets[4])] ??
-            AttendanceStatus.present,
+        AttendanceStatus.present,
   );
   return object;
 }
@@ -136,7 +130,8 @@ P _attendanceLogDeserializeProp<P>(
       return (reader.readStringOrNull(offset)) as P;
     case 4:
       return (_AttendanceLogstatusValueEnumMap[reader.readByteOrNull(offset)] ??
-          AttendanceStatus.present) as P;
+              AttendanceStatus.present)
+          as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -166,7 +161,10 @@ List<IsarLinkBase<dynamic>> _attendanceLogGetLinks(AttendanceLog object) {
 }
 
 void _attendanceLogAttach(
-    IsarCollection<dynamic> col, Id id, AttendanceLog object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  AttendanceLog object,
+) {
   object.id = id;
 }
 
@@ -219,8 +217,10 @@ extension AttendanceLogByIndex on IsarCollection<AttendanceLog> {
     return putAllByIndex(r'date', objects);
   }
 
-  List<Id> putAllByDateSync(List<AttendanceLog> objects,
-      {bool saveLinks = true}) {
+  List<Id> putAllByDateSync(
+    List<AttendanceLog> objects, {
+    bool saveLinks = true,
+  }) {
     return putAllByIndexSync(r'date', objects, saveLinks: saveLinks);
   }
 }
@@ -245,17 +245,16 @@ extension AttendanceLogQueryWhereSort
 extension AttendanceLogQueryWhere
     on QueryBuilder<AttendanceLog, AttendanceLog, QWhereClause> {
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> idEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> idNotEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -278,8 +277,9 @@ extension AttendanceLogQueryWhere
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> idGreaterThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -288,8 +288,9 @@ extension AttendanceLogQueryWhere
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> idLessThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -304,56 +305,67 @@ extension AttendanceLogQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> dateEqualTo(
-      DateTime date) {
+    DateTime date,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'date',
-        value: [date],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'date', value: [date]),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterWhereClause> dateNotEqualTo(
-      DateTime date) {
+    DateTime date,
+  ) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
-              lower: [],
-              upper: [date],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
-              lower: [date],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'date',
+                lower: [],
+                upper: [date],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'date',
+                lower: [date],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
-              lower: [date],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
-              lower: [],
-              upper: [date],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'date',
+                lower: [date],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'date',
+                lower: [],
+                upper: [date],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
@@ -363,12 +375,14 @@ extension AttendanceLogQueryWhere
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
-        lower: [date],
-        includeLower: include,
-        upper: [],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'date',
+          lower: [date],
+          includeLower: include,
+          upper: [],
+        ),
+      );
     });
   }
 
@@ -377,12 +391,14 @@ extension AttendanceLogQueryWhere
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
-        lower: [],
-        upper: [date],
-        includeUpper: include,
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'date',
+          lower: [],
+          upper: [date],
+          includeUpper: include,
+        ),
+      );
     });
   }
 
@@ -393,13 +409,15 @@ extension AttendanceLogQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
-        lower: [lowerDate],
-        includeLower: includeLower,
-        upper: [upperDate],
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'date',
+          lower: [lowerDate],
+          includeLower: includeLower,
+          upper: [upperDate],
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -407,188 +425,184 @@ extension AttendanceLogQueryWhere
 extension AttendanceLogQueryFilter
     on QueryBuilder<AttendanceLog, AttendanceLog, QFilterCondition> {
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeIsNull() {
+  checkInTimeIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'checkInTime',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'checkInTime'),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeIsNotNull() {
+  checkInTimeIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'checkInTime',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'checkInTime'),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeEqualTo(DateTime? value) {
+  checkInTimeEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'checkInTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'checkInTime', value: value),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeGreaterThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  checkInTimeGreaterThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'checkInTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'checkInTime',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeLessThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  checkInTimeLessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'checkInTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'checkInTime',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkInTimeBetween(
+  checkInTimeBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'checkInTime',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'checkInTime',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeIsNull() {
+  checkOutTimeIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'checkOutTime',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'checkOutTime'),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeIsNotNull() {
+  checkOutTimeIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'checkOutTime',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'checkOutTime'),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeEqualTo(DateTime? value) {
+  checkOutTimeEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'checkOutTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'checkOutTime', value: value),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeGreaterThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  checkOutTimeGreaterThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'checkOutTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'checkOutTime',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeLessThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  checkOutTimeLessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'checkOutTime',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'checkOutTime',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      checkOutTimeBetween(
+  checkOutTimeBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'checkOutTime',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'checkOutTime',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition> dateEqualTo(
-      DateTime value) {
+    DateTime value,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'date',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'date', value: value),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      dateGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  dateGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'date',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'date',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      dateLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  dateLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'date',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'date',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -599,37 +613,38 @@ extension AttendanceLogQueryFilter
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'date',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'date',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition> idEqualTo(
-      Id value) {
+    Id value,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -638,11 +653,13 @@ extension AttendanceLogQueryFilter
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -653,31 +670,33 @@ extension AttendanceLogQueryFilter
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteIsNull() {
+  noteIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'note',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'note'),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteIsNotNull() {
+  noteIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'note',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'note'),
+      );
     });
   }
 
@@ -686,43 +705,49 @@ extension AttendanceLogQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteGreaterThan(
+  noteGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteLessThan(
+  noteLessThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
@@ -734,141 +759,143 @@ extension AttendanceLogQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'note',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'note',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  noteStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  noteEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteContains(String value, {bool caseSensitive = true}) {
+  noteContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition> noteMatches(
-      String pattern,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'note',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      noteIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'note',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      statusEqualTo(AttendanceStatus value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'status',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      statusGreaterThan(
-    AttendanceStatus value, {
-    bool include = false,
+    String pattern, {
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'status',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'note',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      statusLessThan(
-    AttendanceStatus value, {
-    bool include = false,
-  }) {
+  noteIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'status',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'note', value: ''),
+      );
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
-      statusBetween(
+  noteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'note', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
+  statusEqualTo(AttendanceStatus value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'status', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
+  statusGreaterThan(AttendanceStatus value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'status',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
+  statusLessThan(AttendanceStatus value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'status',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AttendanceLog, AttendanceLog, QAfterFilterCondition>
+  statusBetween(
     AttendanceStatus lower,
     AttendanceStatus upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'status',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'status',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -888,21 +915,21 @@ extension AttendanceLogQuerySortBy
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      sortByCheckInTimeDesc() {
+  sortByCheckInTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkInTime', Sort.desc);
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      sortByCheckOutTime() {
+  sortByCheckOutTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkOutTime', Sort.asc);
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      sortByCheckOutTimeDesc() {
+  sortByCheckOutTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkOutTime', Sort.desc);
     });
@@ -954,21 +981,21 @@ extension AttendanceLogQuerySortThenBy
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      thenByCheckInTimeDesc() {
+  thenByCheckInTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkInTime', Sort.desc);
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      thenByCheckOutTime() {
+  thenByCheckOutTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkOutTime', Sort.asc);
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QAfterSortBy>
-      thenByCheckOutTimeDesc() {
+  thenByCheckOutTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checkOutTime', Sort.desc);
     });
@@ -1026,14 +1053,14 @@ extension AttendanceLogQuerySortThenBy
 extension AttendanceLogQueryWhereDistinct
     on QueryBuilder<AttendanceLog, AttendanceLog, QDistinct> {
   QueryBuilder<AttendanceLog, AttendanceLog, QDistinct>
-      distinctByCheckInTime() {
+  distinctByCheckInTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'checkInTime');
     });
   }
 
   QueryBuilder<AttendanceLog, AttendanceLog, QDistinct>
-      distinctByCheckOutTime() {
+  distinctByCheckOutTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'checkOutTime');
     });
@@ -1045,8 +1072,9 @@ extension AttendanceLogQueryWhereDistinct
     });
   }
 
-  QueryBuilder<AttendanceLog, AttendanceLog, QDistinct> distinctByNote(
-      {bool caseSensitive = true}) {
+  QueryBuilder<AttendanceLog, AttendanceLog, QDistinct> distinctByNote({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'note', caseSensitive: caseSensitive);
     });
@@ -1068,14 +1096,14 @@ extension AttendanceLogQueryProperty
   }
 
   QueryBuilder<AttendanceLog, DateTime?, QQueryOperations>
-      checkInTimeProperty() {
+  checkInTimeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'checkInTime');
     });
   }
 
   QueryBuilder<AttendanceLog, DateTime?, QQueryOperations>
-      checkOutTimeProperty() {
+  checkOutTimeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'checkOutTime');
     });
@@ -1094,7 +1122,7 @@ extension AttendanceLogQueryProperty
   }
 
   QueryBuilder<AttendanceLog, AttendanceStatus, QQueryOperations>
-      statusProperty() {
+  statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
     });

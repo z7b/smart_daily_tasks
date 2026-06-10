@@ -10,7 +10,7 @@ import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
 import 'package:smart_daily_tasks/app/core/theme/theme_service.dart';
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 enum JobAnalyticsPeriod { weekly, monthly, yearly }
 

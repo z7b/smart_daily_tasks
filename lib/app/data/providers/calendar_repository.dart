@@ -1,5 +1,5 @@
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../../core/helpers/log_helper.dart';
 import '../models/calendar_event_model.dart';
 import '../models/task_model.dart';

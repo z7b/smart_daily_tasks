@@ -58,6 +58,12 @@ android {
             signingConfig = signingConfigs.getByName("upload")
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 dependencies {

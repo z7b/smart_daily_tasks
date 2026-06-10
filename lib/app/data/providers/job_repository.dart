@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../models/work_profile_model.dart';
 import '../models/attendance_log_model.dart';
 import '../../core/helpers/log_helper.dart';

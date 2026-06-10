@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/bookmark_model.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../controllers/bookmarks_controller.dart';
 
 class AddBookmarkView extends GetView<BookmarksController> {

@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'journal_model.dart';
 
 part 'book_model.g.dart';

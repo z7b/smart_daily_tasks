@@ -1,7 +1,7 @@
 import 'package:smart_daily_tasks/app/core/helpers/medication_scheduler_helper.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/medication_model.dart';
 import '../../../core/helpers/log_helper.dart';

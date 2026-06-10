@@ -10,7 +10,7 @@ import device_info_plus
 import file_picker
 import flutter_local_notifications
 import in_app_purchase_storekit
-import isar_flutter_libs
+import isar_community_flutter_libs
 import local_auth_darwin
 import quill_native_bridge_macos
 import record_macos

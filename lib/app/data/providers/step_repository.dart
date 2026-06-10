@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:get_storage/get_storage.dart';
 import '../models/step_log_model.dart';
 

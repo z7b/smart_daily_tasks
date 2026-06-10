@@ -1,5 +1,5 @@
 import '../../core/helpers/log_helper.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../models/task_model.dart';

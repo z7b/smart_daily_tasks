@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:get_storage/get_storage.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 import '../../core/helpers/log_helper.dart';
 import '../models/note_model.dart';

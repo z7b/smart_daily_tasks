@@ -60,3 +60,18 @@ gradle.afterProject {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.datastore:datastore:1.2.1")
+            force("androidx.datastore:datastore-android:1.2.1")
+            force("androidx.datastore:datastore-core:1.2.1")
+            force("androidx.datastore:datastore-core-android:1.2.1")
+            force("androidx.datastore:datastore-preferences:1.2.1")
+            force("androidx.datastore:datastore-preferences-android:1.2.1")
+            force("androidx.graphics:graphics-path:1.1.0")
+        }
+    }
+}
+

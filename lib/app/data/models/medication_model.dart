@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'task_model.dart';
 
 part 'medication_model.g.dart';
