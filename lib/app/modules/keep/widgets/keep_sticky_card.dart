@@ -651,8 +651,8 @@ class _MiniCanvasPainter extends CustomPainter {
       final parts = data.split(':');
       if (parts.length < 3) return;
       
-      final penColor = Color(int.parse(parts[0]));
-      final strokeWidth = double.parse(parts[1]);
+      final penColor = Color(int.tryParse(parts[0]) ?? 0xFF000000);
+      final strokeWidth = double.tryParse(parts[1]) ?? 3.0;
       
       final paint = Paint()
         ..color = penColor
@@ -687,9 +687,9 @@ class _MiniCanvasPainter extends CustomPainter {
           final strokeParts = line.split(';');
           if (strokeParts.length >= 3) {
             strokePaint = Paint()
-              ..color = Color(int.parse(strokeParts[0]))
+              ..color = Color(int.tryParse(strokeParts[0]) ?? 0xFF000000)
               ..strokeCap = StrokeCap.round
-              ..strokeWidth = double.parse(strokeParts[1]) * 0.4
+              ..strokeWidth = (double.tryParse(strokeParts[1]) ?? 3.0) * 0.4
               ..style = PaintingStyle.stroke;
             coords = strokeParts[2].split(',');
           } else {
@@ -702,8 +702,12 @@ class _MiniCanvasPainter extends CustomPainter {
         if (coords.length < 4) continue;
         
         for (int i = 0; i < coords.length - 3; i += 2) {
-          final p1 = Offset(double.parse(coords[i]), double.parse(coords[i+1]));
-          final p2 = Offset(double.parse(coords[i+2]), double.parse(coords[i+3]));
+          final x1 = double.tryParse(coords[i]) ?? 0.0;
+          final y1 = double.tryParse(coords[i+1]) ?? 0.0;
+          final x2 = double.tryParse(coords[i+2]) ?? 0.0;
+          final y2 = double.tryParse(coords[i+3]) ?? 0.0;
+          final p1 = Offset(x1, y1);
+          final p2 = Offset(x2, y2);
           canvas.drawLine(p1, p2, strokePaint);
         }
       }

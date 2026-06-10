@@ -235,7 +235,7 @@ class BackupService {
             clinicName: e['clinicName'],
             clinicLocation: e['clinicLocation'],
             note: e['note'],
-            scheduledAt: e['scheduledAt'] != null ? DateTime.parse(e['scheduledAt']) : DateTime.now(),
+            scheduledAt: e['scheduledAt'] != null ? (DateTime.tryParse(e['scheduledAt']) ?? DateTime.now()) : DateTime.now(),
             status: AppointmentStatus.values[(e['status'] ?? 0).clamp(0, 2)],
             remindersEnabled: e['remindersEnabled'] ?? true,
             alarmEnabled: e['alarmEnabled'] ?? false,

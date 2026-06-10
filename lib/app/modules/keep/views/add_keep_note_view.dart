@@ -2378,8 +2378,8 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
     try {
       final parts = data.split(':');
       if (parts.length >= 3) {
-        _penColor = Color(int.parse(parts[0]));
-        _strokeWidth = double.parse(parts[1]);
+        _penColor = Color(int.tryParse(parts[0]) ?? 0xFF000000);
+        _strokeWidth = double.tryParse(parts[1]) ?? 3.0;
         _strokes.clear();
 
         final String linesStr;
@@ -2402,16 +2402,16 @@ class _DrawingCanvasState extends State<_DrawingCanvas> {
           double strokeWidth = _strokeWidth;
           String coordPart = line;
           if (strokeParts.length == 3) {
-            strokeColor = Color(int.parse(strokeParts[0]));
-            strokeWidth = double.parse(strokeParts[1]);
+            strokeColor = Color(int.tryParse(strokeParts[0]) ?? 0xFF000000);
+            strokeWidth = double.tryParse(strokeParts[1]) ?? 3.0;
             coordPart = strokeParts[2];
           }
           final coords = coordPart.split(',');
           final pts = <Offset?>[];
           for (int i = 0; i < coords.length - 1; i += 2) {
-            pts.add(
-              Offset(double.parse(coords[i]), double.parse(coords[i + 1])),
-            );
+            final x = double.tryParse(coords[i]) ?? 0.0;
+            final y = double.tryParse(coords[i + 1]) ?? 0.0;
+            pts.add(Offset(x, y));
           }
           pts.add(null);
           _strokes.add(

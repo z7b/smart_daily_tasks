@@ -137,14 +137,14 @@ class Medication {
       method: json['method'],
       priority: TaskPriority.values[(json['priority'] ?? 1).clamp(0, TaskPriority.values.length - 1)],
       description: json['description'],
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : DateTime.now(),
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      startDate: json['startDate'] != null ? (DateTime.tryParse(json['startDate']) ?? DateTime.now()) : DateTime.now(),
+      endDate: json['endDate'] != null ? DateTime.tryParse(json['endDate']) : null,
       reminderTimes: (json['reminderTimes'] as List?)?.cast<String>() ?? [],
       isActive: json['isActive'] ?? true,
       isNotificationEnabled: json['isNotificationEnabled'] ?? true,
       reminderLeadMinutes: json['reminderLeadMinutes'] ?? 0,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      intakeHistory: (json['intakeHistory'] as List?)?.map((e) => DateTime.parse(e)).toList() ?? [],
+      createdAt: json['createdAt'] != null ? (DateTime.tryParse(json['createdAt']) ?? DateTime.now()) : DateTime.now(),
+      intakeHistory: (json['intakeHistory'] as List?)?.map((e) => DateTime.tryParse(e?.toString() ?? '')).whereType<DateTime>().toList() ?? [],
     );
   }
 

@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';
-import '../../data/models/note_model.dart';
 import '../../data/models/keep_note_model.dart';
 import '../../core/helpers/log_helper.dart';
 
