@@ -978,4 +978,10 @@ const Map<String, String> zhCN = {
   'weekly_holidays': '每周休息日',
   'no_holidays': '无每周休息日',
   'no_custom_schedules': '无自定义日程',
+  'pin_success_title': '已固定',
+  'pin_success_msg': '已成功固定到看板',
+  'notifications': '通知',
+  'required_title': '必填',
+  'fill_title_url_msg': '请填写标题和网址',
+  'import_warning_msg': '导入将替换当前数据。是否继续？',
 };

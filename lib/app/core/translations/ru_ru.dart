@@ -688,4 +688,10 @@ const Map<String, String> ruRU = {
   'weekly_holidays': 'Еженедельные выходные',
   'no_holidays': 'Нет еженедельных выходных',
   'no_custom_schedules': 'Нет измененных расписаний',
+  'pin_success_title': 'Закреплено',
+  'pin_success_msg': 'Успешно закреплено на доске',
+  'notifications': 'Уведомления',
+  'required_title': 'Обязательно',
+  'fill_title_url_msg': 'Укажите заголовок и URL',
+  'import_warning_msg': 'Импорт заменит текущие данные. Продолжить?',
 };

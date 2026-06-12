@@ -697,4 +697,10 @@ const Map<String, String> hiIN = {
   'weekly_holidays': 'साप्ताहिक छुट्टियां',
   'no_holidays': 'कोई साप्ताहिक छुट्टी नहीं',
   'no_custom_schedules': 'कोई कस्टम शेड्यूल नहीं',
+  'pin_success_title': 'पिन किया गया',
+  'pin_success_msg': 'बोर्ड पर सफलतापूर्वक पिन किया गया',
+  'notifications': 'सूचनाएं',
+  'required_title': 'आवश्यक',
+  'fill_title_url_msg': 'कृपया शीर्षक और URL भरें',
+  'import_warning_msg': 'आयात करने से आपका वर्तमान डेटा बदल जाएगा। जारी रखें?',
 };

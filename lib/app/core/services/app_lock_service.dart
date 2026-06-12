@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:local_auth/local_auth.dart';
@@ -40,8 +41,16 @@ class AppLockService extends GetxService {
     }
   }
 
+  bool _isAuthenticating = false;
+
   Future<bool> authenticate() async {
+    if (_isAuthenticating) {
+      talker.warning('🔒 Authentication already in progress (Dart level)');
+      return false;
+    }
+    
     try {
+      _isAuthenticating = true;
       // 🛡️ Use Native System Authentication (Device Lock / Biometrics)
       // This will prompt for Fingerprint/FaceID or System PIN/Pattern automatically
       final bool didAuthenticate = await _localAuth.authenticate(
@@ -59,9 +68,18 @@ class AppLockService extends GetxService {
       }
       
       return false;
+    } on PlatformException catch (e) {
+      if (e.code == 'auth_in_progress') {
+        talker.warning('🔒 Native authentication already in progress. Ignoring.');
+        return false;
+      }
+      talker.error('🔒 Authentication PlatformException: ${e.code} - ${e.message}');
+      return false;
     } catch (e, stack) {
       talker.handle(e, stack, '🔒 Authentication critical error');
       return false;
+    } finally {
+      _isAuthenticating = false;
     }
   }
 

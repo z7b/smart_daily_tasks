@@ -45,7 +45,7 @@ class AddBookmarkView extends GetView<BookmarksController> {
                     final title = controller.titleController.text.trim();
                     final url = controller.urlController.text.trim();
                     if (title.isEmpty || url.isEmpty) {
-                      Get.snackbar('Required', 'Please fill in title and URL', snackPosition: SnackPosition.BOTTOM);
+                      Get.snackbar('required_title'.tr, 'fill_title_url_msg'.tr, snackPosition: SnackPosition.BOTTOM);
                       return;
                     }
 

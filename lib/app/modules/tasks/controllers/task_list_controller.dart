@@ -9,6 +9,7 @@ import '../../../core/services/time_service.dart';
 import '../../../core/extensions/date_time_extensions.dart';
 import '../../../core/services/task_time_service.dart';
 import '../services/task_recurrence_service.dart';
+import '../../../core/services/pin_service.dart';
 
 class TaskListController extends GetxController with WidgetsBindingObserver {
   final TaskRepository _repository;
@@ -170,6 +171,10 @@ class TaskListController extends GetxController with WidgetsBindingObserver {
       isDeleting.value = true;
       final result = await _repository.deleteTaskAndStopRecurrence(task);
       if (result.isSuccess) {
+        // ✅ Auto-unpin from Keep board if pinned
+        if (Get.isRegistered<PinService>()) {
+          await Get.find<PinService>().unpinOnDelete('task', task.id);
+        }
         talker.info('🗑️ Task and its recurrence series deleted: ${task.title}');
         Get.snackbar('success'.tr, 'task_deleted'.tr, snackPosition: SnackPosition.BOTTOM);
       } else {

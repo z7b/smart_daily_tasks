@@ -655,4 +655,10 @@ const Map<String, String> esES = {
   'weekly_holidays': 'Días Festivos Semanales',
   'no_holidays': 'Sin días festivos semanales',
   'no_custom_schedules': 'Sin horarios personalizados',
+  'pin_success_title': 'Fijado',
+  'pin_success_msg': 'Fijado con éxito en el tablero',
+  'notifications': 'Notificaciones',
+  'required_title': 'Requerido',
+  'fill_title_url_msg': 'Ingrese título y URL',
+  'import_warning_msg': 'Importar reemplazará los datos actuales. ¿Continuar?',
 };

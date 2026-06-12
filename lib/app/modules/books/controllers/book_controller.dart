@@ -7,6 +7,7 @@ import 'package:isar_community/isar.dart';
 import '../../../data/models/book_model.dart';
 import '../../../data/models/journal_model.dart';
 import '../../../core/helpers/log_helper.dart';
+import '../../../core/services/pin_service.dart';
 
 class BookController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -150,5 +151,9 @@ class BookController extends GetxController {
 
   Future<void> deleteBook(Book book) async {
     await _isar.writeTxn(() async => await _isar.books.delete(book.id));
+    // ✅ Auto-unpin from Keep board if pinned
+    if (Get.isRegistered<PinService>()) {
+      await Get.find<PinService>().unpinOnDelete('book', book.id);
+    }
   }
 }

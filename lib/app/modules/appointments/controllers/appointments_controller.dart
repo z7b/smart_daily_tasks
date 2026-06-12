@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 import '../../../data/models/appointment_model.dart';
 import '../../../data/providers/appointment_repository.dart';
+import '../../../core/services/pin_service.dart';
 
 class AppointmentsController extends GetxController {
   final _appointmentRepo = Get.find<AppointmentRepository>();
@@ -39,6 +40,10 @@ class AppointmentsController extends GetxController {
 
   void deleteAppointment(int id) async {
     await _appointmentRepo.deleteAppointment(id);
+    // ✅ Auto-unpin from Keep board if pinned
+    if (Get.isRegistered<PinService>()) {
+      await Get.find<PinService>().unpinOnDelete('appointment', id);
+    }
   }
 
   void markAsCompleted(int id) async {

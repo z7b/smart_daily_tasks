@@ -978,4 +978,10 @@ const Map<String, String> zhTW = {
   'weekly_holidays': '每周休息日',
   'no_holidays': '無每周休息日',
   'no_custom_schedules': '無自訂日程',
+  'pin_success_title': '已固定',
+  'pin_success_msg': '已成功固定到看板',
+  'notifications': '通知',
+  'required_title': '必填',
+  'fill_title_url_msg': '請填寫標題和網址',
+  'import_warning_msg': '導入將替換當前數據。是否繼續？',
 };

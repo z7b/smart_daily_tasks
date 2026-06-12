@@ -926,4 +926,10 @@ const Map<String, String> frFR = {
   'weekly_holidays': 'Congés hebdomadaires',
   'no_holidays': 'Aucun congé hebdomadaire',
   'no_custom_schedules': 'Aucun horaire personnalisé',
+  'pin_success_title': 'Épinglé',
+  'pin_success_msg': 'Épinglé avec succès sur le tableau',
+  'notifications': 'Notifications',
+  'required_title': 'Requis',
+  'fill_title_url_msg': 'Veuillez remplir le titre et l\'URL',
+  'import_warning_msg': 'L\'importation remplacera vos données actuelles. Continuer ?',
 };

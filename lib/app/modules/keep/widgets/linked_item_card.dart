@@ -24,6 +24,7 @@ import '../../books/controllers/book_controller.dart';
 import '../../books/views/widgets/book_tile.dart';
 
 import '../controllers/keep_controller.dart';
+import '../../../core/services/pin_service.dart';
 
 class LinkedItemCard extends StatelessWidget {
   final KeepNote note;
@@ -250,32 +251,17 @@ class LinkedItemCard extends StatelessWidget {
     }
   }
 
+  /// Auto-cleanup: when a linked item is detected as deleted,
+  /// remove the stale KeepNote from the board automatically.
   Widget _buildDeletedItem(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'item_deleted_or_missing'.tr,
-              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.red),
-            onPressed: () {
-               Get.find<KeepController>().deleteNote(note.id);
-            },
-          )
-        ],
-      ),
-    );
+    // Schedule cleanup after the current build frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<KeepController>().deleteNote(note.id);
+      // Also update PinService if available
+      if (Get.isRegistered<PinService>() && note.linkedItemType != null && note.linkedItemId != null) {
+        Get.find<PinService>().pinnedItems.remove('${note.linkedItemType}_${note.linkedItemId}');
+      }
+    });
+    return const SizedBox.shrink();
   }
 }

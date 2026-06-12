@@ -14,9 +14,7 @@ import '../../data/models/note_model.dart';
 import '../../data/models/journal_model.dart';
 import '../../data/models/bookmark_model.dart';
 import '../../data/models/calendar_event_model.dart';
-import '../../data/models/book_model.dart';
 import '../../data/models/medication_model.dart';
-import '../../data/models/step_log_model.dart';
 import '../../data/models/work_profile_model.dart';
 import '../../data/models/attendance_log_model.dart';
 import '../../data/models/appointment_model.dart';
@@ -32,9 +30,7 @@ class BackupService {
     final journals = await _isar.journals.where().findAll();
     final bookmarks = await _isar.bookmarks.where().findAll();
     final events = await _isar.calendarEvents.where().findAll();
-    final books = await _isar.books.where().findAll();
     final medications = await _isar.medications.where().findAll();
-    final stepLogs = await _isar.stepLogs.where().findAll();
     final workProfiles = await _isar.workProfiles.where().findAll();
     final attendanceLogs = await _isar.attendanceLogs.where().findAll();
     final appointments = await _isar.appointments.where().findAll();
@@ -47,9 +43,7 @@ class BackupService {
       'journal': journals.map((e) => e.toJson()).toList(),
       'bookmarks': bookmarks.map((e) => e.toJson()).toList(),
       'events': events.map((e) => e.toJson()).toList(),
-      'books': books.map((e) => e.toJson()).toList(),
       'medications': medications.map((e) => e.toJson()).toList(),
-      'stepLogs': stepLogs.map((e) => e.toJson()).toList(),
       'workProfiles': workProfiles.map((e) => e.toJson()).toList(),
       'attendanceLogs': attendanceLogs.map((e) => e.toJson()).toList(),
       'appointments': appointments.map((e) => {
@@ -84,13 +78,13 @@ class BackupService {
   }
 
   /// Restores data from a picked JSON file using a safe additive merge strategy.
-  Future<void> restoreBackup() async {
+  Future<bool> restoreBackup() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json'],
     );
 
-    if (result == null || result.files.single.path == null) return;
+    if (result == null || result.files.single.path == null) return false;
 
     final file = File(result.files.single.path!);
     final jsonString = await file.readAsString();
@@ -107,9 +101,7 @@ class BackupService {
     final List<Journal> journalsToRestore = [];
     final List<Bookmark> bookmarksToRestore = [];
     final List<CalendarEvent> eventsToRestore = [];
-    final List<Book> booksToRestore = [];
     final List<Medication> medicationsToRestore = [];
-    final List<StepLog> stepLogsToRestore = [];
     final List<WorkProfile> workProfilesToRestore = [];
     final List<AttendanceLog> attendanceLogsToRestore = [];
     final List<Appointment> appointmentsToRestore = [];
@@ -172,17 +164,6 @@ class BackupService {
       }
     }
 
-    // Process Books
-    if (backupData['books'] != null && backupData['books'] is List) {
-      for (var e in (backupData['books'] as List)) {
-        if (e is Map<String, dynamic>) {
-          final book = Book.fromJson(e);
-          if (e['id'] != null) book.id = e['id'];
-          booksToRestore.add(book);
-        }
-      }
-    }
-
     // Process Medications
     if (backupData['medications'] != null && backupData['medications'] is List) {
       for (var e in (backupData['medications'] as List)) {
@@ -190,17 +171,6 @@ class BackupService {
           final med = Medication.fromJson(e);
           if (e['id'] != null) med.id = e['id'];
           medicationsToRestore.add(med);
-        }
-      }
-    }
-
-    // Process StepLogs
-    if (backupData['stepLogs'] != null && backupData['stepLogs'] is List) {
-      for (var e in (backupData['stepLogs'] as List)) {
-        if (e is Map<String, dynamic>) {
-          final step = StepLog.fromJson(e);
-          if (e['id'] != null) step.id = e['id'];
-          stepLogsToRestore.add(step);
         }
       }
     }
@@ -255,9 +225,7 @@ class BackupService {
       if (journalsToRestore.isNotEmpty) await _isar.journals.putAll(journalsToRestore);
       if (bookmarksToRestore.isNotEmpty) await _isar.bookmarks.putAll(bookmarksToRestore);
       if (eventsToRestore.isNotEmpty) await _isar.calendarEvents.putAll(eventsToRestore);
-      if (booksToRestore.isNotEmpty) await _isar.books.putAll(booksToRestore);
       if (medicationsToRestore.isNotEmpty) await _isar.medications.putAll(medicationsToRestore);
-      if (stepLogsToRestore.isNotEmpty) await _isar.stepLogs.putAll(stepLogsToRestore);
       if (workProfilesToRestore.isNotEmpty) await _isar.workProfiles.putAll(workProfilesToRestore);
       if (attendanceLogsToRestore.isNotEmpty) await _isar.attendanceLogs.putAll(attendanceLogsToRestore);
       if (appointmentsToRestore.isNotEmpty) await _isar.appointments.putAll(appointmentsToRestore);
@@ -268,6 +236,8 @@ class BackupService {
         await event.linkedTask.save();
       }
     });
+    
+    return true;
   }
 }
 

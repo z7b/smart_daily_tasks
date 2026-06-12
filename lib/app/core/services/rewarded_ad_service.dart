@@ -40,10 +40,10 @@ class RewardedAdService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    // ✅ Performance Fix: Defer AdMob video preloading by 30 seconds.
+    // ✅ Performance Fix: Defer AdMob video preloading by 3 seconds.
     // This prevents Android's Native MediaCodec from starving the UI thread
     // during cold boot (which causes a massive ~46 skipped frames freeze).
-    Future.delayed(const Duration(seconds: 30), () {
+    Future.delayed(const Duration(seconds: 3), () {
       _loadAd();
     });
   }
@@ -99,7 +99,7 @@ class RewardedAdService extends GetxService {
           isAdLoaded.value = false;
           talker.error('🔴 Rewarded ad failed to load: ${error.message}');
           // Retry after delay
-          Future.delayed(const Duration(seconds: 30), _loadAd);
+          Future.delayed(const Duration(seconds: 10), _loadAd);
         },
       ),
     );

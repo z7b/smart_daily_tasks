@@ -8,6 +8,7 @@ import '../../../core/helpers/log_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/notification_service.dart';
 import '../../../core/helpers/number_extension.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../../core/services/pin_service.dart';
 
 class MedicationController extends GetxController {
   final _isar = Get.find<Isar>();
@@ -241,6 +242,10 @@ class MedicationController extends GetxController {
       await _isar.writeTxn(() async {
         await _isar.medications.delete(med.id);
       });
+      // ✅ Auto-unpin from Keep board if pinned
+      if (Get.isRegistered<PinService>()) {
+        await Get.find<PinService>().unpinOnDelete('medication', med.id);
+      }
       Get.snackbar('success'.tr, 'med_delete_success'.tr);
     } catch (e) {
       talker.error('🔴 Med Delete Error: $e');

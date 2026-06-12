@@ -34,8 +34,8 @@ class GlassyPinButton extends StatelessWidget {
           pinService.togglePin(itemType, itemId);
           if (!isPinned) {
             Get.snackbar(
-              'تم التثبيت',
-              'تم تثبيت العنصر في الصبورة بنجاح',
+              'pin_success_title'.tr,
+              'pin_success_msg'.tr,
               snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.black54,
               colorText: Colors.white,

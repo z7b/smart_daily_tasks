@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:isar_community/isar.dart';
 import '../../data/models/keep_note_model.dart';
@@ -9,11 +10,21 @@ class PinService extends GetxService {
 
   // Observable set of pinned keys, e.g. "task_5", "medication_12"
   final RxSet<String> pinnedItems = <String>{}.obs;
+  StreamSubscription? _watcherSub;
 
   @override
   void onInit() {
     super.onInit();
     _loadPinnedItems();
+    _watcherSub = _isar.keepNotes.watchLazy().listen((_) {
+      _loadPinnedItems();
+    });
+  }
+
+  @override
+  void onClose() {
+    _watcherSub?.cancel();
+    super.onClose();
   }
 
   String _getKey(String type, int id) => '${type}_$id';
@@ -38,6 +49,29 @@ class PinService extends GetxService {
 
   bool isPinned(String type, int id) {
     return pinnedItems.contains(_getKey(type, id));
+  }
+
+  /// Remove linked KeepNote when the source item is deleted.
+  /// This prevents the red "item_deleted_or_missing" error on the board.
+  Future<void> unpinOnDelete(String type, int id) async {
+    final key = _getKey(type, id);
+    try {
+      // Always query DB — don't rely on pinnedItems set being up-to-date
+      final notes = await _isar.keepNotes.filter()
+          .linkedItemTypeEqualTo(type)
+          .linkedItemIdEqualTo(id)
+          .findAll();
+
+      if (notes.isNotEmpty) {
+        await _isar.writeTxn(() async {
+          await _isar.keepNotes.deleteAll(notes.map((n) => n.id).toList());
+        });
+      }
+      pinnedItems.remove(key);
+      talker.info('📌 Auto-unpinned deleted item: $key (removed ${notes.length} notes)');
+    } catch (e, stack) {
+      talker.handle(e, stack, '🔴 Failed to auto-unpin on delete');
+    }
   }
 
   Future<void> togglePin(String type, int id) async {

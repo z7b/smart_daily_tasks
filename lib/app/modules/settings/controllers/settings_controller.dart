@@ -24,6 +24,7 @@ class SettingsController extends GetxController {
   RxBool preventScreenshots = false.obs;
   RxBool appLock = false.obs;
   RxBool useArabicNumbers = false.obs;
+  RxBool isProcessingBackup = false.obs;
 
   RxString notificationStatus = 'pending'.obs;
 
@@ -197,21 +198,62 @@ class SettingsController extends GetxController {
   }
 
   Future<void> createBackup() async {
+    if (isProcessingBackup.value) return;
+
+    if (_appLockService.isAppLockEnabled.value) {
+      final authenticated = await _appLockService.authenticate();
+      if (!authenticated) return;
+    }
+
     try {
+      isProcessingBackup.value = true;
       await BackupService().createBackup();
       _showSnackbar('success'.tr, 'data_exported_successfully'.tr);
     } catch (e) {
       _showSnackbar('Error'.tr, 'failed_to_save'.tr, isError: true);
+    } finally {
+      isProcessingBackup.value = false;
     }
   }
 
   Future<void> restoreBackup() async {
+    if (isProcessingBackup.value) return;
+
+    if (_appLockService.isAppLockEnabled.value) {
+      final authenticated = await _appLockService.authenticate();
+      if (!authenticated) return;
+    }
+
+    final confirm = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text('warning'.tr),
+        content: Text('import_warning_msg'.tr, style: const TextStyle(height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('cancel'.tr),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text('confirm'.tr, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
-      await BackupService().restoreBackup();
-      _showSnackbar('success'.tr, 'data_imported_successfully'.tr);
-      Future.delayed(const Duration(seconds: 1), () => Get.offAllNamed('/home'));
+      isProcessingBackup.value = true;
+      final didRestore = await BackupService().restoreBackup();
+      if (didRestore) {
+        _showSnackbar('success'.tr, 'data_imported_successfully'.tr);
+        Future.delayed(const Duration(seconds: 1), () => Get.offAllNamed('/home'));
+      }
     } catch (e) {
       _showSnackbar('Error'.tr, 'failed_to_save'.tr, isError: true);
+    } finally {
+      isProcessingBackup.value = false;
     }
   }
 

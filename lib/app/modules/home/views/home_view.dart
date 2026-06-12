@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 
 import 'package:get/get.dart';
 
+import 'package:flutter/services.dart';
+
 import 'package:smart_daily_tasks/app/data/models/attendance_log_model.dart';
 import 'package:smart_daily_tasks/app/core/services/appointment_time_service.dart';
 
@@ -20,6 +22,7 @@ import 'package:smart_daily_tasks/app/modules/job/controllers/job_controller.dar
 import 'package:smart_daily_tasks/app/core/helpers/number_extension.dart';
 import 'package:smart_daily_tasks/app/core/helpers/time_format_helper.dart';
 import 'package:smart_daily_tasks/app/core/services/subscription_service.dart';
+import 'package:smart_daily_tasks/app/core/services/rewarded_ad_service.dart';
 import 'package:smart_daily_tasks/app/modules/subscription/views/premium_view.dart';
 import 'package:smart_daily_tasks/app/modules/home/services/home_task_service.dart'
     show NextTaskKind;
@@ -197,67 +200,193 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildReorderToggle(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sub = Get.find<SubscriptionService>();
+    final adService = Get.find<RewardedAdService>();
+
     return Obx(() {
+      final isProUser = sub.isPremium.value;
+      final isAdUnlocked = adService.isFeatureUnlocked('reorder_cards');
+      final isPro = isProUser || isAdUnlocked;
+
       final isReorder = controller.isReorderMode.value;
       return Align(
         alignment: Alignment.centerLeft,
         child: Padding(
           padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
           child: GestureDetector(
-            onTap: controller.toggleReorderMode,
+            onTap: () {
+              if (isPro) {
+                controller.toggleReorderMode();
+              } else {
+                HapticFeedback.lightImpact();
+                Get.to(() => const PremiumView());
+              }
+            },
             child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isReorder
-                        ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                        : (isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : Colors.black.withValues(alpha: 0.05)),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isReorder
-                          ? Theme.of(
-                              context,
-                            ).primaryColor.withValues(alpha: 0.4)
-                          : (isDark
-                                ? Colors.white.withValues(alpha: 0.1)
-                                : Colors.black.withValues(alpha: 0.1)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isReorder
-                            ? Icons.check_circle_outline
-                            : Icons.swap_vert_rounded,
-                        size: 16,
-                        color: isReorder
-                            ? Theme.of(context).primaryColor
-                            : (isDark ? Colors.white70 : Colors.black87),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isReorder ? 'save_order'.tr : 'reorder_cards'.tr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isReorder
-                              ? Theme.of(context).primaryColor
-                              : (isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                    ],
-                  ),
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: isReorder
+                    ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.05)),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isReorder
+                      ? Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.4)
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.black.withValues(alpha: 0.1)),
                 ),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isReorder
+                        ? Icons.check_circle_outline
+                        : (isPro ? Icons.swap_vert_rounded : CupertinoIcons.lock_fill),
+                    size: 16,
+                    color: isReorder
+                        ? Theme.of(context).primaryColor
+                        : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isReorder ? 'save_order'.tr : 'reorder_cards'.tr,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isReorder
+                          ? Theme.of(context).primaryColor
+                          : (isDark ? Colors.white70 : Colors.black87),
+                    ),
+                  ),
+                  if (!isProUser && !isAdUnlocked) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'PRO',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    _buildAdUnlockIcon(
+                      context: context,
+                      featureKey: 'reorder_cards',
+                    ),
+                  ],
+                ],
+              ),
             ),
-          );
+          ),
+        ),
+      );
     });
+  }
+
+  /// Glassmorphic video ad unlock icon — appears next to PRO badge
+  Widget _buildAdUnlockIcon({required BuildContext context, required String featureKey}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final adService = Get.find<RewardedAdService>();
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        adService.showAdToUnlock(
+          featureKey: featureKey,
+          onRewarded: () {
+            Get.rawSnackbar(
+              title: 'success'.tr,
+              message: 'watch_ad_unlocked'.tr,
+              backgroundColor: const Color(0xFF34C759),
+              duration: const Duration(seconds: 3),
+            );
+          },
+          onFailed: () {
+            Get.rawSnackbar(
+              title: 'error'.tr,
+              message: 'watch_ad_not_ready'.tr,
+              backgroundColor: const Color(0xFFFF3B30),
+              duration: const Duration(seconds: 2),
+            );
+          },
+        );
+      },
+      child: Obx(() {
+        final isLoaded = adService.isAdLoaded.value;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isLoaded
+                  ? [const Color(0xFF007AFF).withValues(alpha: 0.25), const Color(0xFF5856D6).withValues(alpha: 0.25)]
+                  : [Colors.grey.withValues(alpha: 0.15), Colors.grey.withValues(alpha: 0.15)],
+            ),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: isLoaded ? 0.25 : 0.1)
+                  : Colors.black.withValues(alpha: isLoaded ? 0.15 : 0.06),
+              width: 0.5,
+            ),
+            boxShadow: isLoaded
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.play_rectangle_fill,
+                size: 11,
+                color: isLoaded
+                    ? (isDark ? const Color(0xFF64D2FF) : const Color(0xFF007AFF))
+                    : Colors.grey.withValues(alpha: 0.5),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'beta_badge'.tr,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: isLoaded
+                      ? (isDark ? const Color(0xFF64D2FF) : const Color(0xFF007AFF))
+                      : Colors.grey.withValues(alpha: 0.5),
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
   }
 
   Widget _buildCardByKey(String key, BuildContext context) {
